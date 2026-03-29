@@ -1,0 +1,298 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* Colors - Obsidian & Champagne */
+  --obsidian: #050505;
+  --charcoal: #0a0a0a;
+  --coal: #121212;
+  --champagne: #D4AF37;
+  --champagne-glow: rgba(212, 175, 55, 0.4);
+  --gold-gradient: linear-gradient(135deg, #FFD700 0%, #D4AF37 50%, #B8860B 100%);
+  --dark-gradient: linear-gradient(180deg, #111111 0%, #050505 100%);
+  
+  --text-main: #FFFFFF;
+  --text-dim: rgba(255, 255, 255, 0.65);
+  --text-muted: rgba(255, 255, 255, 0.35);
+  
+  --glass: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--obsidian);
+  color: var(--text-main);
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, .outfit {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--obsidian);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--coal);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--champagne);
+}
+
+/* Glassmorphism */
+.glass-panel {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.gold-glow {
+  box-shadow: 0 0 20px var(--champagne-glow);
+}
+
+/* Ant Design Overrides */
+.ant-layout {
+  background: var(--obsidian) !important;
+}
+
+.ant-layout-header {
+  background: rgba(5, 5, 5, 0.8) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--glass-border);
+  padding: 0 24px !important;
+}
+
+.ant-menu {
+  background: transparent !important;
+  border: none !important;
+  line-height: 48px !important;
+}
+
+.ant-menu-item {
+  color: var(--text-dim) !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  transition: var(--transition) !important;
+  padding: 0 16px !important;
+  margin: 0 !important;
+}
+
+.ant-menu-item:hover {
+  background: transparent !important;
+  color: var(--champagne) !important;
+}
+
+.ant-menu-item-selected {
+  background: transparent !important;
+  color: var(--champagne) !important;
+  box-shadow: none !important;
+}
+
+.ant-menu-item-selected::after {
+  border-bottom: 2px solid var(--champagne) !important;
+  bottom: 14px !important;
+  left: 16px !important;
+  right: 16px !important;
+  content: '' !important;
+  position: absolute !important;
+}
+
+.ant-menu-horizontal > .ant-menu-item-selected {
+  border-bottom: none !important;
+}
+
+.ant-btn {
+  border-radius: 2px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: var(--transition) !important;
+}
+
+.ant-btn-primary {
+  background: var(--gold-gradient) !important;
+  border: none !important;
+  color: #000 !important;
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2) !important;
+}
+
+.ant-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.3) !important;
+}
+
+.btn-ghost-gold {
+  background: var(--obsidian) !important;
+  border: 1px solid var(--champagne) !important;
+  color: var(--champagne) !important;
+}
+
+
+
+.ant-card {
+  background: var(--glass) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.ant-typography {
+  color: var(--text-main) !important;
+}
+
+.ant-input {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #fff !important;
+}
+
+.ant-input-affix-wrapper {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(212, 175, 55, 0.15) !important;
+  border-radius: 12px !important;
+}
+
+.ant-input-affix-wrapper:focus-within {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Fix Autofill - Removing the black box */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px rgba(212, 175, 55, 0.01) inset !important;
+  -webkit-text-fill-color: #fff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Live Components */
+.player-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+}
+
+.live-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #ff0000;
+  color: white;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 10;
+}
+
+.live-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.8); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.5; }
+  100% { transform: scale(0.8); opacity: 1; }
+}
+
+.ant-modal-content {
+  background: var(--charcoal) !important;
+  border: 1px solid var(--glass-border);
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.ant-modal-close {
+  color: var(--text-dim) !important;
+}
+
+@media (max-width: 768px) {
+  .ant-modal {
+    max-width: 95vw !important;
+    margin: 8px auto !important;
+  }
+}
+
+/* Responsive Helpers */
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(5, 5, 5, 0.9);
+    backdrop-filter: blur(15px);
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 1000;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-only { display: none !important; }
+}
+
+.gold-balance-card {
+  background: var(--gold-gradient) !important;
+  background-color: #D4AF37 !important;
+  border-radius: 16px !important;
+  margin-bottom: 32px;
+  overflow: hidden;
+  padding: 0 !important;
+  color: #000 !important;
+  box-shadow: 0 15px 40px rgba(212, 175, 55, 0.2) !important;
+  border: none !important;
+}
+
+.gold-balance-card .ant-card-body {
+  padding: 32px 24px !important;
+}
+
+.gold-balance-card * {
+  color: #000 !important;
+}
+
+.gold-balance-card .ant-typography {
+  color: #000 !important;
+}
+
+.gold-balance-card .ant-divider {
+  border-color: rgba(0,0,0,0.1) !important;
+}
