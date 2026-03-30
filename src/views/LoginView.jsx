@@ -310,6 +310,9 @@ const LoginView = ({ onLogin }) => {
               <SafetyCertificateFilled style={{ color: '#22c55e', fontSize: 10 }} />
               SISTEMA DE SEGURIDAD FINTECH SSL
            </div>
+           <div style={{ margin: '12px 0 0 0', color: 'rgba(255,255,255,0.3)', fontSize: 8, letterSpacing: '1px' }}>
+              &copy; 2026 COLICEO ANGEL CRUZ. TODOS LOS DERECHOS RESERVADOS.
+           </div>
         </div>
       </Card>
       
