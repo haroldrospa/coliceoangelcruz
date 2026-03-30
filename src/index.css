@@ -1,14 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Colors - Obsidian & Champagne */
-  --obsidian: #050505;
-  --charcoal: #0a0a0a;
-  --coal: #121212;
-  --champagne: #D4AF37;
-  --champagne-glow: rgba(212, 175, 55, 0.4);
-  --gold-gradient: linear-gradient(135deg, #FFD700 0%, #D4AF37 50%, #B8860B 100%);
-  --dark-gradient: linear-gradient(180deg, #111111 0%, #050505 100%);
+  /* Colors - Forest Green Flat */
+  --obsidian: #060e0a;
+  --charcoal: #030805;
+  --coal: #0a140f;
+  --brand-green: #10b981;
+  --brand-glow: transparent;
+  --green-gradient: #10b981; /* Replaced gradient with flat color for minimalist compliance */
+  --dark-gradient: linear-gradient(180deg, #0f1c14 0%, #060e0a 100%);
   
   --text-main: #FFFFFF;
   --text-dim: rgba(255, 255, 255, 0.65);
@@ -54,7 +54,7 @@ h1, h2, h3, h4, .outfit {
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--champagne);
+  background: var(--brand-green);
 }
 
 /* Glassmorphism */
@@ -66,8 +66,8 @@ h1, h2, h3, h4, .outfit {
   border-radius: var(--radius-md);
 }
 
-.gold-glow {
-  box-shadow: 0 0 20px var(--champagne-glow);
+.green-glow {
+  box-shadow: none !important;
 }
 
 /* Ant Design Overrides */
@@ -101,17 +101,17 @@ h1, h2, h3, h4, .outfit {
 
 .ant-menu-item:hover {
   background: transparent !important;
-  color: var(--champagne) !important;
+  color: var(--brand-green) !important;
 }
 
 .ant-menu-item-selected {
   background: transparent !important;
-  color: var(--champagne) !important;
+  color: var(--brand-green) !important;
   box-shadow: none !important;
 }
 
 .ant-menu-item-selected::after {
-  border-bottom: 2px solid var(--champagne) !important;
+  border-bottom: 2px solid var(--brand-green) !important;
   bottom: 14px !important;
   left: 16px !important;
   right: 16px !important;
@@ -124,29 +124,30 @@ h1, h2, h3, h4, .outfit {
 }
 
 .ant-btn {
-  border-radius: 2px !important;
-  font-weight: 700 !important;
+  border-radius: 6px !important; /* Delicate radius */
+  font-weight: 600 !important; /* Lighter weight */
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  transition: var(--transition) !important;
+  transition: all 0.2s ease !important;
 }
 
 .ant-btn-primary {
-  background: var(--gold-gradient) !important;
+  background: var(--brand-green) !important;
   border: none !important;
-  color: #000 !important;
-  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2) !important;
+  color: #fff !important;
+  box-shadow: none !important;
 }
 
 .ant-btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.3) !important;
+  transform: none !important;
+  box-shadow: none !important;
+  opacity: 0.8 !important;
 }
 
-.btn-ghost-gold {
+.btn-ghost-green {
   background: var(--obsidian) !important;
-  border: 1px solid var(--champagne) !important;
-  color: var(--champagne) !important;
+  border: 1px solid var(--brand-green) !important;
+  color: var(--brand-green) !important;
 }
 
 
@@ -169,7 +170,7 @@ h1, h2, h3, h4, .outfit {
 
 .ant-input-affix-wrapper {
   background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(212, 175, 55, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.15) !important;
   border-radius: 12px !important;
 }
 
@@ -182,7 +183,7 @@ input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
 input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px rgba(212, 175, 55, 0.01) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(16, 185, 129, 0.01) inset !important;
   -webkit-text-fill-color: #fff !important;
   transition: background-color 5000s ease-in-out 0s;
 }
@@ -269,30 +270,30 @@ input:-webkit-autofill:active {
   .mobile-only { display: none !important; }
 }
 
-.gold-balance-card {
-  background: var(--gold-gradient) !important;
-  background-color: #D4AF37 !important;
-  border-radius: 16px !important;
-  margin-bottom: 32px;
+.green-balance-card {
+  background: var(--brand-green) !important;
+  background-color: var(--brand-green) !important;
+  border-radius: 12px !important;
+  margin-bottom: 24px;
   overflow: hidden;
   padding: 0 !important;
-  color: #000 !important;
-  box-shadow: 0 15px 40px rgba(212, 175, 55, 0.2) !important;
+  color: #fff !important;
+  box-shadow: none !important; /* Removed glow */
   border: none !important;
 }
 
-.gold-balance-card .ant-card-body {
+.green-balance-card .ant-card-body {
   padding: 32px 24px !important;
 }
 
-.gold-balance-card * {
-  color: #000 !important;
+.green-balance-card * {
+  color: #fff !important;
 }
 
-.gold-balance-card .ant-typography {
-  color: #000 !important;
+.green-balance-card .ant-typography {
+  color: #fff !important;
 }
 
-.gold-balance-card .ant-divider {
-  border-color: rgba(0,0,0,0.1) !important;
+.green-balance-card .ant-divider {
+  border-color: rgba(255,255,255,0.2) !important;
 }

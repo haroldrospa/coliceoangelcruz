@@ -9,6 +9,15 @@ CREATE TABLE IF NOT EXISTS public.users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS public.messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES public.users(id),
+    user_email TEXT NOT NULL,
+    text TEXT NOT NULL,
+    type TEXT DEFAULT 'USER',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS public.events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     post_number TEXT NOT NULL,

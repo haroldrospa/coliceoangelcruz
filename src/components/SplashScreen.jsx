@@ -42,28 +42,33 @@ const SplashScreen = ({ isReady }) => {
       opacity: isReady && percent === 100 ? 0 : 1,
       pointerEvents: 'none'
     }}>
-      <div style={{ textAlign: 'center', animation: 'pulse 2s infinite' }}>
-        <Title level={1} style={{ 
+      <div style={{ textAlign: 'center', animation: 'pulse 2s infinite', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <img src="/official_logo.png" style={{ 
+            height: 60, 
+            marginBottom: 10, 
+            filter: 'drop-shadow(0 0 15px rgba(212,175,55,0.4))' 
+        }} alt="Logo Oficial" />
+        <Title level={2} style={{ 
           color: 'var(--champagne)', 
           margin: 0, 
           fontWeight: 900, 
-          letterSpacing: '8px', 
+          letterSpacing: '6px', 
           fontFamily: 'Outfit',
-          fontSize: 48,
-          textShadow: '0 0 20px rgba(212,175,55,0.2)'
+          fontSize: 22,
+          textShadow: '0 0 10px rgba(212,175,55,0.2)'
         }}>
-          TRABALIVE
+          COLICEO ANGEL CRUZ
         </Title>
         <Text style={{ 
           color: 'rgba(255,255,255,0.3)', 
-          fontSize: 10, 
-          letterSpacing: '4px', 
+          fontSize: 9, 
+          letterSpacing: '3px', 
           fontWeight: 700,
           textTransform: 'uppercase',
-          marginTop: 10,
+          marginTop: 6,
           display: 'block'
         }}>
-          Fintech Cockfighting Hub
+          Plataforma Táctica de Combate
         </Text>
       </div>
 

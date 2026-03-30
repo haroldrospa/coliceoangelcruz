@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase, ensureUserProfile, rawFetch } from './lib/supabase';
 import { Layout, Typography, Badge, Space, Button, App as AntApp } from 'antd';
-import { PlayCircleOutlined, HistoryOutlined, WalletOutlined, ControlOutlined, LogoutOutlined, RocketOutlined, CrownFilled } from '@ant-design/icons';
+import { PlayCircleOutlined, HistoryOutlined, WalletOutlined, ControlOutlined, LogoutOutlined, RocketOutlined, CrownFilled, SettingOutlined } from '@ant-design/icons';
+import { useSound } from './hooks/useSound';
 import UserLiveView from './views/UserLiveView';
 import UserHistoryView from './views/UserHistoryView';
 import UserWalletView from './views/UserWalletView';
 import AdminDashboard from './views/AdminDashboard';
 import LoginView from './views/LoginView';
 import SplashScreen from './components/SplashScreen';
+import UserSettingsView from './views/UserSettingsView';
 
 const logo = "/logo.png"; // Fixed local reliable path
 
@@ -30,6 +32,7 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
     { key: 'live', icon: <PlayCircleOutlined />, label: 'EN VIVO' },
     { key: 'history', icon: <HistoryOutlined />, label: 'RESULTADOS' },
     { key: 'wallet', icon: <WalletOutlined />, label: 'BILLETERA' },
+    { key: 'settings', icon: <SettingOutlined />, label: 'AJUSTES' },
   ];
 
   const adminItem = { key: 'admin-dashboard', icon: <ControlOutlined />, label: 'ADMIN PANEL' };
@@ -40,6 +43,7 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
       case 'live': return <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
       case 'history': return <UserHistoryView />;
       case 'wallet': return <UserWalletView balance={balance} setBalance={setBalance} />;
+      case 'settings': return <UserSettingsView onLogout={onLogout} />;
       case 'admin-dashboard': return currentUser?.role === 'admin' ? <AdminDashboard /> : <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
       default: return <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
     }
@@ -55,68 +59,105 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
       <Header className="desktop-only" style={{ 
         position: 'sticky', top: 0, zIndex: 1001, width: '100%', 
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 60px', height: 90, background: 'rgba(10, 10, 10, 0.95)',
-        backdropFilter: 'blur(30px)', borderBottom: '1px solid rgba(212, 175, 55, 0.1)'
+        padding: '0 40px', height: 72, background: 'rgba(4, 8, 6, 0.85)',
+        backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => setCurrentView('live')}>
-           <Title level={4} style={{ color: 'var(--champagne)', margin: 0, fontWeight: 900, letterSpacing: '2px', fontFamily: 'Outfit' }}>TRABALIVE</Title>
+           <img src="/official_logo.png" style={{ height: 24 }} alt="Coliceo Logo" />
+           <Title level={5} style={{ color: '#fff', margin: 0, fontWeight: 700, letterSpacing: '2px', fontFamily: 'Outfit', textTransform: 'uppercase', fontSize: 13 }}>COLICEO ANGEL CRUZ</Title>
         </div>
 
-        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {itemsToShow.map(item => {
             const isActive = currentView === item.key;
             return (
               <div 
                 key={item.key}
                 onClick={() => setCurrentView(item.key)}
-                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, opacity: isActive ? 1 : 0.4 }}
+                style={{ 
+                   cursor: 'pointer', 
+                   display: 'flex', 
+                   alignItems: 'center', 
+                   gap: 8, 
+                   padding: '8px 16px',
+                   borderRadius: 8,
+                   background: isActive ? 'rgba(255,255,255,0.05)' : 'transparent',
+                   transition: 'all 0.2s ease',
+                   border: '1px solid',
+                   borderColor: isActive ? 'rgba(255,255,255,0.05)' : 'transparent'
+                }}
               >
-                <span style={{ color: isActive ? 'var(--champagne)' : '#fff' }}>{item.icon}</span>
-                <Text style={{ color: isActive ? 'var(--champagne)' : '#fff', fontSize: 11, fontWeight: 800 }}>{item.label}</Text>
+                <span style={{ color: isActive ? '#10b981' : 'rgba(255,255,255,0.4)', fontSize: 16 }}>{item.icon}</span>
+                <Text style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>{item.label}</Text>
               </div>
             );
           })}
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-           <div style={{ background: 'rgba(212,175,55,0.05)', padding: '10px 20px', borderRadius: 12, border: '1px solid rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <WalletOutlined style={{ color: 'var(--champagne)', fontSize: 14 }} />
-              <Text style={{ color: 'var(--champagne)', fontSize: 18, fontWeight: 900, fontFamily: 'Outfit' }}>${parseFloat(balance).toLocaleString()}</Text>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+           <div style={{ 
+              background: '#10b981', /* Flat solid green */
+              padding: '6px 16px', 
+              borderRadius: 8, 
+              boxShadow: 'none',
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 10,
+              border: 'none'
+           }}>
+              <WalletOutlined style={{ color: '#fff', fontSize: 16 }} />
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: 700, fontFamily: 'Outfit' }}>${parseFloat(balance).toLocaleString()}</Text>
            </div>
-           <Button type="text" icon={<LogoutOutlined style={{ color: '#ef4444' }} />} onClick={onLogout} />
-           <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--gold-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 900 }}>{currentUser?.email?.charAt(0).toUpperCase()}</div>
+           <Button 
+              type="text" 
+              icon={<SettingOutlined style={{ color: '#fff' }} />} 
+              onClick={() => setCurrentView('settings')} 
+              style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '50%', width: 45, height: 45 }} 
+           />
         </div>
       </Header>
 
       {/* Mobile Top Header */}
       <Header className="mobile-only" style={{ 
-        background: 'rgba(10, 10, 10, 0.8)', 
-        backdropFilter: 'blur(10px)',
-        padding: '0 20px', 
-        height: 70, 
+        background: 'rgba(4, 8, 6, 0.95)', 
+        backdropFilter: 'blur(20px)',
+        padding: '0 16px', 
+        height: 64, 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between',
         position: 'sticky',
         top: 0,
         zIndex: 1002,
-        borderBottom: '1px solid rgba(212, 175, 55, 0.1)'
+        borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
       }}>
-        <Title level={5} style={{ color: 'var(--champagne)', margin: 0, fontWeight: 900, fontSize: 14 }}>TRABALIVE</Title>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <img src="/official_logo.png" style={{ height: 22 }} alt="Logo" />
+            <Title level={5} style={{ color: '#fff', margin: 0, fontWeight: 900, fontSize: 12, fontFamily: 'Outfit', letterSpacing: '1px' }}>ANGEL CRUZ</Title>
+        </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ background: 'rgba(212,175,55,0.1)', padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(212,175,55,0.2)' }}>
-              <Text style={{ color: 'var(--champagne)', fontSize: 14, fontWeight: 900 }}>${parseFloat(balance).toLocaleString()}</Text>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ 
+              background: '#10b981', 
+              padding: '4px 12px', 
+              borderRadius: 6, 
+              boxShadow: 'none',
+              border: 'none'
+          }}>
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Outfit' }}>${parseFloat(balance).toLocaleString()}</Text>
           </div>
           <Button 
             type="text" 
-            icon={<LogoutOutlined style={{ color: '#ef4444', fontSize: 18 }} />} 
-            onClick={onLogout}
+            icon={<SettingOutlined style={{ color: '#fff', fontSize: 18 }} />} 
+            onClick={() => setCurrentView('settings')}
             style={{ 
-              background: 'rgba(239, 68, 68, 0.05)', 
-              borderRadius: '8px',
-              height: 36,
-              width: 36
+              background: 'rgba(255, 255, 255, 0.05)', 
+              borderRadius: '10px',
+              height: 40,
+              width: 40,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           />
         </div>
@@ -124,14 +165,13 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
 
       <Content>{renderContent()}</Content>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="mobile-nav mobile-only" style={{ background: 'rgba(10, 10, 10, 0.95)', padding: '12px 0 20px', borderTop: '1px solid rgba(212, 175, 55, 0.1)' }}>
+      <div className="mobile-nav mobile-only" style={{ background: 'rgba(4, 8, 6, 0.95)', padding: '12px 0 20px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', justifyContent: 'space-evenly' }}>
         {itemsToShow.map(item => {
           const isActive = currentView === item.key;
           return (
-            <div key={item.key} onClick={() => setCurrentView(item.key)} style={{ flex: 1, textAlign: 'center', color: isActive ? 'var(--champagne)' : 'rgba(255,255,255,0.2)' }}>
-              <div style={{ fontSize: 20 }}>{item.icon}</div>
-              <div style={{ fontSize: 8, fontWeight: 800 }}>{item.label}</div>
+            <div key={item.key} onClick={() => setCurrentView(item.key)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'all 0.2s', width: 64 }}>
+              <span style={{ color: isActive ? '#10b981' : 'rgba(255,255,255,0.3)', fontSize: 18 }}>{item.icon}</span>
+              <Text style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.4)', fontSize: 8, fontWeight: 700, letterSpacing: '0.5px' }}>{item.label}</Text>
             </div>
           );
         })}
@@ -146,6 +186,8 @@ function App() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isDataReady, setIsDataReady] = useState(false);
   const [balance, setBalance] = useState(0);
+  const balanceRef = useRef(0);
+  const { play } = useSound();
 
   useEffect(() => {
     const syncUser = async (user) => {
@@ -157,7 +199,10 @@ function App() {
           role: profile?.role || user.user_metadata?.role || 'user',
           id: user.id
         });
-        if (profile) setBalance(profile.balance);
+        if (profile) {
+          setBalance(profile.balance);
+          balanceRef.current = profile.balance;
+        }
       } catch (err) {
         console.error('Core Sync Err:', err);
       }
@@ -192,12 +237,18 @@ function App() {
       }
     });
 
-    // Global Real-time Sync for balance
+    // Global Real-time Sync for balance & Win Sound
     let balanceChannel;
     if (currentUser?.id) {
        balanceChannel = supabase.channel('global-wallet-sync')
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${currentUser.id}` }, (payload) => {
-          if (payload.new) setBalance(payload.new.balance);
+          if (payload.new) {
+              const newBalance = parseFloat(payload.new.balance);
+              const oldBalance = parseFloat(balanceRef.current);
+              if (newBalance > oldBalance) play('WIN');
+              setBalance(newBalance);
+              balanceRef.current = newBalance;
+          }
         })
         .subscribe();
     }

@@ -10,16 +10,16 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       theme={{
         algorithm: theme.darkAlgorithm,
         token: {
-          colorPrimary: '#D4AF37', // Gold
+          colorPrimary: '#10b981', // Forest Green
           colorBgBase: '#000000',   // Pure Dark Mode
           fontFamily: 'Inter, sans-serif',
           borderRadius: 4,
-          colorLink: '#D4AF37',
+          colorLink: '#10b981',
         },
         components: {
           Button: {
-            colorPrimary: '#D4AF37',
-            colorPrimaryHover: '#B8860B',
+            colorPrimary: '#10b981',
+            colorPrimaryHover: '#059669',
             controlHeight: 45,
             fontWeight: 600,
           },
