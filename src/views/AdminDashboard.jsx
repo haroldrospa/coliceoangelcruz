@@ -16,7 +16,8 @@ const AdminDashboard = () => {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [globalStream, setGlobalStream] = useState(localStorage.getItem('globalStream') || '');
+  const [globalStream, setGlobalStream] = useState('');
+  const [isSavingStream, setIsSavingStream] = useState(false);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState([]);
 
@@ -25,6 +26,12 @@ const AdminDashboard = () => {
       if (activeTab === '1') {
         const data = await rawFetch(`events?select=*&order=created_at.desc`);
         if (data) setEvents(data);
+        
+        // Fetch Global Stream URL from DB
+        const settings = await rawFetch(`settings?id=eq.live_stream_url`);
+        if (settings && settings[0]) {
+            setGlobalStream(settings[0].value);
+        }
       } else {
         const deps = await rawFetch(`deposits?select=*,users(email)&order=created_at.desc`);
         if (deps) setDeposits(deps);
@@ -39,6 +46,11 @@ const AdminDashboard = () => {
     const channel = supabase.channel('admin-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, (payload) => {
+          if (payload.new && payload.new.id === 'live_stream_url') {
+              setGlobalStream(payload.new.value);
+          }
+      })
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [activeTab]);
@@ -243,6 +255,21 @@ const AdminDashboard = () => {
         message.error('Error en carga masiva: ' + e.message);
     } finally {
         setLoading(false);
+    }
+  };
+
+  const handleSaveGlobalStream = async () => {
+    setIsSavingStream(true);
+    try {
+        await rawFetch(`settings?id=eq.live_stream_url`, {
+            method: 'PATCH',
+            body: { value: globalStream }
+        });
+        message.success('URL DE TRANSMISIÓN ACTUALIZADA');
+    } catch (e) {
+        message.error('Error al guardar URL: ' + e.message);
+    } finally {
+        setIsSavingStream(false);
     }
   };
 
@@ -471,13 +498,19 @@ const AdminDashboard = () => {
             </Col>
             <Col xs={24} md={7}>
                <Input 
-                 placeholder="URL DACAST GLOBAL" 
+                 placeholder="URL DE TRANSMISIÓN (CASTR/DACAST)" 
                  value={globalStream} 
-                 onChange={e => {
-                    setGlobalStream(e.target.value);
-                    localStorage.setItem('globalStream', e.target.value);
-                 }}
+                 onChange={e => setGlobalStream(e.target.value)}
                  style={{ background: '#000', border: '1px solid var(--glass-border)', color: '#fff' }}
+                 suffix={
+                    <Button 
+                        type="text" 
+                        size="small" 
+                        icon={<CheckCircleFilled style={{ color: '#10b981' }} />} 
+                        onClick={handleSaveGlobalStream}
+                        loading={isSavingStream}
+                    />
+                 }
                />
             </Col>
             <Col xs={24} md={7} style={{ textAlign: 'right' }}>

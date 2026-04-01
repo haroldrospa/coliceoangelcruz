@@ -94,6 +94,7 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   const [todayProgram, setTodayProgram] = useState([]);
   const [carteleraFilter, setCarteleraFilter] = useState('ALL'); // 'ALL', 'PENDING', 'FINISHED'
   const [chatInput, setChatInput] = useState('');
+  const [globalStream, setGlobalStream] = useState('');
   const chatEndRef = useRef(null);
 
   // Fight State
@@ -157,6 +158,9 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
 
         const initialMsgs = await rawFetch(`messages?select=*&order=created_at.asc&limit=50`);
         if (initialMsgs) setChatMessages(initialMsgs);
+
+        const settings = await rawFetch(`settings?id=eq.live_stream_url`);
+        if (settings && settings[0]) setGlobalStream(settings[0].value);
       } catch (err) {
         console.error('Core Sync Err:', err);
       }
@@ -203,6 +207,11 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
             if (payload.new.user_id !== userId) play('NOTIFY');
             return [...prev, payload.new];
         });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
+          if (payload.new && payload.new.id === 'live_stream_url') {
+              setGlobalStream(payload.new.value);
+          }
       })
       .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
@@ -348,7 +357,7 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
       {/* PRIMARY BATTLE ZONE: Video & Chat Aligned */}
       <Row gutter={[16, 16]} align="stretch" style={{ minHeight: 400 }}>
         <Col xs={24} lg={16} className="player-container">
-           <DacastPlayer status={fightInfo.status} stream_url={fightInfo.stream_url} />
+           <DacastPlayer status={fightInfo.status} stream_url={fightInfo.stream_url || globalStream} />
         </Col>
 
         <Col xs={24} lg={8} style={{ display: 'flex' }}>
