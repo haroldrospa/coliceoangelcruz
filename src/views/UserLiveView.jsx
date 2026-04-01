@@ -18,6 +18,7 @@ const HLSVideoPlayer = ({ url }) => {
 
         playerRef.current = videojs(videoRef.current, {
             autoplay: true,
+            muted: true,
             controls: true,
             responsive: true,
             fluid: true,
@@ -55,8 +56,9 @@ const HLSVideoPlayer = ({ url }) => {
 // Premium Dacast Iframe Player Wrapper & Standby Mode
 const DacastPlayer = ({ status, stream_url }) => {
     const isHLS = stream_url?.toLowerCase().includes('.m3u8');
+    const hasSignal = !!stream_url;
 
-  if (status !== 'LIVE') {
+  if (status !== 'LIVE' && !hasSignal) {
     return (
       <div style={{ 
           position: 'relative', width: '100%', paddingBottom: '56.25%', 
