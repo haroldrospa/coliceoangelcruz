@@ -73,7 +73,7 @@ const UserWalletView = ({ balance, setBalance }) => {
     <div style={{ padding: '40px 20px', maxWidth: 700, margin: '0 auto', background: 'var(--obsidian)', minHeight: '100vh', paddingBottom: 100 }}>
       {/* Brand Header */}
       <div style={{ marginBottom: 40, textAlign: 'center' }}>
-        <Title level={4} className="outfit" style={{ margin: 0, color: '#fff', fontSize: 20, fontWeight: 700 }}>BILLETERA COLICEO</Title>
+        <Title level={4} className="outfit" style={{ margin: 0, color: '#fff', fontSize: 20, fontWeight: 700 }}>BILLETERA COLISEO</Title>
         <Text style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600 }}>Activos en Tiempo Real</Text>
       </div>
 

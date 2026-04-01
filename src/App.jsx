@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, ensureUserProfile, rawFetch } from './lib/supabase';
 import { Layout, Typography, Badge, Space, Button, App as AntApp } from 'antd';
-import { PlayCircleOutlined, HistoryOutlined, WalletOutlined, ControlOutlined, LogoutOutlined, RocketOutlined, CrownFilled, SettingOutlined } from '@ant-design/icons';
+import { PlayCircleOutlined, HistoryOutlined, WalletOutlined, ControlOutlined, LogoutOutlined, RocketOutlined, CrownFilled, SettingOutlined, FilePdfOutlined } from '@ant-design/icons';
 import { useSound } from './hooks/useSound';
 import UserLiveView from './views/UserLiveView';
 import UserHistoryView from './views/UserHistoryView';
@@ -10,6 +10,9 @@ import AdminDashboard from './views/AdminDashboard';
 import LoginView from './views/LoginView';
 import SplashScreen from './components/SplashScreen';
 import UserSettingsView from './views/UserSettingsView';
+import ReplaysView from './views/ReplaysView';
+import AdminCarteleraView from './views/AdminCarteleraView';
+
 
 const logo = "/logo.png"; // Fixed local reliable path
 
@@ -30,21 +33,26 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
 
   const navItems = [
     { key: 'live', icon: <PlayCircleOutlined />, label: 'EN VIVO' },
+    { key: 'replays', icon: <PlayCircleOutlined />, label: 'REPETICIONES' },
     { key: 'history', icon: <HistoryOutlined />, label: 'RESULTADOS' },
     { key: 'wallet', icon: <WalletOutlined />, label: 'BILLETERA' },
-    { key: 'settings', icon: <SettingOutlined />, label: 'AJUSTES' },
   ];
 
-  const adminItem = { key: 'admin-dashboard', icon: <ControlOutlined />, label: 'ADMIN PANEL' };
-  const itemsToShow = currentUser?.role === 'admin' ? [...navItems, adminItem] : navItems;
+  const adminItems = [
+    { key: 'admin-dashboard', icon: <ControlOutlined />, label: 'ADMIN PANEL' },
+    { key: 'admin-cartelera', icon: <FilePdfOutlined />, label: 'CARTELERA' },
+  ];
+  const itemsToShow = currentUser?.role === 'admin' ? [...navItems, ...adminItems] : navItems;
 
   const renderContent = () => {
     switch (currentView) {
       case 'live': return <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
+      case 'replays': return <ReplaysView />;
       case 'history': return <UserHistoryView />;
       case 'wallet': return <UserWalletView balance={balance} setBalance={setBalance} />;
       case 'settings': return <UserSettingsView onLogout={onLogout} />;
       case 'admin-dashboard': return currentUser?.role === 'admin' ? <AdminDashboard /> : <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
+      case 'admin-cartelera': return currentUser?.role === 'admin' ? <AdminCarteleraView /> : <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
       default: return <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
     }
   };
@@ -63,8 +71,8 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
         backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => setCurrentView('live')}>
-           <img src="/official_logo.png" style={{ height: 24 }} alt="Coliceo Logo" />
-           <Title level={5} style={{ color: '#fff', margin: 0, fontWeight: 700, letterSpacing: '2px', fontFamily: 'Outfit', textTransform: 'uppercase', fontSize: 13 }}>COLICEO ANGEL CRUZ</Title>
+           <img src="/official_logo.png" style={{ height: 24 }} alt="Coliseo Logo" />
+           <Title level={5} style={{ color: '#fff', margin: 0, fontWeight: 700, letterSpacing: '2px', fontFamily: 'Outfit', textTransform: 'uppercase', fontSize: 13 }}>COLISEO ANGEL CRUZ</Title>
         </div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -190,6 +198,10 @@ function App() {
   const { play } = useSound();
 
   useEffect(() => {
+    balanceRef.current = balance;
+  }, [balance]);
+
+  useEffect(() => {
     const syncUser = async (user) => {
       if (!user) return;
       try {
@@ -213,14 +225,12 @@ function App() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           await syncUser(user);
-          // Pre-fetch live event to warm up
           await rawFetch(`events?select=id&limit=1`);
         }
       } catch (err) {
         console.error('Auth Init Error:', err);
       } finally {
         setIsInitialized(true);
-        // Minimum hydration time for aesthetics
         setTimeout(() => setIsDataReady(true), 2000);
       }
     };
@@ -228,7 +238,7 @@ function App() {
     initApp();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
         syncUser(session.user);
       } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
@@ -237,6 +247,12 @@ function App() {
       }
     });
 
+    return () => {
+        if (subscription) subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
     // Global Real-time Sync for balance & Win Sound
     let balanceChannel;
     if (currentUser?.id) {
@@ -245,7 +261,13 @@ function App() {
           if (payload.new) {
               const newBalance = parseFloat(payload.new.balance);
               const oldBalance = parseFloat(balanceRef.current);
-              if (newBalance > oldBalance) play('WIN');
+              
+              console.log('💰 [Sync Realtime] Nuevo Saldo:', newBalance, 'Anterior:', oldBalance);
+              
+              if (newBalance > oldBalance) {
+                console.log('🎉 [Sound] Play WIN');
+                play('WIN');
+              }
               setBalance(newBalance);
               balanceRef.current = newBalance;
           }
@@ -254,7 +276,6 @@ function App() {
     }
 
     return () => {
-       if (subscription) subscription.unsubscribe();
        if (balanceChannel) supabase.removeChannel(balanceChannel);
     };
   }, [currentUser?.id]);

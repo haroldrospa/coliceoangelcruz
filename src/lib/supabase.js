@@ -1,10 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // PLATINUM HARDCODE FIX (Bypassing .env issues)
-const supabaseUrl = 'https://znhvjpyvdawmapxreypq.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuaHZqcHl2ZGF3bWFweHJleXBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTUxNDMsImV4cCI6MjA5MDI5MTE0M30.Zj4eIauG_Ej0KmEj4g3YiCQvbXKK9dqvXvcZuoYZtTA'
-
-export { supabaseUrl, supabaseAnonKey };
+export const supabaseUrl = 'https://znhvjpyvdawmapxreypq.supabase.co';
+export const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpuaHZqcHl2ZGF3bWFweHJleXBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTUxNDMsImV4cCI6MjA5MDI5MTE0M30.Zj4eIauG_Ej0KmEj4g3YiCQvbXKK9dqvXvcZuoYZtTA';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   db: {
@@ -21,7 +19,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // UNIVERSAL TACTICAL BYPASS (Force apikey-in-headers to fix 406 Error)
 export const rawFetch = async (endpoint, options = {}) => {
   const method = options.method || 'GET';
-  const url = `${supabaseUrl}/rest/v1/${endpoint}`;
+  const queryStr = options.query ? (endpoint.includes('?') ? `&${options.query}` : `?${options.query}`) : '';
+  const url = `${supabaseUrl}/rest/v1/${endpoint}${queryStr}`;
   
   const headers = { 
     'apikey': supabaseAnonKey,
@@ -47,7 +46,8 @@ export const rawFetch = async (endpoint, options = {}) => {
     throw new Error(`Fetch Error: ${response.status}`);
   }
 
-  const data = await response.json();
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : { success: true };
   console.log(`[rawFetch] ${endpoint} SUCCESS:`, data);
   return data;
 };

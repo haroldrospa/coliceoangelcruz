@@ -57,7 +57,7 @@ const SplashScreen = ({ isReady }) => {
           fontSize: 22,
           textShadow: '0 0 10px rgba(212,175,55,0.2)'
         }}>
-          COLICEO ANGEL CRUZ
+          COLISEO ANGEL CRUZ
         </Title>
         <Text style={{ 
           color: 'rgba(255,255,255,0.3)', 

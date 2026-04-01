@@ -187,7 +187,7 @@ const LoginView = ({ onLogin }) => {
                 letterSpacing: '4px', 
                 fontSize: 12
              }}>
-                COLICEO
+                COLISEO
              </Title>
              <Title level={2} style={{ 
                 margin: '2px 0 0 0', 
@@ -243,7 +243,7 @@ const LoginView = ({ onLogin }) => {
             margin: 0,
             opacity: 0.9
           }}>
-             COLICEO ANGEL CRUZ
+             COLISEO ANGEL CRUZ
           </Title>
           <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 7, textTransform: 'uppercase', letterSpacing: '2px', display: 'block', marginTop: 4 }}>
              Acceso de Nivel Platinum
@@ -311,7 +311,7 @@ const LoginView = ({ onLogin }) => {
               SISTEMA DE SEGURIDAD FINTECH SSL
            </div>
            <div style={{ margin: '12px 0 0 0', color: 'rgba(255,255,255,0.3)', fontSize: 8, letterSpacing: '1px' }}>
-              &copy; 2026 COLICEO ANGEL CRUZ. TODOS LOS DERECHOS RESERVADOS.
+              &copy; 2026 COLISEO ANGEL CRUZ. TODOS LOS DERECHOS RESERVADOS.
            </div>
         </div>
       </Card>

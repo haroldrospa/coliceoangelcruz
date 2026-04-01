@@ -140,7 +140,7 @@ const UserSettingsView = ({ onLogout }) => {
       </Button>
 
       <div style={{ textAlign: 'center', marginTop: 40, opacity: 0.2 }}>
-         <Text style={{ color: '#fff', fontSize: 8, letterSpacing: '2px', fontWeight: 700 }}>COLICEO ANGEL CRUZ • v2.0.0 (GREEN EDITION)</Text>
+         <Text style={{ color: '#fff', fontSize: 8, letterSpacing: '2px', fontWeight: 700 }}>COLISEO ANGEL CRUZ • v2.0.0 (GREEN EDITION)</Text>
          <Text style={{ color: '#fff', fontSize: 7, letterSpacing: '1px', display: 'block', marginTop: 4 }}>&copy; 2026 TODOS LOS DERECHOS RESERVADOS.</Text>
       </div>
     </div>
