@@ -17,6 +17,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [globalStream, setGlobalStream] = useState('');
+  const [showCartelera, setShowCartelera] = useState(true);
   const [isSavingStream, setIsSavingStream] = useState(false);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState([]);
@@ -27,10 +28,13 @@ const AdminDashboard = () => {
         const data = await rawFetch(`events?select=*&order=created_at.desc`);
         if (data) setEvents(data);
         
-        // Fetch Global Stream URL from DB
-        const settings = await rawFetch(`settings?id=eq.live_stream_url`);
-        if (settings && settings[0]) {
-            setGlobalStream(settings[0].value);
+        // Fetch Global Settings from DB
+        const settings = await rawFetch(`settings`);
+        if (settings) {
+            const stream = settings.find(s => s.id === 'live_stream_url');
+            const cartelera = settings.find(s => s.id === 'show_cartelera');
+            if (stream) setGlobalStream(stream.value);
+            if (cartelera) setShowCartelera(cartelera.value === 'true');
         }
       } else {
         const deps = await rawFetch(`deposits?select=*,users(email)&order=created_at.desc`);
@@ -47,8 +51,9 @@ const AdminDashboard = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'deposits' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, (payload) => {
-          if (payload.new && payload.new.id === 'live_stream_url') {
-              setGlobalStream(payload.new.value);
+          if (payload.new) {
+              if (payload.new.id === 'live_stream_url') setGlobalStream(payload.new.value);
+              if (payload.new.id === 'show_cartelera') setShowCartelera(payload.new.value === 'true');
           }
       })
       .subscribe();
@@ -271,6 +276,19 @@ const AdminDashboard = () => {
     } finally {
         setIsSavingStream(false);
     }
+  };
+
+  const handleToggleCartelera = async (checked) => {
+     try {
+         await rawFetch(`settings?id=eq.show_cartelera`, {
+             method: 'PATCH',
+             body: { value: String(checked) }
+         });
+         setShowCartelera(checked);
+         message.success(checked ? 'CARTELERA VISIBLE PARA USUARIOS' : 'CARTELERA OCULTA PARA USUARIOS');
+     } catch (e) {
+         message.error('Error al actualizar cartelera');
+     }
   };
 
   const handleApproveDeposit = async (deposit) => {
@@ -513,13 +531,25 @@ const AdminDashboard = () => {
                  }
                />
             </Col>
-            <Col xs={24} md={7} style={{ textAlign: 'right' }}>
-               <Button 
+             <Col xs={24} md={3} style={{ textAlign: 'center' }}>
+                <Text style={{ color: 'var(--text-muted)', fontSize: 10, display: 'block', marginBottom: 4 }}>CARTELERA</Text>
+                <Select 
+                    value={showCartelera} 
+                    onChange={handleToggleCartelera}
+                    style={{ width: '100%', background: '#000' }}
+                    options={[
+                        { value: true, label: 'VER' },
+                        { value: false, label: 'OCULTAR' }
+                    ]}
+                />
+             </Col>
+             <Col xs={24} md={4} style={{ textAlign: 'right' }}>
+                <Button 
                 onClick={handleFixStorage} 
                 loading={loading}
-                style={{ background: 'rgba(212,175,55,0.2)', color: '#d4af37', borderColor: '#d4af37', width: '100%' }}
+                style={{ background: 'rgba(212,175,55,0.2)', color: '#d4af37', borderColor: '#d4af37', width: '100%', height: 32 }}
                >
-                 REPARAR CARPETA VIDEOS
+                 REPARAR CARPETA
                </Button>
             </Col>
          </Row>

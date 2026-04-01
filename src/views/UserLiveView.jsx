@@ -95,6 +95,7 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   const [carteleraFilter, setCarteleraFilter] = useState('ALL'); // 'ALL', 'PENDING', 'FINISHED'
   const [chatInput, setChatInput] = useState('');
   const [globalStream, setGlobalStream] = useState('');
+  const [showCartelera, setShowCartelera] = useState(true);
   const chatEndRef = useRef(null);
 
   // Fight State
@@ -159,8 +160,13 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
         const initialMsgs = await rawFetch(`messages?select=*&order=created_at.asc&limit=50`);
         if (initialMsgs) setChatMessages(initialMsgs);
 
-        const settings = await rawFetch(`settings?id=eq.live_stream_url`);
-        if (settings && settings[0]) setGlobalStream(settings[0].value);
+        const settings = await rawFetch(`settings`);
+        if (settings) {
+            const stream = settings.find(s => s.id === 'live_stream_url');
+            const cartelera = settings.find(s => s.id === 'show_cartelera');
+            if (stream) setGlobalStream(stream.value);
+            if (cartelera) setShowCartelera(cartelera.value === 'true');
+        }
       } catch (err) {
         console.error('Core Sync Err:', err);
       }
@@ -209,8 +215,9 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
-          if (payload.new && payload.new.id === 'live_stream_url') {
-              setGlobalStream(payload.new.value);
+          if (payload.new) {
+              if (payload.new.id === 'live_stream_url') setGlobalStream(payload.new.value);
+              if (payload.new.id === 'show_cartelera') setShowCartelera(payload.new.value === 'true');
           }
       })
       .subscribe((status) => {
@@ -492,161 +499,163 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
       </Row>
 
       {/* NEW PROMINENT PROGRAM SECTION UNDERNEATH */}
-      <div style={{ marginTop: 40, marginBottom: 20 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <ThunderboltFilled style={{ color: '#10b981', fontSize: 20 }} />
-                <Title level={4} style={{ color: '#fff', margin: 0, fontSize: 18, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px' }}>CARTELERA DE HOY</Title>
-             </div>
-             
-             <div style={{ flex: 1, minWidth: 20, height: '1px', background: 'linear-gradient(90deg, rgba(16,185,129,0.3) 0%, transparent 100%)' }} />
-             
-             <Space>
-                {['ALL', 'PENDING', 'FINISHED'].map(f => (
-                    <Button 
-                        key={f}
-                        size="small"
-                        onClick={() => setCarteleraFilter(f)}
-                        style={{ 
-                            background: carteleraFilter === f ? 'rgba(16,185,129,0.2)' : 'transparent',
-                            color: carteleraFilter === f ? '#10b981' : 'var(--text-muted)',
-                            border: carteleraFilter === f ? '1px solid #10b981' : '1px solid rgba(255,255,255,0.05)',
-                            fontSize: 10,
-                            fontWeight: 800,
-                            borderRadius: 6
-                        }}
-                    >
-                        {f === 'ALL' ? 'TODAS' : f === 'PENDING' ? 'PENDIENTES' : 'CERRADAS'}
-                    </Button>
-                ))}
-             </Space>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {(() => {
-                const filtered = todayProgram.filter(e => {
-                    if (carteleraFilter === 'PENDING') return e.status !== 'FINISHED';
-                    if (carteleraFilter === 'FINISHED') return e.status === 'FINISHED';
-                    return true;
-                });
-                
-                filtered.sort((a, b) => {
-                    const statusVal = { 'LIVE': 1, 'CLOSED': 2, 'FINISHED': 3 };
-                    const diff = (statusVal[a.status] || 99) - (statusVal[b.status] || 99);
-                    if (diff !== 0) return diff;
+      {showCartelera && (
+          <div style={{ marginTop: 40, marginBottom: 20 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <ThunderboltFilled style={{ color: '#10b981', fontSize: 20 }} />
+                    <Title level={4} style={{ color: '#fff', margin: 0, fontSize: 18, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px' }}>CARTELERA DE HOY</Title>
+                 </div>
+                 
+                 <div style={{ flex: 1, minWidth: 20, height: '1px', background: 'linear-gradient(90deg, rgba(16,185,129,0.3) 0%, transparent 100%)' }} />
+                 
+                 <Space>
+                    {['ALL', 'PENDING', 'FINISHED'].map(f => (
+                        <Button 
+                            key={f}
+                            size="small"
+                            onClick={() => setCarteleraFilter(f)}
+                            style={{ 
+                                background: carteleraFilter === f ? 'rgba(16,185,129,0.2)' : 'transparent',
+                                color: carteleraFilter === f ? '#10b981' : 'var(--text-muted)',
+                                border: carteleraFilter === f ? '1px solid #10b981' : '1px solid rgba(255,255,255,0.05)',
+                                fontSize: 10,
+                                fontWeight: 800,
+                                borderRadius: 6
+                            }}
+                        >
+                            {f === 'ALL' ? 'TODAS' : f === 'PENDING' ? 'PENDIENTES' : 'CERRADAS'}
+                        </Button>
+                    ))}
+                 </Space>
+              </div>
+    
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {(() => {
+                    const filtered = todayProgram.filter(e => {
+                        if (carteleraFilter === 'PENDING') return e.status !== 'FINISHED';
+                        if (carteleraFilter === 'FINISHED') return e.status === 'FINISHED';
+                        return true;
+                    });
                     
-                    const numA = parseInt((a.post_number || '0').replace(/\D/g, '')) || 0;
-                    const numB = parseInt((b.post_number || '0').replace(/\D/g, '')) || 0;
-                    return numA - numB;
-                });
-
-                
-                if (filtered.length === 0) return (
-                    <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px dashed rgba(255,255,255,0.05)' }}>
-                        <Text style={{ color: 'var(--text-muted)' }}>No hay combates en esta categoría de momento.</Text>
-                    </div>
-                );
-
-                return filtered.map((event, index) => {
-                    let aData = { weight: event.gallo_a_weight || '0-0.0' };
-                    let bData = { weight: event.gallo_b_weight || '0-0.0' };
-                    try { 
-                       const pA = JSON.parse(event.gallo_a_weight); 
-                       if (pA && typeof pA === 'object') aData = pA;
-                    } catch(e){}
-                    try { 
-                       const pB = JSON.parse(event.gallo_b_weight); 
-                       if (pB && typeof pB === 'object') bData = pB;
-                    } catch(e){}
-
-                    return (
-                    <div 
-                        key={event.id}
-                        onClick={() => setFightInfo(event)}
-                        className="list-item-hover"
-                        style={{ 
-                            background: event.id === fightInfo.id ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.02)', 
-                            border: event.id === fightInfo.id ? '1px solid #10b981' : '1px solid var(--glass-border)',
-                            borderRadius: 12,
-                            padding: '16px 20px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            gap: 16,
-                            position: 'relative',
-                            overflow: 'hidden'
-                        }}
-                    >
-                       <style>{`
-                          .list-item-hover:hover { background: rgba(255,255,255,0.05) !important; transform: translateX(5px); }
-                       `}</style>
-
-                       {/* Status Indicator Bar */}
-                       <div style={{ width: 4, height: 40, background: event.status === 'LIVE' ? '#10b981' : (event.status === 'FINISHED' ? '#d4af37' : 'rgba(255,255,255,0.1)'), borderRadius: 2 }} />
-
-                       <div style={{ width: 80 }}>
-                          <Text style={{ color: event.id === fightInfo.id ? '#10b981' : 'var(--text-muted)', fontSize: 10, fontWeight: 900, display: 'block' }}>PELEA #{index + 1}</Text>
-                          <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 8, fontWeight: 800 }}>POSTE {event.post_number}</Text>
-                       </div>
-
-                       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 24, paddingLeft: 20 }}>
-                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                {aData.clase === 'P' && <Tag color="gold" style={{ margin: 0, padding: '0 4px', fontSize: 10, borderRadius: 4, fontWeight: 800 }}>P</Tag>}
-                                <Text style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{event.gallo_a_name}</Text>
-                                <Tag style={{ background: 'rgba(16,185,129,0.1)', border: 'none', color: '#10b981', fontSize: 11, fontWeight: 800 }}>{event.gallo_a_odds}</Tag>
-                             </div>
-                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
-                                {aData.turno && <span>T: {aData.turno}</span>}
-                                {aData.marca && <span>M: {aData.marca}</span>}
-                                {aData.color && <span>{aData.color}</span>}
-                                <span style={{ color: '#10b981', fontWeight: 800, background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>{aData.weight}</span>
-                             </div>
-                          </div>
-
-                          <div style={{ color: 'rgba(255,255,255,0.1)', fontSize: 10, fontWeight: 900 }}>VS</div>
-
-                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <Tag style={{ background: 'rgba(16,185,129,0.1)', border: 'none', color: '#10b981', fontSize: 11, fontWeight: 800 }}>{event.gallo_b_odds}</Tag>
-                                <Text style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{event.gallo_b_name}</Text>
-                                {bData.clase === 'P' && <Tag color="gold" style={{ margin: 0, padding: '0 4px', fontSize: 10, borderRadius: 4, fontWeight: 800 }}>P</Tag>}
-                             </div>
-                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
-                                <span style={{ color: '#10b981', fontWeight: 800, background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>{bData.weight}</span>
-                                {bData.color && <span>{bData.color}</span>}
-                                {bData.marca && <span>M: {bData.marca}</span>}
-                                {bData.turno && <span>T: {bData.turno}</span>}
-                             </div>
-                          </div>
-                       </div>
-
-
-                       <div style={{ width: 150, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                          <Tag color={event.status === 'LIVE' ? 'green' : (event.status === 'FINISHED' ? 'gold' : 'default')} style={{ fontSize: 8, borderRadius: 4, margin: 0, padding: '2px 6px' }}>
-                              {event.status === 'LIVE' ? 'PRÓXIMAMENTE' : (event.status === 'FINISHED' ? 'FINALIZADA' : 'PROGRAMADA')}
-                          </Tag>
-                          
-                          {event.status === 'FINISHED' ? (
-                             <div style={{ color: '#d4af37', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <TrophyOutlined />
-                                <span style={{ fontSize: 9 }}>{event.winner_side === 'DRAW' ? 'TABLAS' : (event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name)}</span>
-                             </div>
-                          ) : (
-                             event.status === 'LIVE' ? (
-                                <Text style={{ color: '#10b981', fontSize: 8, fontWeight: 800 }}>VER AHORA</Text>
-                             ) : (
-                                <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 8 }}>ESPERANDO</Text>
-                             )
-                          )}
-                       </div>
-                    </div>
-                );
-                });
-            })()}
+                    filtered.sort((a, b) => {
+                        const statusVal = { 'LIVE': 1, 'CLOSED': 2, 'FINISHED': 3 };
+                        const diff = (statusVal[a.status] || 99) - (statusVal[b.status] || 99);
+                        if (diff !== 0) return diff;
+                        
+                        const numA = parseInt((a.post_number || '0').replace(/\D/g, '')) || 0;
+                        const numB = parseInt((b.post_number || '0').replace(/\D/g, '')) || 0;
+                        return numA - numB;
+                    });
+    
+                    
+                    if (filtered.length === 0) return (
+                        <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1px dashed rgba(255,255,255,0.05)' }}>
+                            <Text style={{ color: 'var(--text-muted)' }}>No hay combates en esta categoría de momento.</Text>
+                        </div>
+                    );
+    
+                    return filtered.map((event, index) => {
+                        let aData = { weight: event.gallo_a_weight || '0-0.0' };
+                        let bData = { weight: event.gallo_b_weight || '0-0.0' };
+                        try { 
+                           const pA = JSON.parse(event.gallo_a_weight); 
+                           if (pA && typeof pA === 'object') aData = pA;
+                        } catch(e){}
+                        try { 
+                           const pB = JSON.parse(event.gallo_b_weight); 
+                           if (pB && typeof pB === 'object') bData = pB;
+                        } catch(e){}
+    
+                        return (
+                        <div 
+                            key={event.id}
+                            onClick={() => setFightInfo(event)}
+                            className="list-item-hover"
+                            style={{ 
+                                background: event.id === fightInfo.id ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.02)', 
+                                border: event.id === fightInfo.id ? '1px solid #10b981' : '1px solid var(--glass-border)',
+                                borderRadius: 12,
+                                padding: '16px 20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                gap: 16,
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}
+                        >
+                           <style>{`
+                              .list-item-hover:hover { background: rgba(255,255,255,0.05) !important; transform: translateX(5px); }
+                           `}</style>
+    
+                           {/* Status Indicator Bar */}
+                           <div style={{ width: 4, height: 40, background: event.status === 'LIVE' ? '#10b981' : (event.status === 'FINISHED' ? '#d4af37' : 'rgba(255,255,255,0.1)'), borderRadius: 2 }} />
+    
+                           <div style={{ width: 80 }}>
+                              <Text style={{ color: event.id === fightInfo.id ? '#10b981' : 'var(--text-muted)', fontSize: 10, fontWeight: 900, display: 'block' }}>PELEA #{index + 1}</Text>
+                              <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 8, fontWeight: 800 }}>POSTE {event.post_number}</Text>
+                           </div>
+    
+                           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 24, paddingLeft: 20 }}>
+                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    {aData.clase === 'P' && <Tag color="gold" style={{ margin: 0, padding: '0 4px', fontSize: 10, borderRadius: 4, fontWeight: 800 }}>P</Tag>}
+                                    <Text style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{event.gallo_a_name}</Text>
+                                    <Tag style={{ background: 'rgba(16,185,129,0.1)', border: 'none', color: '#10b981', fontSize: 11, fontWeight: 800 }}>{event.gallo_a_odds}</Tag>
+                                 </div>
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
+                                    {aData.turno && <span>T: {aData.turno}</span>}
+                                    {aData.marca && <span>M: {aData.marca}</span>}
+                                    {aData.color && <span>{aData.color}</span>}
+                                    <span style={{ color: '#10b981', fontWeight: 800, background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>{aData.weight}</span>
+                                 </div>
+                              </div>
+    
+                              <div style={{ color: 'rgba(255,255,255,0.1)', fontSize: 10, fontWeight: 900 }}>VS</div>
+    
+                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <Tag style={{ background: 'rgba(16,185,129,0.1)', border: 'none', color: '#10b981', fontSize: 11, fontWeight: 800 }}>{event.gallo_b_odds}</Tag>
+                                    <Text style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{event.gallo_b_name}</Text>
+                                    {bData.clase === 'P' && <Tag color="gold" style={{ margin: 0, padding: '0 4px', fontSize: 10, borderRadius: 4, fontWeight: 800 }}>P</Tag>}
+                                 </div>
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
+                                    <span style={{ color: '#10b981', fontWeight: 800, background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>{bData.weight}</span>
+                                    {bData.color && <span>{bData.color}</span>}
+                                    {bData.marca && <span>M: {bData.marca}</span>}
+                                    {bData.turno && <span>T: {bData.turno}</span>}
+                                 </div>
+                              </div>
+                           </div>
+    
+    
+                           <div style={{ width: 150, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                              <Tag color={event.status === 'LIVE' ? 'green' : (event.status === 'FINISHED' ? 'gold' : 'default')} style={{ fontSize: 8, borderRadius: 4, margin: 0, padding: '2px 6px' }}>
+                                  {event.status === 'LIVE' ? 'PRÓXIMAMENTE' : (event.status === 'FINISHED' ? 'FINALIZADA' : 'PROGRAMADA')}
+                              </Tag>
+                              
+                              {event.status === 'FINISHED' ? (
+                                 <div style={{ color: '#d4af37', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <TrophyOutlined />
+                                    <span style={{ fontSize: 9 }}>{event.winner_side === 'DRAW' ? 'TABLAS' : (event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name)}</span>
+                                 </div>
+                              ) : (
+                                 event.status === 'LIVE' ? (
+                                    <Text style={{ color: '#10b981', fontSize: 8, fontWeight: 800 }}>VER AHORA</Text>
+                                 ) : (
+                                    <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 8 }}>ESPERANDO</Text>
+                                 )
+                              )}
+                           </div>
+                        </div>
+                    );
+                    });
+                })()}
+              </div>
           </div>
-      </div>
+      )}
 
       <Modal open={isBetModalOpen} onCancel={() => !loading && setIsBetModalOpen(false)} footer={null} centered width={360} styles={{ body: { padding: 0 } }}>
         <div style={{ backgroundColor: 'var(--charcoal)', padding: '24px 20px', borderRadius: 12, border: '1px solid rgba(16,185,129,0.3)' }}>
