@@ -3,11 +3,59 @@ import { Button, Space, Typography, Card, Modal, InputNumber, Row, Col, Divider,
 import { SendOutlined, MessageFilled, SignalFilled, ThunderboltFilled, PlayCircleFilled, EyeOutlined, TrophyOutlined } from '@ant-design/icons';
 import { supabase, rawFetch } from '../lib/supabase';
 import { useSound } from '../hooks/useSound';
+import videojs from 'video.js';
+import 'video.js/dist/video-js.css';
 
 const { Title, Text } = Typography;
 
+// Specialized Video.js Player for HLS (.m3u8) streams
+const HLSVideoPlayer = ({ url }) => {
+    const videoRef = useRef(null);
+    const playerRef = useRef(null);
+
+    useEffect(() => {
+        if (!videoRef.current) return;
+
+        playerRef.current = videojs(videoRef.current, {
+            autoplay: true,
+            controls: true,
+            responsive: true,
+            fluid: true,
+            sources: [{ src: url, type: 'application/x-mpegURL' }],
+            liveui: true,
+            playbackRates: [1],
+            controlBar: {
+                children: [
+                    'playToggle',
+                    'volumePanel',
+                    'fullscreenToggle',
+                ],
+            },
+        });
+
+        return () => {
+            if (playerRef.current) {
+                playerRef.current.dispose();
+            }
+        };
+    }, [url]);
+
+    return (
+        <div data-vjs-player style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
+            <video ref={videoRef} className="video-js vjs-big-play-centered vjs-theme-city" />
+            <style>{`
+                .vjs-theme-city .vjs-control-bar { background: rgba(10,10,10,0.8); backdrop-filter: blur(10px); }
+                .vjs-theme-city .vjs-big-play-button { background: rgba(16,185,129,0.9); border: none; border-radius: 50%; width: 60px; height: 60px; line-height: 60px; margin-top: -30px; margin-left: -30px; }
+                .vjs-theme-city .vjs-play-progress { background: #10b981; }
+            `}</style>
+        </div>
+    );
+};
+
 // Premium Dacast Iframe Player Wrapper & Standby Mode
 const DacastPlayer = ({ status, stream_url }) => {
+    const isHLS = stream_url?.toLowerCase().includes('.m3u8');
+
   if (status !== 'LIVE') {
     return (
       <div style={{ 
@@ -54,16 +102,20 @@ const DacastPlayer = ({ status, stream_url }) => {
         <Text style={{ color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.5px' }}>EN VIVO</Text>
       </div>
 
-      <iframe 
-        src={stream_url || "https://iframe.dacast.com/live/55197822-2232-7fde-fcf0-9369fe4022fb/013bad74-e5d5-4478-824f-893cedb06b66"} 
-        width="100%" 
-        height="100%" 
-        frameBorder="0" 
-        scrolling="no" 
-        allow="autoplay; encrypted-media" 
-        allowFullScreen 
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-      />
+      {isHLS ? (
+        <HLSVideoPlayer url={stream_url} />
+      ) : (
+        <iframe 
+            src={stream_url || "https://iframe.dacast.com/live/55197822-2232-7fde-fcf0-9369fe4022fb/013bad74-e5d5-4478-824f-893cedb06b66"} 
+            width="100%" 
+            height="100%" 
+            frameBorder="0" 
+            scrolling="no" 
+            allow="autoplay; encrypted-media" 
+            allowFullScreen 
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+        />
+      )}
       
       <style>{`
         @keyframes blink {

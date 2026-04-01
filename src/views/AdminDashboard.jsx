@@ -516,7 +516,7 @@ const AdminDashboard = () => {
             </Col>
             <Col xs={24} md={7}>
                <Input 
-                 placeholder="URL DE TRANSMISIÓN (CASTR/DACAST)" 
+                 placeholder="URL DE TRANSMISIÓN (CASTR/M3U8/DACAST)" 
                  value={globalStream} 
                  onChange={e => setGlobalStream(e.target.value)}
                  style={{ background: '#000', border: '1px solid var(--glass-border)', color: '#fff' }}
