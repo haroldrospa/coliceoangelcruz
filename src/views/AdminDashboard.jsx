@@ -18,7 +18,9 @@ const AdminDashboard = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [globalStream, setGlobalStream] = useState('');
   const [showCartelera, setShowCartelera] = useState(true);
+  const [streamMode, setStreamMode] = useState('LIVE');
   const [isSavingStream, setIsSavingStream] = useState(false);
+  const [isSavingMode, setIsSavingMode] = useState(false);
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState([]);
 
@@ -33,8 +35,10 @@ const AdminDashboard = () => {
         if (settings) {
             const stream = settings.find(s => s.id === 'live_stream_url');
             const cartelera = settings.find(s => s.id === 'show_cartelera');
+            const mode = settings.find(s => s.id === 'stream_logic_mode');
             if (stream) setGlobalStream(stream.value);
             if (cartelera) setShowCartelera(cartelera.value === 'true');
+            if (mode) setStreamMode(mode.value);
         }
       } else {
         const deps = await rawFetch(`deposits?select=*,users(email)&order=created_at.desc`);
@@ -54,6 +58,7 @@ const AdminDashboard = () => {
           if (payload.new) {
               if (payload.new.id === 'live_stream_url') setGlobalStream(payload.new.value);
               if (payload.new.id === 'show_cartelera') setShowCartelera(payload.new.value === 'true');
+              if (payload.new.id === 'stream_logic_mode') setStreamMode(payload.new.value);
           }
       })
       .subscribe();
@@ -287,8 +292,24 @@ const AdminDashboard = () => {
          setShowCartelera(checked);
          message.success(checked ? 'CARTELERA VISIBLE PARA USUARIOS' : 'CARTELERA OCULTA PARA USUARIOS');
      } catch (e) {
-         message.error('Error al actualizar cartelera');
-     }
+      message.error('Error al actualizar cartelera');
+    }
+  };
+
+  const handleToggleStreamMode = async (val) => {
+    try {
+      setIsSavingMode(true);
+      setStreamMode(val);
+      await rawFetch(`settings?id=eq.stream_logic_mode`, { 
+        method: 'PATCH', 
+        body: { value: val } 
+      });
+      message.success(`SISTEMA EN MODO: ${val === 'LIVE' ? 'TRANSMISIÓN' : 'LOGO PUBLICITARIO'}`);
+    } catch (e) {
+      message.error('Error al cambiar modo de transmisión');
+    } finally {
+      setIsSavingMode(false);
+    }
   };
 
   const handleClearChat = async () => {
@@ -548,18 +569,31 @@ const AdminDashboard = () => {
                />
             </Col>
              <Col xs={24} md={3} style={{ textAlign: 'center' }}>
-                <Text style={{ color: 'var(--text-muted)', fontSize: 10, display: 'block', marginBottom: 4 }}>CARTELERA</Text>
-                <Select 
-                    value={showCartelera} 
-                    onChange={handleToggleCartelera}
-                    style={{ width: '100%', background: '#000' }}
-                    options={[
-                        { value: true, label: 'VER' },
-                        { value: false, label: 'OCULTAR' }
-                    ]}
-                />
-             </Col>
-             <Col xs={24} md={4} style={{ textAlign: 'right' }}>
+                 <Text style={{ color: 'var(--text-muted)', fontSize: 10, display: 'block', marginBottom: 4 }}>CARTELERA</Text>
+                 <Select 
+                     value={showCartelera} 
+                     onChange={handleToggleCartelera}
+                     style={{ width: '100%', background: '#000' }}
+                     options={[
+                         { value: true, label: 'VER' },
+                         { value: false, label: 'OCULTAR' }
+                     ]}
+                 />
+              </Col>
+              <Col xs={24} md={3} style={{ textAlign: 'center' }}>
+                 <Text style={{ color: 'var(--text-muted)', fontSize: 10, display: 'block', marginBottom: 4 }}>MODO LIVE</Text>
+                 <Select 
+                     value={streamMode} 
+                     onChange={handleToggleStreamMode}
+                     loading={isSavingMode}
+                     style={{ width: '100%', background: '#000' }}
+                     options={[
+                         { value: 'LIVE', label: 'VIVO' },
+                         { value: 'STANDBY', label: 'LOGO' }
+                     ]}
+                 />
+              </Col>
+              <Col xs={24} md={3} style={{ textAlign: 'right' }}>
                  <Space direction="vertical" style={{ width: '100%' }}>
                     <Button 
                         onClick={handleFixStorage} 

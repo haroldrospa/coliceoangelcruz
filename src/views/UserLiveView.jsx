@@ -60,9 +60,31 @@ const HLSVideoPlayer = ({ url }) => {
 };
 
 // Premium Dacast Iframe Player Wrapper & Standby Mode
-const DacastPlayer = ({ status, stream_url }) => {
+const DacastPlayer = ({ status, stream_url, streamMode }) => {
     const isHLS = stream_url?.toLowerCase().includes('.m3u8');
     const hasSignal = !!stream_url;
+
+    if (streamMode === 'STANDBY') {
+        return (
+          <div style={{ 
+              position: 'relative', width: '100%', paddingBottom: '56.25%', 
+              background: '#000', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+          }}>
+             <img 
+                src="/logo_coliseo.png" 
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} 
+                alt="Standby"
+             />
+             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%)' }} />
+             <div style={{ zIndex: 1, textAlign: 'center' }}>
+                <div style={{ width: 60, height: 60, border: '3px solid rgba(16,185,129,0.2)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 2s linear infinite', margin: '0 auto 20px' }} />
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: 800, letterSpacing: '4px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>TRANSMISIÓN EN BREVE</Text>
+             </div>
+             <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+          </div>
+        );
+    }
 
   if (status !== 'LIVE' && !hasSignal) {
     return (
@@ -156,6 +178,7 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   const [chatInput, setChatInput] = useState('');
   const [globalStream, setGlobalStream] = useState('');
   const [showCartelera, setShowCartelera] = useState(true);
+  const [streamMode, setStreamMode] = useState('LIVE');
   const chatEndRef = useRef(null);
   const channelRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -234,8 +257,10 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
         if (settings) {
             const stream = settings.find(s => s.id === 'live_stream_url');
             const cartelera = settings.find(s => s.id === 'show_cartelera');
+            const mode = settings.find(s => s.id === 'stream_logic_mode');
             if (stream) setGlobalStream(stream.value);
             if (cartelera) setShowCartelera(cartelera.value === 'true');
+            if (mode) setStreamMode(mode.value);
         }
       } catch (err) {
         console.error('Core Sync Err:', err);
@@ -312,6 +337,7 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
           if (payload.new) {
               if (payload.new.id === 'live_stream_url') setGlobalStream(payload.new.value);
               if (payload.new.id === 'show_cartelera') setShowCartelera(payload.new.value === 'true');
+              if (payload.new.id === 'stream_logic_mode') setStreamMode(payload.new.value);
           }
       })
       .subscribe((status) => {
@@ -464,7 +490,11 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
       {/* PRIMARY BATTLE ZONE: Video & Chat Aligned */}
       <Row gutter={[16, 16]} align="stretch" style={{ minHeight: 400 }}>
         <Col xs={24} lg={16} className="player-container">
-           <DacastPlayer status={fightInfo.status} stream_url={fightInfo.stream_url || globalStream} />
+           <DacastPlayer 
+                status={fightInfo.status} 
+                stream_url={fightInfo.stream_url || globalStream} 
+                streamMode={streamMode}
+           />
         </Col>
 
         <Col xs={24} lg={8} style={{ display: 'flex' }}>
