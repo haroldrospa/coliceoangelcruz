@@ -260,11 +260,18 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
         setChatMessages(prev => {
-            // Deduplicate: Don't add if the ID (UUID or TempID) already exists
-            const exists = prev.some(m => m.id === payload.new.id || (m.text === payload.new.text && m.user_id === payload.new.user_id && Math.abs(new Date(m.created_at) - new Date(payload.new.created_at)) < 2000));
-            if (exists) return prev;
+            // Deduplicate: Compare text and sender only if it's within 5 seconds to avoid conflicts with optimistic UI
+            const isDuplicate = prev.some(m => 
+                m.id === payload.new.id || 
+                (m.text === payload.new.text && m.user_id === payload.new.user_id && Math.abs(new Date(m.created_at) - new Date(payload.new.created_at)) < 5000)
+            );
             
-            if (payload.new.user_id !== userId) play('NOTIFY');
+            if (isDuplicate) return prev;
+            
+            if (payload.new.user_id !== userId) {
+                play('NOTIFY');
+                message.info(`Nuevo mensaje de ${payload.new.user_email}`);
+            }
             return [...prev, payload.new];
         });
       })
@@ -286,13 +293,13 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   const chatContainerRef = useRef(null);
   const [lastMessageCount, setLastMessageCount] = useState(0);
 
-  // 🕒 EPHEMERAL ENGINE: Auto-destruct messages after 15 seconds
+  // 🕒 EPHEMERAL ENGINE: Auto-destruct messages after 120 seconds (2 minutes)
   useEffect(() => {
     const ticker = setInterval(() => {
       const now = Date.now();
       setChatMessages(prev => prev.filter(msg => {
-        const msgTime = msg.timestamp || new Date(msg.created_at).getTime();
-        return (now - msgTime) < 15000;
+        const msgTime = new Date(msg.created_at).getTime();
+        return (now - msgTime) < 120000; // 120 seconds
       }));
     }, 1000);
     return () => clearInterval(ticker);
