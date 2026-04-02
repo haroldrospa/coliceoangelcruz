@@ -157,6 +157,8 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   const [globalStream, setGlobalStream] = useState('');
   const [showCartelera, setShowCartelera] = useState(true);
   const chatEndRef = useRef(null);
+  const channelRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   // Fight State
   const [fightInfo, setFightInfo] = useState({
@@ -241,9 +243,34 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
     };
 
     initData();
+  }, []);
 
-    // Real-time Engine
-    const eventChannel = supabase.channel('stable-view-sync')
+  // 3. Real-time Engine
+  useEffect(() => {
+    // Join Broadcast & Change Channel
+    const channel = supabase.channel('chat_live', {
+        config: {
+            broadcast: { self: true },
+        },
+    });
+
+    channelRef.current = channel;
+
+    channel
+      .on('broadcast', { event: 'chat_message' }, ({ payload }) => {
+          setChatMessages(prev => {
+              // Deduplicate by content and user in a short window
+              const isDuplicate = prev.some(m => 
+                  m.text === payload.text && 
+                  m.user_id === payload.user_id && 
+                  Math.abs(Date.now() - new Date(m.created_at).getTime()) < 2000
+              );
+              if (isDuplicate) return prev;
+              
+              if (payload.user_id !== userId) play('NOTIFY');
+              return [...prev, payload];
+          });
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, payload => {
         if (payload.eventType === 'DELETE') {
             setTodayProgram(prev => prev.filter(e => e.id !== payload.old.id));
@@ -273,22 +300,11 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
         }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-        if (!payload.new || !payload.new.id) return;
+        // Only load if not already in state from Broadcast
         setChatMessages(prev => {
-            // Replace optimistic temp message if same text+user exists with a fake id, else just add
-            const tempIdx = prev.findIndex(m => 
-                typeof m.id === 'string' && m.id.startsWith('temp_') &&
-                m.text === payload.new.text && 
-                m.user_id === payload.new.user_id
-            );
-            if (tempIdx > -1) {
-                // Replace temp message with real one from DB
-                const updated = [...prev];
-                updated[tempIdx] = payload.new;
-                return updated;
-            }
-            // Ignore if exact UUID already exists
             if (prev.some(m => m.id === payload.new.id)) return prev;
+            // If it's a message from someone else that we didn't get via broadcast
+            if (prev.some(m => m.text === payload.new.text && m.user_id === payload.new.user_id)) return prev;
             return [...prev, payload.new];
         });
       })
@@ -300,16 +316,15 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
       })
       .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
-              console.log('🛡️ CANAL TÁCTICO ASEGURADO: Realtime Activo');
+              console.log('🛡️ CANAL HÍBRIDO ASEGURADO: Realtime + Broadcast Activo');
           }
       });
 
     return () => {
-        supabase.removeChannel(eventChannel);
+        supabase.removeChannel(channel);
     };
   }, [userId]);
 
-  const chatContainerRef = useRef(null);
   const [lastMessageCount, setLastMessageCount] = useState(0);
 
   // 🕒 EPHEMERAL ENGINE: Auto-destruct LIVE messages after 5 minutes, but keep history
@@ -411,35 +426,36 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !userId) return;
     const text = chatInput.trim();
-    const tempId = `temp_${Date.now()}`;
     setChatInput('');
 
-    // OPTIMISTIC UPDATE: Show message immediately for the sender with a temp ID
-    const optimisticMsg = {
-        id: tempId,
+    const messagePayload = {
+        id: `br_${Date.now()}`, // Temporary broadcast ID
         user_id: userId,
         user_email: userEmail.split('@')[0],
         text,
         type: 'USER',
         created_at: new Date().toISOString()
     };
-    setChatMessages(prev => [...prev, optimisticMsg]);
+
+    // 1. BROADCAST: Send to everyone (including self) immediately
+    if (channelRef.current) {
+        channelRef.current.send({
+            type: 'broadcast',
+            event: 'chat_message',
+            payload: messagePayload
+        });
+    }
 
     try {
-        // Use OFFICIAL Supabase client (not rawFetch) so Realtime fires correctly on ALL devices
-        const { error } = await supabase.from('messages').insert({
+        // 2. PERSIST: Save to DB in the background
+        await supabase.from('messages').insert({
             user_id: userId,
             user_email: userEmail.split('@')[0],
             text,
             type: 'USER'
         });
-        if (error) throw error;
     } catch (e) {
-        console.error('Chat Err:', e);
-        // Remove optimistic message on failure and restore input
-        setChatMessages(prev => prev.filter(m => m.id !== tempId));
-        setChatInput(text);
-        msg.error('Error al enviar mensaje');
+        console.error('Chat Persist Err:', e);
     }
   };
 
