@@ -259,19 +259,11 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
         }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+        if (!payload.new || !payload.new.id) return;
         setChatMessages(prev => {
-            // Deduplicate: Compare text and sender only if it's within 5 seconds to avoid conflicts with optimistic UI
-            const isDuplicate = prev.some(m => 
-                m.id === payload.new.id || 
-                (m.text === payload.new.text && m.user_id === payload.new.user_id && Math.abs(new Date(m.created_at) - new Date(payload.new.created_at)) < 5000)
-            );
-            
+            // Only block if the exact UUID already exists (to de-duplicate optimistic insert)
+            const isDuplicate = prev.some(m => m.id === payload.new.id);
             if (isDuplicate) return prev;
-            
-            if (payload.new.user_id !== userId) {
-                play('NOTIFY');
-                message.info(`Nuevo mensaje de ${payload.new.user_email}`);
-            }
             return [...prev, payload.new];
         });
       })
@@ -387,22 +379,10 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !userId) return;
     const text = chatInput.trim();
-    const tempId = Date.now();
-    
-    // OPTIMISTIC UPDATE: Show message immediately for the sender
-    const newMessage = {
-        id: tempId,
-        user_id: userId,
-        user_email: userEmail.split('@')[0],
-        text: text,
-        type: 'USER',
-        created_at: new Date().toISOString()
-    };
-    
-    setChatMessages(prev => [...prev, newMessage]);
     setChatInput('');
 
     try {
+        // No optimistic update - let Realtime deliver it to ALL devices equally
         await rawFetch('messages', {
             method: 'POST',
             body: { 
@@ -414,9 +394,8 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
         });
     } catch (e) {
         console.error('Chat Err:', e);
-        // Remove optimistic message if failed
-        setChatMessages(prev => prev.filter(m => m.id !== tempId));
         msg.error('Error al enviar mensaje');
+        setChatInput(text); // Restore input on failure
     }
   };
 
