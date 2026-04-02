@@ -73,15 +73,12 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
           }}>
              <img 
                 src="/logo_coliseo.png" 
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} 
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} 
                 alt="Standby"
              />
-             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%)' }} />
-             <div style={{ zIndex: 1, textAlign: 'center' }}>
-                <div style={{ width: 60, height: 60, border: '3px solid rgba(16,185,129,0.2)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 2s linear infinite', margin: '0 auto 20px' }} />
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: 800, letterSpacing: '4px', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>TRANSMISIÓN EN BREVE</Text>
+             <div style={{ position: 'absolute', bottom: 20, width: '100%', textAlign: 'center', zIndex: 1 }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '4px', textShadow: '0 2px 8px rgba(0,0,0,0.8)', opacity: 0.6 }}>TRANSMISIÓN EN BREVE</Text>
              </div>
-             <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
           </div>
         );
     }
