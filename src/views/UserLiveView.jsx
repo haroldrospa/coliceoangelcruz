@@ -261,9 +261,20 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
         if (!payload.new || !payload.new.id) return;
         setChatMessages(prev => {
-            // Only block if the exact UUID already exists (to de-duplicate optimistic insert)
-            const isDuplicate = prev.some(m => m.id === payload.new.id);
-            if (isDuplicate) return prev;
+            // Replace optimistic temp message if same text+user exists with a fake id, else just add
+            const tempIdx = prev.findIndex(m => 
+                typeof m.id === 'string' && m.id.startsWith('temp_') &&
+                m.text === payload.new.text && 
+                m.user_id === payload.new.user_id
+            );
+            if (tempIdx > -1) {
+                // Replace temp message with real one from DB
+                const updated = [...prev];
+                updated[tempIdx] = payload.new;
+                return updated;
+            }
+            // Ignore if exact UUID already exists
+            if (prev.some(m => m.id === payload.new.id)) return prev;
             return [...prev, payload.new];
         });
       })
@@ -379,23 +390,35 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !userId) return;
     const text = chatInput.trim();
+    const tempId = `temp_${Date.now()}`;
     setChatInput('');
 
+    // OPTIMISTIC UPDATE: Show message immediately for the sender with a temp ID
+    const optimisticMsg = {
+        id: tempId,
+        user_id: userId,
+        user_email: userEmail.split('@')[0],
+        text,
+        type: 'USER',
+        created_at: new Date().toISOString()
+    };
+    setChatMessages(prev => [...prev, optimisticMsg]);
+
     try {
-        // No optimistic update - let Realtime deliver it to ALL devices equally
-        await rawFetch('messages', {
-            method: 'POST',
-            body: { 
-                user_id: userId, 
-                user_email: userEmail.split('@')[0], 
-                text: text,
-                type: 'USER'
-            }
+        // Use OFFICIAL Supabase client (not rawFetch) so Realtime fires correctly on ALL devices
+        const { error } = await supabase.from('messages').insert({
+            user_id: userId,
+            user_email: userEmail.split('@')[0],
+            text,
+            type: 'USER'
         });
+        if (error) throw error;
     } catch (e) {
         console.error('Chat Err:', e);
+        // Remove optimistic message on failure and restore input
+        setChatMessages(prev => prev.filter(m => m.id !== tempId));
+        setChatInput(text);
         msg.error('Error al enviar mensaje');
-        setChatInput(text); // Restore input on failure
     }
   };
 
