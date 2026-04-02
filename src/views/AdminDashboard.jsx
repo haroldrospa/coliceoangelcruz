@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Tag, Button, Modal, Form, Input, InputNumber, Space, Typography, Row, Col, Divider, App as AntApp, Tabs, Image, Select, Upload, Progress, Badge, Popconfirm } from 'antd';
-import { PlusOutlined, ThunderboltFilled, TrophyOutlined, SignalFilled, SettingOutlined, EyeOutlined, CheckCircleFilled, WalletOutlined, DollarOutlined, VideoCameraOutlined, InboxOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, ThunderboltFilled, TrophyOutlined, SignalFilled, SettingOutlined, EyeOutlined, CheckCircleFilled, WalletOutlined, DollarOutlined, VideoCameraOutlined, InboxOutlined, DeleteOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 
 const { Title, Text } = Typography;
@@ -291,6 +291,22 @@ const AdminDashboard = () => {
      }
   };
 
+  const handleClearChat = async () => {
+    try {
+      setLoading(true);
+      await rawFetch('messages', { 
+        method: 'DELETE', 
+        query: 'id=not.is.null' 
+      });
+      message.success('CHAT VACIADO CORRECTAMENTE');
+    } catch (e) {
+      console.error('Clear Chat Err:', e);
+      message.error('Error al vaciar el chat');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleApproveDeposit = async (deposit) => {
     modal.confirm({
         title: 'CONFIRMAR ACREDITACIÓN',
@@ -544,13 +560,31 @@ const AdminDashboard = () => {
                 />
              </Col>
              <Col xs={24} md={4} style={{ textAlign: 'right' }}>
-                <Button 
-                onClick={handleFixStorage} 
-                loading={loading}
-                style={{ background: 'rgba(212,175,55,0.2)', color: '#d4af37', borderColor: '#d4af37', width: '100%', height: 32 }}
-               >
-                 REPARAR CARPETA
-               </Button>
+                 <Space direction="vertical" style={{ width: '100%' }}>
+                    <Button 
+                        onClick={handleFixStorage} 
+                        loading={loading}
+                        style={{ background: 'rgba(212,175,55,0.2)', color: '#d4af37', borderColor: '#d4af37', width: '100%', height: 32, fontSize: 11 }}
+                    >
+                        REPARAR CARPETA
+                    </Button>
+                    <Popconfirm
+                        title="¿Vaciar todo el chat?"
+                        description="Esta acción borrará todos los mensajes para siempre."
+                        onConfirm={handleClearChat}
+                        okText="Sí, borrar"
+                        cancelText="No"
+                        icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
+                    >
+                        <Button 
+                            danger 
+                            icon={<DeleteOutlined />} 
+                            style={{ width: '100%', height: 32, fontSize: 11 }}
+                        >
+                            VACIAR CHAT
+                        </Button>
+                    </Popconfirm>
+                 </Space>
             </Col>
          </Row>
       </div>
