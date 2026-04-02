@@ -497,6 +497,37 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
                 `}</style>
 
                 <div style={{ padding: 16, borderTop: '1px solid var(--glass-border)', background: 'rgba(5,5,5,0.3)' }}>
+                   {/* QUICK EMOJI BAR */}
+                   <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }} className="hide-scrollbar">
+                      {['🐓', '🐔', '🥊', '🏆', '💰', '🔥', '⚡', '🔪', '🚩', '🤝'].map(emoji => (
+                         <div 
+                            key={emoji}
+                            onClick={() => setChatInput(prev => prev + emoji)}
+                            style={{ 
+                               cursor: 'pointer', 
+                               fontSize: 18, 
+                               background: 'rgba(255,255,255,0.05)', 
+                               borderRadius: 8, 
+                               width: 32, 
+                               height: 32, 
+                               display: 'flex', 
+                               alignItems: 'center', 
+                               justifyContent: 'center',
+                               transition: 'all 0.2s',
+                               border: '1px solid rgba(255,255,255,0.05)'
+                            }}
+                            className="emoji-btn"
+                         >
+                            {emoji}
+                         </div>
+                      ))}
+                   </div>
+
+                   <style>{`
+                      .hide-scrollbar::-webkit-scrollbar { display: none; }
+                      .emoji-btn:hover { background: rgba(16,185,129,0.2) !important; transform: scale(1.1); border-color: #10b981 !important; }
+                   `}</style>
+
                    <div style={{ position: 'relative' }}>
                       <input 
                         value={chatInput} 
