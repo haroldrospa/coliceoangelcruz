@@ -197,6 +197,7 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
 
   // 1. Auth Sync
   useEffect(() => {
+    window.sessionStartTime = Date.now();
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -311,15 +312,20 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   const chatContainerRef = useRef(null);
   const [lastMessageCount, setLastMessageCount] = useState(0);
 
-  // 🕒 EPHEMERAL ENGINE: Auto-destruct messages after 120 seconds (2 minutes)
+  // 🕒 EPHEMERAL ENGINE: Auto-destruct LIVE messages after 5 minutes, but keep history
   useEffect(() => {
     const ticker = setInterval(() => {
       const now = Date.now();
+      const sessionStart = window.sessionStartTime || now;
+      
       setChatMessages(prev => prev.filter(msg => {
         const msgTime = new Date(msg.created_at).getTime();
-        return (now - msgTime) < 120000; // 120 seconds
+        // If message is historical (before session), keep it
+        if (msgTime < sessionStart - 5000) return true; 
+        // If message is new (live), keep it for 5 minutes (300,000ms)
+        return (now - msgTime) < 300000;
       }));
-    }, 1000);
+    }, 2000);
     return () => clearInterval(ticker);
   }, []);
 
