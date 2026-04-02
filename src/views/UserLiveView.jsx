@@ -12,42 +12,48 @@ const { Title, Text } = Typography;
 const HLSVideoPlayer = ({ url }) => {
     const videoRef = useRef(null);
     const playerRef = useRef(null);
+    const containerRef = useRef(null);
 
     useEffect(() => {
-        if (!videoRef.current) return;
+        if (!containerRef.current) return;
 
-        playerRef.current = videojs(videoRef.current, {
+        // Create a dedicated video element for Video.js to manage
+        const videoElement = document.createElement("video-js");
+        videoElement.classList.add('vjs-big-play-centered', 'vjs-theme-city');
+        containerRef.current.appendChild(videoElement);
+
+        const player = playerRef.current = videojs(videoElement, {
             autoplay: true,
             muted: true,
             controls: true,
             responsive: true,
             fluid: true,
-            sources: [{ src: url, type: 'application/x-mpegURL' }],
             liveui: true,
             playbackRates: [1],
+            sources: [{ src: url, type: 'application/x-mpegURL' }],
             controlBar: {
-                children: [
-                    'playToggle',
-                    'volumePanel',
-                    'fullscreenToggle',
-                ],
-            },
+                children: ['playToggle', 'volumePanel', 'fullscreenToggle']
+            }
+        }, () => {
+            // Player is ready
         });
 
         return () => {
-            if (playerRef.current) {
-                playerRef.current.dispose();
+            if (player) {
+                player.dispose();
+                playerRef.current = null;
             }
         };
     }, [url]);
 
     return (
         <div data-vjs-player style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
-            <video ref={videoRef} className="video-js vjs-big-play-centered vjs-theme-city" />
+            <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
             <style>{`
                 .vjs-theme-city .vjs-control-bar { background: rgba(10,10,10,0.8); backdrop-filter: blur(10px); }
                 .vjs-theme-city .vjs-big-play-button { background: rgba(16,185,129,0.9); border: none; border-radius: 50%; width: 60px; height: 60px; line-height: 60px; margin-top: -30px; margin-left: -30px; }
                 .vjs-theme-city .vjs-play-progress { background: #10b981; }
+                .video-js { width: 100% !important; height: 100% !important; }
             `}</style>
         </div>
     );
@@ -189,15 +195,22 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
     };
   }, []);
 
-  // System Sync
+  // 1. Auth Sync
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        setUserEmail(user.email);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  // 2. Data & Real-time Sync
   useEffect(() => {
     const initData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          setUserId(user.id);
-          setUserEmail(user.email);
-        }
 
         const events = await rawFetch(`events?select=*&order=updated_at.desc&limit=1`);
         if (events && events[0]) setFightInfo(events[0]);
@@ -290,7 +303,9 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
           }
       });
 
-    return () => supabase.removeChannel(eventChannel);
+    return () => {
+        supabase.removeChannel(eventChannel);
+    };
   }, [userId]);
 
   const chatContainerRef = useRef(null);
