@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 
-// TrabaLive Sound Engine: Curated High-Fidelity Audio Signals
+// Coliseo Angel Cruz Sound Engine: Curated High-Fidelity Audio Signals
 const SOUNDS = {
   WIN: 'https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3', // Crystal Coins
   BET: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', // Tactical Click

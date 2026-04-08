@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trabalive | Ultra-Pro Mobile</title>
+    <title>Coliseo Angel Cruz | Ultra-Pro Mobile</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -185,7 +185,7 @@
             if (!user) return (
                 <div className="login-wrapper">
                     <div className="login-card">
-                        <div style={{ color: 'var(--luxury-gold)', fontSize: 24, fontWeight: 900, letterSpacing: 8, marginBottom: 40 }}>TRABALIVE.</div>
+                        <div style={{ color: 'var(--luxury-gold)', fontSize: 24, fontWeight: 900, letterSpacing: 8, marginBottom: 40 }}>COLISEO ANGEL CRUZ.</div>
                         <Space direction="vertical" style={{ width: '100%' }} size={15}>
                             <Button block className="gold-btn" onClick={() => {setUser({role: 'admin'}); setView('admin_panel');}}>ACCESO ADMINISTRADOR</Button>
                             <Button block className="gold-btn" style={{ background: '#111', color: '#fff' }} onClick={() => {setUser({role: 'client'}); setView('live');}}>ACCESO CLIENTE</Button>
@@ -198,7 +198,7 @@
                 <ConfigProvider theme={{ algorithm: theme.darkAlgorithm, token: { colorPrimary: '#D4AF37', fontFamily: 'Inter' } }}>
                     <Layout style={{ background: '#000' }}>
                         <Header>
-                            <div className="logo-text">TRABALIVE.</div>
+                            <div className="logo-text">COLISEO ANGEL CRUZ.</div>
                             <div className="desktop-nav">
                                 <Menu mode="horizontal" selectedKeys={[view]} onClick={e => e.key === 'logout' ? setUser(null) : setView(e.key)} items={NavItems.map(i => ({...i, icon: getIcon(i.icon)}))} />
                             </div>

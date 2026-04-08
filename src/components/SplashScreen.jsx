@@ -46,6 +46,7 @@ const SplashScreen = ({ isReady }) => {
         <img src="/official_logo.png" style={{ 
             height: 60, 
             marginBottom: 10, 
+            clipPath: 'circle(49%)',
             filter: 'drop-shadow(0 0 15px rgba(212,175,55,0.4))' 
         }} alt="Logo Oficial" />
         <Title level={2} style={{ 

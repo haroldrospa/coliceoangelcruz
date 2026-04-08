@@ -68,16 +68,30 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
         return (
           <div style={{ 
               position: 'relative', width: '100%', paddingBottom: '56.25%', 
-              background: '#000', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+              background: 'radial-gradient(circle at center, #0a110d 0%, #000 100%)',
+              borderRadius: 12, border: '1px solid rgba(16,185,129,0.1)',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
           }}>
-             <img 
-                src="/logo_coliseo.png" 
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} 
-                alt="Standby"
-             />
-             <div style={{ position: 'absolute', bottom: 20, width: '100%', textAlign: 'center', zIndex: 1 }}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '4px', textShadow: '0 2px 8px rgba(0,0,0,0.8)', opacity: 0.6 }}>TRANSMISIÓN EN BREVE</Text>
+             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '100%' }}>
+                <Title level={1} style={{ 
+                    color: '#fff', 
+                    margin: 0, 
+                    fontWeight: 900, 
+                    letterSpacing: '8px', 
+                    fontFamily: 'Outfit',
+                    fontSize: 'clamp(18px, 4vw, 32px)',
+                    textTransform: 'uppercase',
+                    textShadow: '0 0 20px rgba(16,185,129,0.3)'
+                }}>
+                    COLISEO ANGEL CRUZ
+                </Title>
+                <div style={{ width: 40, height: 2, background: '#10b981', margin: '20px auto', borderRadius: 2, opacity: 0.6 }} />
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, letterSpacing: '4px', textTransform: 'uppercase' }}>
+                    TRANSMISIÓN EN BREVE
+                </Text>
              </div>
           </div>
         );
@@ -155,7 +169,7 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
   );
 };
 
-const UserLiveView = ({ userBalance, setUserBalance }) => {
+const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView }) => {
   const { message: msg } = AntApp.useApp();
   const { play, preload } = useSound();
   
@@ -247,7 +261,8 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
         };
         fetchProgram();
 
-        const initialMsgs = await rawFetch(`messages?select=*&order=created_at.asc&limit=50`);
+        const fiveMinsAgo = new Date(Date.now() - 300000).toISOString();
+        const initialMsgs = await rawFetch(`messages?select=*&created_at=gt.${fiveMinsAgo}&order=created_at.asc&limit=100`);
         if (initialMsgs) setChatMessages(initialMsgs);
 
         const settings = await rawFetch(`settings`);
@@ -350,20 +365,25 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
 
   const [lastMessageCount, setLastMessageCount] = useState(0);
 
-  // 🕒 EPHEMERAL ENGINE: Auto-destruct LIVE messages after 5 minutes, but keep history
+  // 🕒 EPHEMERAL ENGINE: Strict 5-minute Autodestruct (Screen & DB Cleanup)
   useEffect(() => {
-    const ticker = setInterval(() => {
+    const ticker = setInterval(async () => {
       const now = Date.now();
-      const sessionStart = window.sessionStartTime || now;
+      const cutoff = now - 300000; // 5 Minutes
+      const cutoffISO = new Date(cutoff).toISOString();
       
+      // 1. UI Pruning: Remove from screen immediately
       setChatMessages(prev => prev.filter(msg => {
-        const msgTime = new Date(msg.created_at).getTime();
-        // If message is historical (before session), keep it
-        if (msgTime < sessionStart - 5000) return true; 
-        // If message is new (live), keep it for 5 minutes (300,000ms)
-        return (now - msgTime) < 300000;
+        return new Date(msg.created_at).getTime() > cutoff;
       }));
-    }, 2000);
+
+      // 2. DB Pruning: Keep the table clean in background
+      try {
+        await supabase.from('messages').delete().lt('created_at', cutoffISO);
+      } catch (e) {
+        console.error('Chat Auto-Prune Err:', e);
+      }
+    }, 10000); // Check every 10 seconds
     return () => clearInterval(ticker);
   }, []);
 
@@ -386,6 +406,7 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   }, []);
 
   const openBetModal = (side) => {
+    if (!currentUser) return setCurrentView('login');
     if (fightInfo.status !== 'LIVE') return msg.warning('APUESTAS CERRADAS');
     setBetSide(side);
     setIsBetModalOpen(true);
@@ -447,6 +468,7 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
   };
 
   const handleSendMessage = async () => {
+    if (!currentUser) return setCurrentView('login');
     if (!chatInput.trim() || !userId) return;
     const text = chatInput.trim();
     setChatInput('');
@@ -560,10 +582,21 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
                         value={chatInput} 
                         onChange={e => setChatInput(e.target.value)}
                         onKeyPress={e => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Comenta la jugada..."
-                        style={{ width: '100%', background: 'var(--obsidian)', border: '1px solid var(--glass-border)', borderRadius: 12, padding: '12px 48px 12px 16px', color: '#fff', fontSize: 13 }}
+                        placeholder={currentUser ? "Comenta la jugada..." : "Inicia sesión para chatear"}
+                        disabled={!currentUser}
+                        style={{ 
+                           width: '100%', 
+                           background: currentUser ? 'var(--obsidian)' : 'rgba(255,255,255,0.02)', 
+                           border: '1px solid var(--glass-border)', 
+                           borderRadius: 12, 
+                           padding: '12px 48px 12px 16px', 
+                           color: '#fff', 
+                           fontSize: 13,
+                           cursor: currentUser ? 'text' : 'pointer'
+                        }}
+                        onClick={() => !currentUser && setCurrentView('login')}
                       />
-                      <SendOutlined onClick={handleSendMessage} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: '#10b981', cursor: 'pointer' }} />
+                      <SendOutlined onClick={handleSendMessage} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: currentUser ? '#10b981' : 'rgba(255,255,255,0.1)', cursor: 'pointer' }} />
                    </div>
                 </div>
            </Card>
@@ -592,49 +625,62 @@ const UserLiveView = ({ userBalance, setUserBalance }) => {
                 </Col>
               </Row>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
-                 <Button 
-                    block 
-                    disabled={fightInfo.status !== 'LIVE'} 
-                    onClick={() => openBetModal('A')} 
-                    style={{ 
-                        height: 50, 
-                        background: '#10b981', 
-                        color: '#fff', 
-                        border: 'none', 
-                        fontWeight: 600, 
-                        fontSize: 16, 
-                        borderRadius: 8, 
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: 'none'
-                    }}
-                 >
-                    {fightInfo.gallo_a_odds}
-                 </Button>
-                 <Button 
-                    block 
-                    type="primary" 
-                    ghost 
-                    disabled={fightInfo.status !== 'LIVE'} 
-                    onClick={() => openBetModal('B')} 
-                    style={{ 
-                        height: 50, 
-                        fontWeight: 600, 
-                        fontSize: 16, 
-                        borderRadius: 8, 
-                        border: '1px solid #10b981', 
-                        color: '#10b981',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: 'none'
-                    }}
-                 >
-                    {fightInfo.gallo_b_odds}
-                 </Button>
-              </div>
+              {!currentUser ? (
+                 <div style={{ marginTop: 24, textAlign: 'center', padding: '20px', background: 'rgba(16,185,129,0.05)', borderRadius: 12, border: '1px solid rgba(16,185,129,0.2)' }}>
+                    <Title level={5} style={{ color: '#fff', fontSize: 14, margin: '0 0 12px 0' }}>¿QUIERES APOSTAR EN ESTA PELEA?</Title>
+                    <Button 
+                       type="primary" 
+                       onClick={() => setCurrentView('login')}
+                       style={{ background: '#10b981', borderColor: '#10b981', fontWeight: 700, borderRadius: 8, height: 40, padding: '0 32px' }}
+                    >
+                       INICIAR SESIÓN AHORA
+                    </Button>
+                 </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
+                   <Button 
+                      block 
+                      disabled={fightInfo.status !== 'LIVE'} 
+                      onClick={() => openBetModal('A')} 
+                      style={{ 
+                          height: 50, 
+                          background: '#10b981', 
+                          color: '#fff', 
+                          border: 'none', 
+                          fontWeight: 600, 
+                          fontSize: 16, 
+                          borderRadius: 8, 
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: 'none'
+                      }}
+                   >
+                      {fightInfo.gallo_a_odds}
+                   </Button>
+                   <Button 
+                      block 
+                      type="primary" 
+                      ghost 
+                      disabled={fightInfo.status !== 'LIVE'} 
+                      onClick={() => openBetModal('B')} 
+                      style={{ 
+                          height: 50, 
+                          fontWeight: 600, 
+                          fontSize: 16, 
+                          borderRadius: 8, 
+                          border: '1px solid #10b981', 
+                          color: '#10b981',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: 'none'
+                      }}
+                   >
+                      {fightInfo.gallo_b_odds}
+                   </Button>
+                </div>
+              )}
            </div>
         </Col>
          

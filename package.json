@@ -1,5 +1,5 @@
 {
-  "name": "trabalive-fintech",
+  "name": "coliseo-angel-cruz-fintech",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -25,6 +25,7 @@
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@vitejs/plugin-react": "^4.2.0",
+    "pngjs": "^7.0.0",
     "vite": "^5.0.0"
   }
 }

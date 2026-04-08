@@ -371,7 +371,23 @@ const AdminDashboard = () => {
             message.success('CARPETA "media" CREADA CON ÉXITO');
         }
     } catch (e) {
-        message.warning('Por favor, crea la carpeta "media" manualmente en el panel de Supabase (Sección Storage)');
+        Modal.error({
+            title: 'ACCIÓN REQUERIDA EN SUPABASE',
+            content: (
+                <div>
+                    <p>Por seguridad, Supabase no permite que las aplicaciones creen carpetas automáticamente.</p>
+                    <p>Sigue estos pasos rápidos:</p>
+                    <ol>
+                        <li>Abre tu panel de <b>Supabase</b> (https://supabase.com).</li>
+                        <li>Entra a la sección <b>Storage</b> en el menú izquierdo.</li>
+                        <li>Haz clic en <b>New Bucket</b>.</li>
+                        <li>Escribe <b>media</b> en el nombre.</li>
+                        <li>Marca la casilla <b>Public bucket</b> y haz clic en Save.</li>
+                        <li>(Opcional) Ve a Policies y permite "Insert" para la carpeta "media".</li>
+                    </ol>
+                </div>
+            )
+        });
         console.error('Error al crear bucket:', e);
     } finally {
         setLoading(false);
@@ -544,96 +560,192 @@ const AdminDashboard = () => {
   return (
     <>
 
-    <div style={{ padding: '40px 24px', maxWidth: 1000, margin: '0 auto', background: 'var(--obsidian)', minHeight: '100vh' }}>
-      <div style={{ background: 'rgba(212,175,55,0.05)', padding: '20px 30px', borderRadius: 16, marginBottom: 30, border: '1px solid rgba(212,175,55,0.1)' }}>
-         <Row gutter={20} align="middle">
-            <Col xs={24} md={10}>
-               <Title level={4} style={{ color: '#fff', margin: 0 }}>JORNADA DE HOY</Title>
-               <Text style={{ color: 'var(--text-muted)' }}>Configura el Stream Global para todas las peleas</Text>
+    <div style={{ padding: '60px 24px', maxWidth: 1100, margin: '0 auto', background: 'var(--obsidian)', minHeight: '100vh' }}>
+      
+      {/* 🚀 PREMIUM ACTION PANEL: JORNADA DE HOY */}
+      <div style={{ 
+          background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,5,5,0.4) 100%)', 
+          padding: '32px', 
+          borderRadius: 24, 
+          marginBottom: 40, 
+          border: '1px solid rgba(16,185,129,0.15)',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          position: 'relative',
+          overflow: 'hidden'
+      }}>
+         {/* Subliminal Decor */}
+         <ThunderboltFilled style={{ position: 'absolute', right: -20, top: -20, fontSize: 160, color: '#10b981', opacity: 0.03, transform: 'rotate(15deg)' }} />
+
+         <Row gutter={[32, 24]} align="middle">
+            <Col xs={24} lg={10}>
+               <Space direction="vertical" size={4}>
+                  <Title level={3} style={{ color: '#fff', margin: 0, letterSpacing: '1px', fontWeight: 800 }}>JORNADA ESTRATÉGICA</Title>
+                  <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>Control maestro de señal y despliegue táctico</Text>
+               </Space>
             </Col>
-            <Col xs={24} md={7}>
-               <Input 
-                 placeholder="URL DE TRANSMISIÓN (CASTR/M3U8/DACAST)" 
-                 value={globalStream} 
-                 onChange={e => setGlobalStream(e.target.value)}
-                 style={{ background: '#000', border: '1px solid var(--glass-border)', color: '#fff' }}
-                 suffix={
-                    <Button 
-                        type="text" 
-                        size="small" 
-                        icon={<CheckCircleFilled style={{ color: '#10b981' }} />} 
-                        onClick={handleSaveGlobalStream}
-                        loading={isSavingStream}
-                    />
-                 }
-               />
-            </Col>
-             <Col xs={24} md={3} style={{ textAlign: 'center' }}>
-                 <Text style={{ color: 'var(--text-muted)', fontSize: 10, display: 'block', marginBottom: 4 }}>CARTELERA</Text>
-                 <Select 
-                     value={showCartelera} 
-                     onChange={handleToggleCartelera}
-                     style={{ width: '100%', background: '#000' }}
-                     options={[
-                         { value: true, label: 'VER' },
-                         { value: false, label: 'OCULTAR' }
-                     ]}
-                 />
-              </Col>
-              <Col xs={24} md={3} style={{ textAlign: 'center' }}>
-                 <Text style={{ color: 'var(--text-muted)', fontSize: 10, display: 'block', marginBottom: 4 }}>MODO LIVE</Text>
-                 <Select 
-                     value={streamMode} 
-                     onChange={handleToggleStreamMode}
-                     loading={isSavingMode}
-                     style={{ width: '100%', background: '#000' }}
-                     options={[
-                         { value: 'LIVE', label: 'VIVO' },
-                         { value: 'STANDBY', label: 'LOGO' }
-                     ]}
-                 />
-              </Col>
-              <Col xs={24} md={3} style={{ textAlign: 'right' }}>
-                 <Space direction="vertical" style={{ width: '100%' }}>
-                    <Button 
-                        onClick={handleFixStorage} 
-                        loading={loading}
-                        style={{ background: 'rgba(212,175,55,0.2)', color: '#d4af37', borderColor: '#d4af37', width: '100%', height: 32, fontSize: 11 }}
-                    >
-                        REPARAR CARPETA
-                    </Button>
-                    <Popconfirm
-                        title="¿Vaciar todo el chat?"
-                        description="Esta acción borrará todos los mensajes para siempre."
-                        onConfirm={handleClearChat}
-                        okText="Sí, borrar"
-                        cancelText="No"
-                        icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
-                    >
-                        <Button 
-                            danger 
-                            icon={<DeleteOutlined />} 
-                            style={{ width: '100%', height: 32, fontSize: 11 }}
-                        >
-                            VACIAR CHAT
-                        </Button>
-                    </Popconfirm>
-                 </Space>
+
+            <Col xs={24} lg={14}>
+               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <Row gutter={[20, 20]} align="bottom">
+                     <Col xs={24} md={12}>
+                        <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 800, letterSpacing: '2px', display: 'block', marginBottom: 8, textTransform: 'uppercase' }}>SEÑAL GLOBAL</Text>
+                        <Input 
+                           placeholder="DACAST / HLS / M3U8" 
+                           value={globalStream} 
+                           onChange={e => setGlobalStream(e.target.value)}
+                           style={{ 
+                              background: '#050505', 
+                              border: '1px solid rgba(16,185,129,0.3)', 
+                              color: '#fff',
+                              height: 44,
+                              borderRadius: 10,
+                              fontSize: 13,
+                              fontWeight: 600
+                           }}
+                           suffix={
+                              <Button 
+                                 type="text" 
+                                 size="small" 
+                                 icon={<CheckCircleFilled style={{ color: isSavingStream ? '#fff' : '#10b981', fontSize: 18 }} />} 
+                                 onClick={handleSaveGlobalStream}
+                                 loading={isSavingStream}
+                                 style={{ background: isSavingStream ? 'transparent' : 'rgba(16,185,129,0.1)', width: 32, height: 32, borderRadius: 8, marginLeft: 8 }}
+                              />
+                           }
+                        />
+                     </Col>
+
+                     <Col xs={12} md={6}>
+                        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, letterSpacing: '1px', display: 'block', marginBottom: 8 }}>MODO LIVE</Text>
+                        <Select 
+                           value={streamMode} 
+                           onChange={handleToggleStreamMode}
+                           loading={isSavingMode}
+                           size="large"
+                           style={{ width: '100%' }}
+                           dropdownStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)' }}
+                           options={[
+                              { value: 'LIVE', label: <span style={{ color: '#10b981', fontWeight: 700 }}>🔵 TRANSMISIÓN</span> },
+                              { value: 'STANDBY', label: <span style={{ color: '#d4af37', fontWeight: 700 }}>🟠 LOGO ESPERA</span> }
+                           ]}
+                        />
+                     </Col>
+
+                     <Col xs={12} md={6}>
+                        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, letterSpacing: '1px', display: 'block', marginBottom: 8 }}>CARTELERA</Text>
+                        <Select 
+                           value={showCartelera} 
+                           onChange={handleToggleCartelera}
+                           size="large"
+                           style={{ width: '100%' }}
+                           options={[
+                              { value: true, label: <span style={{ fontWeight: 700 }}>VISIBLE</span> },
+                              { value: false, label: <span style={{ color: 'rgba(255,255,255,0.4)' }}>OCULTA</span> }
+                           ]}
+                        />
+                     </Col>
+                  </Row>
+               </div>
             </Col>
          </Row>
+
+         <Divider style={{ borderColor: 'rgba(255,255,255,0.05)', margin: '24px 0' }} />
+
+         {/* Maintenance Actions Grouped at the Bottom */}
+         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <Button 
+               icon={<SettingOutlined />}
+               onClick={handleFixStorage} 
+               loading={loading}
+               style={{ 
+                  background: 'rgba(212,175,55,0.05)', 
+                  color: '#d4af37', 
+                  borderColor: 'rgba(212,175,55,0.2)', 
+                  height: 38,
+                  borderRadius: 10,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: 'uppercase'
+               }}
+            >
+               REPARAR CARPETA VIDEOS
+            </Button>
+
+            <Popconfirm
+               title="¿VACIAR TODO EL CHAT?"
+               description="Limpiar historial de mensajes global."
+               onConfirm={handleClearChat}
+               okText="Sí, vaciar"
+               cancelText="No"
+               okButtonProps={{ danger: true }}
+            >
+               <Button 
+                  danger 
+                  type="text"
+                  icon={<DeleteOutlined />} 
+                  style={{ 
+                     background: 'rgba(255,77,79,0.05)', 
+                     height: 38,
+                     borderRadius: 10,
+                     fontSize: 11,
+                     fontWeight: 700,
+                     textTransform: 'uppercase'
+                  }}
+               >
+                  Limpiar Chat
+               </Button>
+            </Popconfirm>
+         </div>
       </div>
 
-      <Title level={2} style={{ color: '#fff', textAlign: 'center' }}>ESTRATEGIA CENTRAL</Title>
-      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} tabBarExtraContent={activeTab === '1' && (
-        <Space>
-          <Button onClick={() => setIsModalOpen(true)} icon={<PlusOutlined />}>NUEVA PELEA</Button>
+
+      <div style={{ textAlign: 'center', margin: '40px 0 32px' }}>
+         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
+            <div style={{ width: 40, height: 1, background: 'linear-gradient(90deg, transparent, #10b981)' }} />
+            <Title level={2} style={{ color: '#fff', margin: 0, letterSpacing: '4px', fontSize: 24, fontWeight: 900 }}>ESTRATEGIA CENTRAL</Title>
+            <div style={{ width: 40, height: 1, background: 'linear-gradient(90deg, #10b981, transparent)' }} />
+         </div>
+         <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 700, letterSpacing: '2px', display: 'block' }}>GESTIÓN OPERATIVA DE ALTO NIVEL</Text>
+      </div>
+
+      <Tabs 
+        activeKey={activeTab} 
+        onChange={setActiveTab} 
+        items={tabItems} 
+        tabBarStyle={{ borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: 24 }}
+        tabBarExtraContent={activeTab === '1' && (
+        <Space size={12}>
+          <Button 
+            onClick={() => setIsModalOpen(true)} 
+            icon={<PlusOutlined />}
+            style={{ 
+                height: 40, 
+                borderRadius: 10, 
+                fontWeight: 700, 
+                background: '#10b981', 
+                color: '#fff', 
+                border: 'none',
+                boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
+            }}
+          >
+            NUEVA PELEA
+          </Button>
+
           <Button 
             onClick={() => setIsBulkModalOpen(true)} 
             icon={<TrophyOutlined />}
-            style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}
+            style={{ 
+                height: 40, 
+                borderRadius: 10, 
+                fontWeight: 700, 
+                background: 'rgba(16,185,129,0.1)', 
+                color: '#10b981', 
+                border: '1px solid rgba(16,185,129,0.2)'
+            }}
           >
             CARGA MASIVA
           </Button>
+
           <Button 
             onClick={() => {
                 setEditingEvent(null);
@@ -641,7 +753,14 @@ const AdminDashboard = () => {
                 form.resetFields();
             }} 
             icon={<VideoCameraOutlined />} 
-            style={{ background: 'rgba(212,175,55,0.1)', color: '#d4af37', border: '1px solid rgba(212,175,55,0.3)' }}
+            style={{ 
+                height: 40, 
+                borderRadius: 10, 
+                fontWeight: 700, 
+                background: 'rgba(212,175,55,0.1)', 
+                color: '#d4af37', 
+                border: '1px solid rgba(212,175,55,0.2)'
+            }}
           >
             CARGAR REPETICIÓN
           </Button>

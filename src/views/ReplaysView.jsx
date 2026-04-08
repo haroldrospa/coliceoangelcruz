@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker } from 'antd';
-import { PlayCircleOutlined, HistoryOutlined, ThunderboltFilled, TrophyOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, message } from 'antd';
+import { PlayCircleOutlined, HistoryOutlined, ThunderboltFilled, TrophyOutlined, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined } from '@ant-design/icons';
 import { supabase, rawFetch } from '../lib/supabase';
 
 const { Title, Text } = Typography;
@@ -46,6 +46,55 @@ const ReplaysView = () => {
 
   const closeReplay = () => {
     setSelectedReplay(null);
+  };
+
+  const handleDownload = async (url, postNumber) => {
+    const hide = message.loading('Preparando descarga...', 0);
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `Pelea_Poste_${postNumber}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      message.success('Descarga iniciada');
+    } catch (err) {
+      console.error('Download Error:', err);
+      // Fallback: open in new tab if blob fetch fails
+      window.open(url, '_blank');
+      message.warning('Iniciando descarga en nueva pestaña');
+    } finally {
+      hide();
+    }
+  };
+
+  const handleShare = async (event) => {
+    const shareData = {
+      title: `Coliseo Ángel Cruz - Poste #${event.post_number}`,
+      text: `¡Mira esta pelea! Poste #${event.post_number}: ${event.gallo_a_name} vs ${event.gallo_b_name}. Ganador: ${event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name}`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error('Share Error:', err);
+      }
+    } else {
+      // Fallback: Open WhatsApp
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(shareData.text + ' ' + shareData.url)}`;
+      window.open(waUrl, '_blank');
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    message.success('Enlace copiado al portapapeles');
   };
 
   return (
@@ -209,12 +258,54 @@ const ReplaysView = () => {
                         Finalizado el {new Date(selectedReplay.created_at).toLocaleString()}
                       </Text>
                    </Col>
-                   <Col>
+                    <Col>
                       <div style={{ background: '#10b981', color: '#fff', padding: '6px 16px', borderRadius: 8, fontWeight: 900, fontSize: 12 }}>
                          GANADOR: {selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : selectedReplay.gallo_b_name}
                       </div>
                    </Col>
                 </Row>
+
+                <div style={{ marginTop: 24, padding: '16px', background: 'rgba(212,175,55,0.05)', borderRadius: 12, border: '1px solid rgba(212,175,55,0.1)' }}>
+                   <Text style={{ color: 'rgba(212,175,55,0.7)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: 12 }}>
+                     Acciones y Compartir
+                   </Text>
+                   <Space size="middle" wrap>
+                      {selectedReplay.stream_url?.match(/\.(mp4|webm|ogg|mov)$/i) || selectedReplay.stream_url?.includes('/storage/v1/object/public/') ? (
+                         <Button 
+                            type="primary" 
+                            icon={<DownloadOutlined />} 
+                            onClick={() => handleDownload(selectedReplay.stream_url, selectedReplay.post_number)}
+                            style={{ background: 'var(--gold)', borderColor: 'var(--gold)', color: '#000', fontWeight: 700 }}
+                         >
+                            Descargar Video
+                         </Button>
+                      ) : null}
+                      
+                      <Button 
+                         icon={<WhatsAppOutlined />} 
+                         onClick={() => handleShare(selectedReplay)}
+                         style={{ background: '#25D366', borderColor: '#25D366', color: '#fff', fontWeight: 700 }}
+                      >
+                         WhatsApp
+                      </Button>
+
+                      <Button 
+                         icon={<CopyOutlined />} 
+                         onClick={() => copyToClipboard(window.location.href)}
+                         style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 700 }}
+                      >
+                         Copiar Enlace
+                      </Button>
+
+                      <Button 
+                         icon={<ShareAltOutlined />} 
+                         onClick={() => handleShare(selectedReplay)}
+                         style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 700 }}
+                      >
+                         Más opciones
+                      </Button>
+                   </Space>
+                </div>
              </div>
           </div>
         )}

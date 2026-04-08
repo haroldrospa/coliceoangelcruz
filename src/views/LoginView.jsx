@@ -168,14 +168,16 @@ const LoginView = ({ onLogin }) => {
             bottom: '-10%',
             transform: 'rotate(-15deg)',
             filter: 'blur(3px)',
+            clipPath: 'circle(46%)',
             pointerEvents: 'none'
          }} alt="" aria-hidden="true" />
          
          <img src="/official_logo.png" style={{ 
-            height: 120, /* Smaller, more delicate logo */
-            marginBottom: 24,
+            height: 180,
+            marginBottom: 32,
             zIndex: 2,
-            opacity: 0.95
+            opacity: 1,
+            clipPath: 'circle(46%)'
          }} alt="Main Logo" />
          
          <div style={{ textAlign: 'center', zIndex: 2 }}>
@@ -231,8 +233,9 @@ const LoginView = ({ onLogin }) => {
       >
         <div className="form-mobile-header" style={{ textAlign: 'center' }}>
           <img src="/official_logo.png" style={{ 
-            height: 48, 
-            marginBottom: 12
+            height: 72, 
+            marginBottom: 16,
+            clipPath: 'circle(46%)'
           }} alt="Login Logo" />
           <Title level={5} style={{ 
             color: 'var(--brand-green)', 

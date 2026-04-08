@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# --- TRABALIVE RTMP-HLS SERVER SETUP SCRIPT ---
+# --- COLISEO ANGEL CRUZ RTMP-HLS SERVER SETUP SCRIPT ---
 # TARGET: UBUNTU 22.04
 # SERVICE: Nginx + RTMP Module + HLS fragments
 
-echo "Starting TrabaLive Video Infrastructure Setup..."
+echo "Starting Coliseo Angel Cruz Video Infrastructure Setup..."
 
 # 1. Update and install dependencies
 sudo apt update
@@ -76,7 +76,7 @@ sudo chown -R www-data:www-data /var/www/html/hls
 sudo systemctl restart nginx
 
 echo "--------------------------------------------------------"
-echo "TRABALIVE SERVER READY!"
+echo "COLISEO ANGEL CRUZ SERVER READY!"
 echo "--------------------------------------------------------"
 echo "RTMP INTAKE (OBS): rtmp://[YOUR_SERVER_IP]/live"
 echo "STREAM KEY: pollo_live"

@@ -32,34 +32,42 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
   };
 
   const navItems = [
-    { key: 'live', icon: <PlayCircleOutlined />, label: 'EN VIVO' },
-    { key: 'replays', icon: <PlayCircleOutlined />, label: 'REPETICIONES' },
-    { key: 'history', icon: <HistoryOutlined />, label: 'RESULTADOS' },
-    { key: 'wallet', icon: <WalletOutlined />, label: 'BILLETERA' },
+    { key: 'live', icon: <PlayCircleOutlined />, label: 'EN VIVO', public: true },
+    { key: 'replays', icon: <PlayCircleOutlined />, label: 'REPETICIONES', public: false },
+    { key: 'history', icon: <HistoryOutlined />, label: 'RESULTADOS', public: false },
+    { key: 'wallet', icon: <WalletOutlined />, label: 'BILLETERA', public: false },
   ];
 
   const adminItems = [
-    { key: 'admin-dashboard', icon: <ControlOutlined />, label: 'ADMIN PANEL' },
-    { key: 'admin-cartelera', icon: <FilePdfOutlined />, label: 'CARTELERA' },
+    { key: 'admin-dashboard', icon: <ControlOutlined />, label: 'ADMIN PANEL', public: false },
+    { key: 'admin-cartelera', icon: <FilePdfOutlined />, label: 'CARTELERA', public: false },
   ];
-  const itemsToShow = currentUser?.role === 'admin' ? [...navItems, ...adminItems] : navItems;
+
+  const itemsToShow = currentUser 
+    ? (currentUser.role === 'admin' ? [...navItems, ...adminItems] : navItems)
+    : navItems.filter(item => item.public);
 
   const renderContent = () => {
+    // PROTECCIÓN DE RUTAS: Redirigir a live si se intenta acceder a una ruta privada sin login
+    const currentItem = [...navItems, ...adminItems].find(i => i.key === currentView);
+    if (currentItem && !currentItem.public && !currentUser) {
+        return <UserLiveView userBalance={0} setUserBalance={() => {}} currentUser={null} setCurrentView={setCurrentView} />;
+    }
+
     switch (currentView) {
-      case 'live': return <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
+      case 'live': return <UserLiveView userBalance={balance} setUserBalance={setBalance} currentUser={currentUser} setCurrentView={setCurrentView} />;
+      case 'login': return <LoginView onLogin={handleLogin} />;
       case 'replays': return <ReplaysView />;
       case 'history': return <UserHistoryView />;
       case 'wallet': return <UserWalletView balance={balance} setBalance={setBalance} />;
       case 'settings': return <UserSettingsView onLogout={onLogout} />;
-      case 'admin-dashboard': return currentUser?.role === 'admin' ? <AdminDashboard /> : <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
-      case 'admin-cartelera': return currentUser?.role === 'admin' ? <AdminCarteleraView /> : <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
-      default: return <UserLiveView userBalance={balance} setUserBalance={setBalance} />;
+      case 'admin-dashboard': return currentUser?.role === 'admin' ? <AdminDashboard /> : <UserLiveView userBalance={balance} setUserBalance={setBalance} currentUser={currentUser} setCurrentView={setCurrentView} />;
+      case 'admin-cartelera': return currentUser?.role === 'admin' ? <AdminCarteleraView /> : <UserLiveView userBalance={balance} setUserBalance={setBalance} currentUser={currentUser} setCurrentView={setCurrentView} />;
+      default: return <UserLiveView userBalance={balance} setUserBalance={setBalance} currentUser={currentUser} setCurrentView={setCurrentView} />;
     }
   };
 
-  if (!currentUser) {
-    return <LoginView onLogin={handleLogin} />;
-  }
+
 
   return (
     <Layout style={{ minHeight: '100vh', background: 'var(--obsidian)' }}>
@@ -71,8 +79,8 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
         backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => setCurrentView('live')}>
-           <img src="/official_logo.png" style={{ height: 24 }} alt="Coliseo Logo" />
-           <Title level={5} style={{ color: '#fff', margin: 0, fontWeight: 700, letterSpacing: '2px', fontFamily: 'Outfit', textTransform: 'uppercase', fontSize: 13 }}>COLISEO ANGEL CRUZ</Title>
+           <img src="/official_logo.png" style={{ height: 28, borderRadius: '50%' }} alt="Coliseo Logo" />
+            <Title level={5} style={{ color: '#fff', margin: 0, fontWeight: 700, letterSpacing: '2px', fontFamily: 'Outfit', textTransform: 'uppercase', fontSize: 13 }}>COLISEO ANGEL CRUZ</Title>
         </div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -103,25 +111,46 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-           <div style={{ 
-              background: '#10b981', /* Flat solid green */
-              padding: '6px 16px', 
-              borderRadius: 8, 
-              boxShadow: 'none',
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 10,
-              border: 'none'
-           }}>
-              <WalletOutlined style={{ color: '#fff', fontSize: 16 }} />
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: 700, fontFamily: 'Outfit' }}>${parseFloat(balance).toLocaleString()}</Text>
-           </div>
-           <Button 
-              type="text" 
-              icon={<SettingOutlined style={{ color: '#fff' }} />} 
-              onClick={() => setCurrentView('settings')} 
-              style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '50%', width: 45, height: 45 }} 
-           />
+           {currentUser ? (
+              <>
+                <div style={{ 
+                   background: '#10b981', 
+                   padding: '6px 16px', 
+                   borderRadius: 8, 
+                   display: 'flex', 
+                   alignItems: 'center', 
+                   gap: 10,
+                   border: 'none'
+                }}>
+                   <WalletOutlined style={{ color: '#fff', fontSize: 16 }} />
+                   <Text style={{ color: '#fff', fontSize: 16, fontWeight: 700, fontFamily: 'Outfit' }}>${parseFloat(balance).toLocaleString()}</Text>
+                </div>
+                <Button 
+                   type="text" 
+                   icon={<SettingOutlined style={{ color: '#fff' }} />} 
+                   onClick={() => setCurrentView('settings')} 
+                   style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '50%', width: 45, height: 45 }} 
+                />
+              </>
+           ) : (
+              <Button 
+                 type="primary" 
+                 onClick={() => setCurrentView('login')}
+                 style={{ 
+                    background: '#10b981', 
+                    borderColor: '#10b981', 
+                    height: 40, 
+                    borderRadius: 8, 
+                    fontWeight: 700, 
+                    padding: '0 24px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    fontSize: 12
+                 }}
+              >
+                 INICIAR SESIÓN
+              </Button>
+           )}
         </div>
       </Header>
 
@@ -140,34 +169,52 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
         borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <img src="/official_logo.png" style={{ height: 22 }} alt="Logo" />
+            <img src="/official_logo.png" style={{ height: 26, borderRadius: '50%' }} alt="Logo" />
             <Title level={5} style={{ color: '#fff', margin: 0, fontWeight: 900, fontSize: 12, fontFamily: 'Outfit', letterSpacing: '1px' }}>ANGEL CRUZ</Title>
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ 
-              background: '#10b981', 
-              padding: '4px 12px', 
-              borderRadius: 6, 
-              boxShadow: 'none',
-              border: 'none'
-          }}>
-              <Text style={{ color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Outfit' }}>${parseFloat(balance).toLocaleString()}</Text>
-          </div>
-          <Button 
-            type="text" 
-            icon={<SettingOutlined style={{ color: '#fff', fontSize: 18 }} />} 
-            onClick={() => setCurrentView('settings')}
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.05)', 
-              borderRadius: '10px',
-              height: 40,
-              width: 40,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          />
+          {currentUser ? (
+              <>
+                <div style={{ 
+                    background: '#10b981', 
+                    padding: '4px 12px', 
+                    borderRadius: 6, 
+                    border: 'none'
+                }}>
+                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Outfit' }}>${parseFloat(balance).toLocaleString()}</Text>
+                </div>
+                <Button 
+                  type="text" 
+                  icon={<SettingOutlined style={{ color: '#fff', fontSize: 18 }} />} 
+                  onClick={() => setCurrentView('settings')}
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.05)', 
+                    borderRadius: '10px',
+                    height: 40,
+                    width: 40,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                />
+              </>
+          ) : (
+            <Button 
+                type="primary" 
+                size="small"
+                onClick={() => setCurrentView('login')}
+                style={{ 
+                   background: '#10b981', 
+                   borderColor: '#10b981', 
+                   borderRadius: 6, 
+                   fontWeight: 800,
+                   fontSize: 10
+                }}
+             >
+                LOGIN
+             </Button>
+          )}
         </div>
       </Header>
 

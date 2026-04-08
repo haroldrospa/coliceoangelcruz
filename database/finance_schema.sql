@@ -1,4 +1,4 @@
--- TrabaLive Finance Schema Extension (Deposits & Withdrawals)
+-- Coliseo Angel Cruz Finance Schema Extension (Deposits & Withdrawals)
 
 -- 1. Deposits Table
 CREATE TABLE IF NOT EXISTS public.deposits (

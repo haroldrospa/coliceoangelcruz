@@ -1,4 +1,4 @@
-# Trabalive | Plataforma de Apuestas y Streaming de Peleas de Gallos
+# Coliseo Angel Cruz | Plataforma de Apuestas y Streaming de Peleas de Gallos
 
 Esta es una aplicación de clase mundial con estética **Fintech Premium**, construida con React y Ant Design.
 

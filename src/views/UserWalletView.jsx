@@ -24,7 +24,7 @@ const UserWalletView = ({ balance, setBalance }) => {
     bank: "BANCO CENTRAL",
     account: "0000-0000-0000-0000",
     id: "V-12345678",
-    alias: "trabalive.pago"
+    alias: "coliseoangelcruz.pago"
   };
 
   useEffect(() => {
