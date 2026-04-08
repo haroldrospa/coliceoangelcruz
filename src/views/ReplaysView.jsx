@@ -1,31 +1,123 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, message } from 'antd';
-import { PlayCircleOutlined, HistoryOutlined, ThunderboltFilled, TrophyOutlined, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined } from '@ant-design/icons';
-import { supabase, rawFetch } from '../lib/supabase';
+import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, message, Popconfirm, Form, Upload, Progress } from 'antd';
+import { PlayCircleOutlined, HistoryOutlined, ThunderboltFilled, TrophyOutlined, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined, DeleteOutlined, EditOutlined, InboxOutlined } from '@ant-design/icons';
+import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 
 const { Title, Text } = Typography;
 
-const ReplaysView = () => {
+const ReplaysView = ({ currentUser }) => {
   const [replays, setReplays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedReplay, setSelectedReplay] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [editingReplay, setEditingReplay] = useState(null);
+  const [form] = Form.useForm();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [fileList, setFileList] = useState([]);
+
+  const fetchReplays = async () => {
+    try {
+      // Fetch finished events 
+      const data = await rawFetch(`events?select=*&status=eq.FINISHED&order=created_at.desc&limit=50`);
+      if (data) setReplays(data);
+    } catch (err) {
+      console.error('Replays Fetch Err:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchReplays = async () => {
-      try {
-        // Fetch finished events (including those that were archived from the admin dashboard)
-        const data = await rawFetch(`events?select=*&status=eq.FINISHED&order=created_at.desc&limit=30`);
-        if (data) setReplays(data);
-      } catch (err) {
-        console.error('Replays Fetch Err:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchReplays();
   }, []);
+
+  const handleDeleteReplay = async (id) => {
+     try {
+        setIsDeleting(true);
+        // First delete bets associated with this event to avoid FK issues
+        await rawFetch(`bets?event_id=eq.${id}`, { method: 'DELETE' });
+        await rawFetch(`events?id=eq.${id}`, { method: 'DELETE' });
+        message.success('PELEA ELIMINADA DEFINTIVAMENTE');
+        fetchReplays();
+     } catch (err) {
+        message.error('Error al eliminar: ' + err.message);
+     } finally {
+        setIsDeleting(false);
+     }
+  };
+
+  const openEditor = (event) => {
+      setEditingReplay(event);
+      setIsAdminOpen(true);
+      form.setFieldsValue({
+          stream_url: event.stream_url
+      });
+  };
+
+  const handleUpdateReplay = async (values) => {
+    setLoading(true);
+    setUploadProgress(0);
+    try {
+      let videoUrl = values.stream_url;
+      
+      if (fileList.length > 0) {
+        const file = fileList[0].originFileObj;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+        
+        const uploadPromise = new Promise(async (resolve, reject) => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token || supabaseAnonKey;
+
+            const xhr = new XMLHttpRequest();
+            const storageUrl = `${supabaseUrl}/storage/v1/object/media/${filePath}`;
+            xhr.open('PUT', storageUrl);
+            xhr.setRequestHeader('apikey', supabaseAnonKey);
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+            xhr.setRequestHeader('x-upsert', 'true');
+
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    setUploadProgress(percent);
+                }
+            };
+            xhr.onload = () => {
+                if (xhr.status === 200 || xhr.status === 201) resolve(xhr.response);
+                else reject(new Error(`Upload failed ${xhr.status}`));
+            };
+            xhr.onerror = () => reject(new Error('Network Error'));
+            xhr.send(file);
+        });
+
+        await uploadPromise;
+        const { data } = supabase.storage.from('media').getPublicUrl(filePath);
+        videoUrl = data.publicUrl;
+      }
+
+      await rawFetch(`events?id=eq.${editingReplay.id}`, { 
+        method: 'PATCH', 
+        body: { stream_url: videoUrl } 
+      });
+      
+      message.success('REPETICIÓN ACTUALIZADA');
+      setIsAdminOpen(false);
+      setEditingReplay(null);
+      setFileList([]);
+      form.resetFields();
+      fetchReplays();
+    } catch (e) {
+      message.error('Error al actualizar: ' + e.message);
+    } finally {
+      setLoading(false);
+      setTimeout(() => setUploadProgress(0), 1000);
+    }
+  };
 
   const filteredReplays = replays.filter(event => {
     const matchesSearch = 
@@ -201,6 +293,34 @@ const ReplaysView = () => {
                             <TrophyOutlined /> {(event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name).replace('[ARCHIVED] ', '')}
                          </div>
                       </div>
+
+                      {/* Admin Actions Overlay */}
+                      {currentUser?.role === 'admin' && (
+                         <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 3, display: 'flex', gap: 8 }}>
+                            <Button 
+                               size="small" 
+                               icon={<EditOutlined />} 
+                               onClick={(e) => { e.stopPropagation(); openEditor(event); }}
+                               style={{ background: 'var(--gold)', borderColor: 'var(--gold)', color: '#000', borderRadius: 8, height: 32, width: 32 }}
+                            />
+                            <Popconfirm
+                               title="¿ELIMINAR REPETICIÓN?"
+                               description="Se borrará definitivamente de la base de datos."
+                               onConfirm={() => handleDeleteReplay(event.id)}
+                               okText="SÍ, ELIMINAR"
+                               cancelText="NO"
+                               okButtonProps={{ danger: true, loading: isDeleting }}
+                            >
+                               <Button 
+                                  size="small" 
+                                  danger
+                                  icon={<DeleteOutlined />} 
+                                  onClick={e => e.stopPropagation()}
+                                  style={{ borderRadius: 8, height: 32, width: 32 }}
+                               />
+                            </Popconfirm>
+                         </div>
+                      )}
                   </div>
 
                   <div style={{ padding: '24px', background: 'rgba(255,255,255,0.01)' }}>
@@ -389,6 +509,60 @@ const ReplaysView = () => {
            to { opacity: 1; transform: translateY(0); } 
         }
       `}</style>
+       {/* Admin Edit Modal */}
+       <Modal
+          title={<span style={{ color: 'var(--gold)', fontWeight: 900, letterSpacing: '2px' }}>🛠️ PANEL DE EDICIÓN ADMIN</span>}
+          open={isAdminOpen}
+          onCancel={() => { setIsAdminOpen(false); setEditingReplay(null); setFileList([]); }}
+          footer={null}
+          centered
+          width={500}
+          styles={{ 
+             body: { background: 'var(--obsidian)', padding: '24px 32px' },
+             header: { background: 'var(--obsidian)', borderBottom: '1px solid rgba(212,175,55,0.2)' }
+          }}
+       >
+          <Form form={form} layout="vertical" onFinish={handleUpdateReplay}>
+              <Form.Item name="stream_url" label={<Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 900 }}>URL DEL VIDEO (DACAST/HLS)</Text>}>
+                 <Input 
+                   style={{ background: '#0a0a0a', border: '1px solid rgba(212,175,55,0.2)', color: '#fff', borderRadius: 10, height: 44 }} 
+                   placeholder="Pega el enlace directo aquí..."
+                 />
+              </Form.Item>
+
+              <div style={{ margin: '24px 0', padding: '20px', background: 'rgba(212,175,55,0.05)', borderRadius: 12, border: '1px dashed rgba(212,175,55,0.2)' }}>
+                  <Text style={{ color: 'var(--gold)', fontSize: 10, fontWeight: 900, display: 'block', marginBottom: 16, textAlign: 'center' }}>O SUBE UN ARCHIVO MP4</Text>
+                  <Upload.Dragger
+                      fileList={fileList}
+                      beforeUpload={() => false}
+                      onChange={({ fileList }) => setFileList(fileList.slice(-1))}
+                      style={{ background: 'transparent', border: 'none' }}
+                  >
+                      <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: 'var(--gold)' }} /></p>
+                      <p style={{ color: '#fff', fontSize: 12 }}>Haz clic o arrastra un video aquí</p>
+                  </Upload.Dragger>
+                  {uploadProgress > 0 && <Progress percent={uploadProgress} strokeColor="var(--gold)" trailColor="rgba(255,255,255,0.05)" style={{ marginTop: 20 }} />}
+              </div>
+
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                loading={loading}
+                block 
+                style={{ 
+                   height: 50, 
+                   background: 'linear-gradient(90deg, #d4af37 0%, #b8860b 100%)', 
+                   borderColor: 'transparent', 
+                   color: '#000', 
+                   fontWeight: 900, 
+                   borderRadius: 12,
+                   marginTop: 10 
+                }}
+              >
+                 GUARDAR CAMBIOS
+              </Button>
+          </Form>
+       </Modal>
     </div>
   );
 };

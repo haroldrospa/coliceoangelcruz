@@ -57,7 +57,7 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
     switch (currentView) {
       case 'live': return <UserLiveView userBalance={balance} setUserBalance={setBalance} currentUser={currentUser} setCurrentView={setCurrentView} />;
       case 'login': return <LoginView onLogin={handleLogin} />;
-      case 'replays': return <ReplaysView />;
+      case 'replays': return <ReplaysView currentUser={currentUser} />;
       case 'history': return <UserHistoryView />;
       case 'wallet': return <UserWalletView balance={balance} setBalance={setBalance} />;
       case 'settings': return <UserSettingsView onLogout={onLogout} />;
