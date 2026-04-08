@@ -27,7 +27,9 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       if (activeTab === '1') {
-        const data = await rawFetch(`events?select=*&order=created_at.desc`);
+        // Filter out [ARCHIVED] fights to keep the list clean. 
+        // We use a prefix because the 'status' column is an Enum in the database.
+        const data = await rawFetch(`events?select=*&gallo_a_name=not.ilike.[ARCHIVED]*&order=created_at.desc`);
         if (data) setEvents(data);
         
         // Fetch Global Settings from DB
@@ -394,20 +396,27 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDeleteEvent = async (id) => {
+  const handleDeleteEvent = async (event) => {
     setLoading(true);
     try {
-      // 1. Delete associated bets first to satisfy FK constraint
-      await rawFetch(`bets?event_id=eq.${id}`, { method: 'DELETE' });
-      
-      // 2. Delete the event itself
-      await rawFetch(`events?id=eq.${id}`, { method: 'DELETE' });
-      
-      message.success('PELEA Y APUESTAS ELIMINADAS');
+      if (event.status === 'FINISHED') {
+        // SOFT DELETE: Prefix name with [ARCHIVED] to hide it from admin dashboard but keep replay
+        const newName = `[ARCHIVED] ${event.gallo_a_name}`;
+        await rawFetch(`events?id=eq.${event.id}`, { 
+          method: 'PATCH', 
+          body: { gallo_a_name: newName } 
+        });
+        message.success('PELEA ARCHIVADA (REPETICIÓN PRESERVADA)');
+      } else {
+        // HARD DELETE: For non-finished fights
+        await rawFetch(`bets?event_id=eq.${event.id}`, { method: 'DELETE' });
+        await rawFetch(`events?id=eq.${event.id}`, { method: 'DELETE' });
+        message.success('PELEA ELIMINADA');
+      }
       fetchData();
     } catch (e) { 
         console.error('Delete Error:', e);
-        message.error('Error al borrar: ' + e.message); 
+        message.error('Error al procesar: ' + e.message); 
     } finally {
         setLoading(false);
     }
@@ -494,8 +503,20 @@ const AdminDashboard = () => {
 
   const eventColumns = [
     { title: 'PELEA', dataIndex: 'post_number', key: 'post', render: (t) => <Text style={{ color: 'var(--champagne)', fontWeight: 900 }}>{t}</Text> },
-    { title: 'GALLOS', key: 'ga', render: (_, r) => <div style={{ color: '#fff' }}>{r.gallo_a_name} vs {r.gallo_b_name}</div> },
-    { title: 'ESTADO', dataIndex: 'status', key: 'status', render: (s) => (s === 'LIVE' ? <Tag color="green">VIVO</Tag> : <Tag>{s}</Tag>) },
+    { title: 'GALLOS', key: 'ga', render: (_, r) => <div style={{ color: '#fff' }}>{r.gallo_a_name.replace('[ARCHIVED] ', '')} vs {r.gallo_b_name}</div> },
+    { title: 'ESTADO', dataIndex: 'status', key: 'status', render: (s, r) => {
+      if (s === 'LIVE') return <Tag color="green">VIVO</Tag>;
+      if (s === 'FINISHED') {
+         const hasReplay = r.stream_url && (r.stream_url.includes('/storage/') || r.stream_url.match(/\.(mp4|webm|mov|ogg)$/i));
+         return (
+           <Space>
+             <Tag color="cyan">TERMINADA</Tag>
+             {!hasReplay && <Badge count="SIN VIDEO" style={{ backgroundColor: '#ff4d4f', fontSize: 9, fontWeight: 900, borderRadius: 4, height: 16, lineHeight: '16px', boxShadow: '0 0 8px rgba(255,77,79,0.5)' }} className="pulse-warning" />}
+           </Space>
+         );
+      }
+      return <Tag>{s}</Tag>;
+    }},
     { title: 'ACCIONES', key: 'actions', render: (_, r) => (
       <Space>
         {r.status === 'LIVE' && <Button size="small" onClick={() => updateStatus(r.id, 'CLOSED')}>CERRAR</Button>}
@@ -507,25 +528,29 @@ const AdminDashboard = () => {
           </Space>
         )}
         {r.status === 'FINISHED' && (
-          <Button 
-            size="small" 
-            icon={<VideoCameraOutlined />} 
-            onClick={() => openReplayEditor(r)}
-            style={{ color: '#d4af37', borderColor: '#d4af37' }}
-          >
-            REPETICIÓN
-          </Button>
+          <Badge dot={!(r.stream_url && (r.stream_url.includes('/storage/') || r.stream_url.match(/\.(mp4|webm|mov|ogg)$/i)))} color="#ff4d4f" offset={[-2, 2]}>
+            <Button 
+                size="small" 
+                icon={<VideoCameraOutlined />} 
+                onClick={() => openReplayEditor(r)}
+                style={{ color: '#d4af37', borderColor: '#d4af37' }}
+            >
+                REPETICIÓN
+            </Button>
+          </Badge>
         )}
-        <Popconfirm
-          title="¿ELIMINAR PELEA?"
-          description="Esta acción no se puede deshacer."
-          onConfirm={() => handleDeleteEvent(r.id)}
-          okText="SÍ, ELIMINAR"
-          cancelText="NO"
-          okButtonProps={{ danger: true }}
-        >
-          <Button type="text" danger icon={<DeleteOutlined />} />
-        </Popconfirm>
+        <div onClick={e => e.stopPropagation()}>
+          <Popconfirm
+            title="¿ELIMINAR PELEA?"
+            description="Esta acción no se puede deshacer."
+            onConfirm={() => handleDeleteEvent(r)}
+            okText="SÍ, ELIMINAR"
+            cancelText="NO"
+            okButtonProps={{ danger: true }}
+          >
+            <Button type="text" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </div>
       </Space>
     )}
   ];
@@ -564,17 +589,18 @@ const AdminDashboard = () => {
       
       {/* 🚀 PREMIUM ACTION PANEL: JORNADA DE HOY */}
       <div style={{ 
-          background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,5,5,0.4) 100%)', 
-          padding: '32px', 
+          background: 'linear-gradient(135deg, rgba(30,30,30,0.5) 0%, rgba(10,10,10,0.8) 100%)', 
+          padding: '36px', 
           borderRadius: 24, 
-          marginBottom: 40, 
-          border: '1px solid rgba(16,185,129,0.15)',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          marginBottom: 44, 
+          border: '1px solid rgba(212,175,55,0.15)',
+          boxShadow: '0 25px 50px rgba(0,0,0,0.7)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          backdropFilter: 'blur(20px)'
       }}>
          {/* Subliminal Decor */}
-         <ThunderboltFilled style={{ position: 'absolute', right: -20, top: -20, fontSize: 160, color: '#10b981', opacity: 0.03, transform: 'rotate(15deg)' }} />
+         <ThunderboltFilled style={{ position: 'absolute', right: -30, top: -30, fontSize: 180, color: '#d4af37', opacity: 0.03, transform: 'rotate(15deg)' }} />
 
          <Row gutter={[32, 24]} align="middle">
             <Col xs={24} lg={10}>
@@ -585,62 +611,64 @@ const AdminDashboard = () => {
             </Col>
 
             <Col xs={24} lg={14}>
-               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.03)' }}>
-                  <Row gutter={[20, 20]} align="bottom">
+               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '28px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.4)' }}>
+                  <Row gutter={[24, 24]} align="bottom">
                      <Col xs={24} md={12}>
-                        <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 800, letterSpacing: '2px', display: 'block', marginBottom: 8, textTransform: 'uppercase' }}>SEÑAL GLOBAL</Text>
+                        <Text style={{ color: 'var(--gold)', fontSize: 10, fontWeight: 900, letterSpacing: '3px', display: 'block', marginBottom: 10, textTransform: 'uppercase' }}>SEÑAL GLOBAL MASTER</Text>
                         <Input 
                            placeholder="DACAST / HLS / M3U8" 
                            value={globalStream} 
                            onChange={e => setGlobalStream(e.target.value)}
                            style={{ 
                               background: '#050505', 
-                              border: '1px solid rgba(16,185,129,0.3)', 
+                              border: '1px solid rgba(212,175,55,0.2)', 
                               color: '#fff',
-                              height: 44,
-                              borderRadius: 10,
-                              fontSize: 13,
-                              fontWeight: 600
+                              height: 48,
+                              borderRadius: 12,
+                              fontSize: 14,
+                              fontWeight: 600,
+                              boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)'
                            }}
                            suffix={
                               <Button 
                                  type="text" 
                                  size="small" 
-                                 icon={<CheckCircleFilled style={{ color: isSavingStream ? '#fff' : '#10b981', fontSize: 18 }} />} 
+                                 icon={<CheckCircleFilled style={{ color: isSavingStream ? '#fff' : 'var(--gold)', fontSize: 20 }} />} 
                                  onClick={handleSaveGlobalStream}
                                  loading={isSavingStream}
-                                 style={{ background: isSavingStream ? 'transparent' : 'rgba(16,185,129,0.1)', width: 32, height: 32, borderRadius: 8, marginLeft: 8 }}
+                                 style={{ background: isSavingStream ? 'transparent' : 'rgba(212,175,55,0.1)', width: 36, height: 36, borderRadius: 10, marginLeft: 8 }}
                               />
                            }
                         />
                      </Col>
 
                      <Col xs={12} md={6}>
-                        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, letterSpacing: '1px', display: 'block', marginBottom: 8 }}>MODO LIVE</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 900, letterSpacing: '1px', display: 'block', marginBottom: 10, textTransform: 'uppercase' }}>SISTEMA LIVE</Text>
                         <Select 
                            value={streamMode} 
                            onChange={handleToggleStreamMode}
                            loading={isSavingMode}
                            size="large"
                            style={{ width: '100%' }}
-                           dropdownStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)' }}
+                           dropdownStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }}
                            options={[
-                              { value: 'LIVE', label: <span style={{ color: '#10b981', fontWeight: 700 }}>🔵 TRANSMISIÓN</span> },
-                              { value: 'STANDBY', label: <span style={{ color: '#d4af37', fontWeight: 700 }}>🟠 LOGO ESPERA</span> }
+                              { value: 'LIVE', label: <span style={{ color: '#10b981', fontWeight: 900, fontSize: 12 }}>🔵 TRANSMISIÓN</span> },
+                              { value: 'STANDBY', label: <span style={{ color: 'var(--gold)', fontWeight: 900, fontSize: 12 }}>🟠 STANDBY</span> }
                            ]}
                         />
                      </Col>
 
                      <Col xs={12} md={6}>
-                        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, letterSpacing: '1px', display: 'block', marginBottom: 8 }}>CARTELERA</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 900, letterSpacing: '1px', display: 'block', marginBottom: 10, textTransform: 'uppercase' }}>CARTELERA</Text>
                         <Select 
                            value={showCartelera} 
                            onChange={handleToggleCartelera}
                            size="large"
                            style={{ width: '100%' }}
+                           dropdownStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }}
                            options={[
-                              { value: true, label: <span style={{ fontWeight: 700 }}>VISIBLE</span> },
-                              { value: false, label: <span style={{ color: 'rgba(255,255,255,0.4)' }}>OCULTA</span> }
+                              { value: true, label: <span style={{ fontWeight: 900, fontSize: 12 }}>VISIBLE</span> },
+                              { value: false, label: <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 900, fontSize: 12 }}>OCULTA</span> }
                            ]}
                         />
                      </Col>
@@ -699,13 +727,13 @@ const AdminDashboard = () => {
       </div>
 
 
-      <div style={{ textAlign: 'center', margin: '40px 0 32px' }}>
-         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
-            <div style={{ width: 40, height: 1, background: 'linear-gradient(90deg, transparent, #10b981)' }} />
-            <Title level={2} style={{ color: '#fff', margin: 0, letterSpacing: '4px', fontSize: 24, fontWeight: 900 }}>ESTRATEGIA CENTRAL</Title>
-            <div style={{ width: 40, height: 1, background: 'linear-gradient(90deg, #10b981, transparent)' }} />
+      <div style={{ textAlign: 'center', margin: '48px 0 36px' }}>
+         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 20, marginBottom: 12 }}>
+            <div style={{ width: 60, height: 1, background: 'linear-gradient(90deg, transparent, var(--gold))' }} />
+            <Title level={2} style={{ color: '#fff', margin: 0, letterSpacing: '6px', fontSize: 28, fontWeight: 900, fontFamily: 'Outfit' }}>ESTRATEGIA CENTRAL</Title>
+            <div style={{ width: 60, height: 1, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
          </div>
-         <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 700, letterSpacing: '2px', display: 'block' }}>GESTIÓN OPERATIVA DE ALTO NIVEL</Text>
+         <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, fontWeight: 900, letterSpacing: '4px', display: 'block', textTransform: 'uppercase' }}>GESTIÓN OPERATIVA DE ALTO NIVEL</Text>
       </div>
 
       <Tabs 
@@ -869,13 +897,18 @@ const AdminDashboard = () => {
         </div>
       </Modal>
     </div>
-    <style>{`
-        .clickable-row { cursor: pointer; transition: background 0.3s; }
-        .clickable-row:hover { background: rgba(212,175,55,0.05) !important; }
-    `}</style>
+      <style>{`
+        .clickable-row { cursor: pointer; }
+        .clickable-row:hover { background: rgba(212,175,55,0.03) !important; }
+        .pulse-warning { animation: pulseAnim 2s infinite; }
+        @keyframes pulseAnim {
+           0% { opacity: 1; transform: scale(1); }
+           50% { opacity: 0.7; transform: scale(0.95); }
+           100% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
     </>
   );
 };
-
 
 export default AdminDashboard;

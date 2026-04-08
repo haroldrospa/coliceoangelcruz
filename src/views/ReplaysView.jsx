@@ -15,7 +15,7 @@ const ReplaysView = () => {
   useEffect(() => {
     const fetchReplays = async () => {
       try {
-        // Fetch finished events
+        // Fetch finished events (including those that were archived from the admin dashboard)
         const data = await rawFetch(`events?select=*&status=eq.FINISHED&order=created_at.desc&limit=30`);
         if (data) setReplays(data);
       } catch (err) {
@@ -73,9 +73,10 @@ const ReplaysView = () => {
   };
 
   const handleShare = async (event) => {
+    const winnerName = (event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name).replace('[ARCHIVED] ', '');
     const shareData = {
       title: `Coliseo Ángel Cruz - Poste #${event.post_number}`,
-      text: `¡Mira esta pelea! Poste #${event.post_number}: ${event.gallo_a_name} vs ${event.gallo_b_name}. Ganador: ${event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name}`,
+      text: `¡Mira esta pelea! Poste #${event.post_number}: ${event.gallo_a_name.replace('[ARCHIVED] ', '')} vs ${event.gallo_b_name}. Ganador: ${winnerName}`,
       url: window.location.href,
     };
 
@@ -107,8 +108,8 @@ const ReplaysView = () => {
 
       {/* Filter Controls */}
       <Card 
-        styles={{ body: { padding: '16px 24px' } }} 
-        style={{ marginBottom: 40, background: 'rgba(212,175,55,0.03)', border: '1px solid rgba(212,175,55,0.1)', borderRadius: 16 }}
+        styles={{ body: { padding: '20px 24px' } }} 
+        style={{ marginBottom: 44, background: 'rgba(212,175,55,0.02)', border: '1px solid rgba(212,175,55,0.1)', borderRadius: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}
       >
         <Row gutter={[16, 16]} align="middle">
             <Col xs={24} md={12}>
@@ -147,51 +148,82 @@ const ReplaysView = () => {
                   styles={{ body: { padding: 0 } }}
                   style={{ border: '1px solid rgba(212,175,55,0.1)', borderRadius: 20, overflow: 'hidden' }}
                 >
-                  <div style={{ position: 'relative', height: 160, background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                      {/* Fake Thumbnail or Placeholder */}
+                  <div style={{ position: 'relative', height: 180, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      {/* Premium Thumbnail with Gradient Overlay */}
                       <img 
-                        src={`https://images.unsplash.com/photo-1549465220-1d8f9dcfc3c3?auto=format&fit=crop&q=80&w=400`} 
-                        style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3, filter: 'blur(2px)' }} 
-                        alt="Replay Thumbnail"
+                        src={`https://images.unsplash.com/photo-1549464478-f2b700f135e6?auto=format&fit=crop&q=80&w=400`} 
+                        style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4, filter: 'grayscale(100%) contrast(1.2)' }} 
+                        alt=""
                       />
-                      <div style={{ zIndex: 1, textAlign: 'center' }}>
-                          <PlayCircleOutlined style={{ fontSize: 48, color: '#10b981', cursor: 'pointer', transition: 'transform 0.3s' }} className="play-icon" onClick={() => openReplay(event)} />
-                          <div style={{ marginTop: 8 }}>
-                             <Badge count={`POSTE ${event.post_number}`} style={{ backgroundColor: '#10b981', color: '#fff', fontWeight: 900, fontSize: 10, border: 'none' }} />
+                      <div style={{ 
+                         position: 'absolute', 
+                         top: 0, left: 0, width: '100%', height: '100%', 
+                         background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 50%, rgba(0,0,0,0.9) 100%)',
+                         zIndex: 1 
+                      }} />
+
+                      <div style={{ zIndex: 2, textAlign: 'center' }}>
+                          <div className="play-container" onClick={() => openReplay(event)}>
+                             <PlayCircleOutlined style={{ fontSize: 64, color: '#10b981' }} className="play-icon-glow" />
+                          </div>
+                          <div style={{ marginTop: 12 }}>
+                             <Badge 
+                                count={`POSTE ${event.post_number}`} 
+                                style={{ 
+                                   backgroundColor: 'rgba(16,185,129,0.15)', 
+                                   color: '#10b981', 
+                                   fontWeight: 900, 
+                                   fontSize: 10, 
+                                   border: '1px solid rgba(16,185,129,0.3)',
+                                   borderRadius: 4,
+                                   padding: '0 8px'
+                                }} 
+                             />
                           </div>
                       </div>
                       
-                      {/* Winner Tag */}
-                      <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
+                      {/* Winner Floating Pill */}
+                      <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 3 }}>
                          <div style={{ 
-                            background: 'rgba(212,175,55,0.9)', 
+                            background: 'linear-gradient(135deg, #d4af37 0%, #b8860b 100%)', 
                             color: '#000', 
-                            padding: '4px 10px', 
-                            borderRadius: 6, 
+                            padding: '6px 14px', 
+                            borderRadius: '50px', 
                             fontSize: 10, 
                             fontWeight: 900,
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 4
+                            gap: 6,
+                            boxShadow: '0 8px 20px rgba(212,175,55,0.3)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px'
                          }}>
-                            <TrophyOutlined /> {event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name}
+                            <TrophyOutlined /> {(event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name).replace('[ARCHIVED] ', '')}
                          </div>
                       </div>
                   </div>
 
-                  <div style={{ padding: '20px' }}>
-                      <Title level={5} style={{ color: '#fff', margin: 0, fontSize: 16, fontWeight: 800, fontFamily: 'Outfit', textTransform: 'uppercase' }}>
-                         {event.gallo_a_name} <span style={{ color: 'rgba(212,175,55,0.4)', fontSize: 12 }}>vs</span> {event.gallo_b_name}
+                  <div style={{ padding: '24px', background: 'rgba(255,255,255,0.01)' }}>
+                      <Title level={5} style={{ color: '#fff', margin: 0, fontSize: 15, fontWeight: 900, fontFamily: 'Outfit', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                         {event.gallo_a_name.replace('[ARCHIVED] ', '')} <span style={{ color: 'rgba(212,175,55,0.4)', fontSize: 10, fontWeight: 300, margin: '0 4px' }}>VS</span> {event.gallo_b_name}
                       </Title>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-                         <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                         <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 800, letterSpacing: '1px' }}>
                             {new Date(event.created_at).toLocaleDateString()}
                          </Text>
                          <Button 
                             type="text" 
                             icon={<VideoCameraOutlined />} 
                             onClick={() => openReplay(event)}
-                            style={{ color: '#10b981', fontSize: 12, fontWeight: 700, padding: 0 }}
+                            style={{ 
+                               color: '#10b981', 
+                               fontSize: 11, 
+                               fontWeight: 900, 
+                               padding: 0,
+                               display: 'flex',
+                               alignItems: 'center',
+                               gap: 4
+                            }}
                          >
                             VER REPETICIÓN
                          </Button>
@@ -252,15 +284,15 @@ const ReplaysView = () => {
                 <Row justify="space-between" align="middle">
                    <Col>
                       <Title level={4} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit' }}>
-                        POSTE #{selectedReplay.post_number}: {selectedReplay.gallo_a_name} VS {selectedReplay.gallo_b_name}
+                        POSTE #{selectedReplay.post_number}: {selectedReplay.gallo_a_name.replace('[ARCHIVED] ', '')} VS {selectedReplay.gallo_b_name}
                       </Title>
                       <Text style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                         Finalizado el {new Date(selectedReplay.created_at).toLocaleString()}
                       </Text>
                    </Col>
                     <Col>
-                      <div style={{ background: '#10b981', color: '#fff', padding: '6px 16px', borderRadius: 8, fontWeight: 900, fontSize: 12 }}>
-                         GANADOR: {selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : selectedReplay.gallo_b_name}
+                      <div style={{ background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)', color: '#fff', padding: '8px 20px', borderRadius: 10, fontWeight: 900, fontSize: 13, boxShadow: '0 4px 12px rgba(16,185,129,0.3)', letterSpacing: '0.5px' }}>
+                         GANADOR: {(selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : selectedReplay.gallo_b_name).replace('[ARCHIVED] ', '')}
                       </div>
                    </Col>
                 </Row>
@@ -313,22 +345,49 @@ const ReplaysView = () => {
 
       <style>{`
         .glass-panel {
-            background: linear-gradient(135deg, rgba(20, 20, 20, 0.9) 0%, rgba(10, 10, 10, 0.95) 100%) !important;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: linear-gradient(135deg, rgba(20, 20, 20, 0.7) 0%, rgba(5, 5, 5, 0.8) 100%) !important;
+            backdrop-filter: blur(20px);
+            box-shadow: 
+               0 10px 30px rgba(0,0,0,0.5),
+               inset 0 0 0 1px rgba(255,255,255,0.05);
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .replay-card {
+            border: 1px solid rgba(212, 175, 55, 0.1) !important;
         }
         .replay-card:hover {
-            transform: translateY(-8px);
-            border-color: rgba(212, 175, 55, 0.4) !important;
-            box-shadow: 0 20px 40px rgba(212, 175, 55, 0.1);
+            transform: translateY(-12px) scale(1.02);
+            border-color: rgba(212, 175, 55, 0.5) !important;
+            box-shadow: 
+               0 30px 60px rgba(0,0,0,0.8),
+               0 0 20px rgba(212, 175, 55, 0.15);
         }
-        .replay-card:hover .play-icon {
-            transform: scale(1.2);
+        .play-container {
+            cursor: pointer;
+            transition: all 0.4s ease;
+            padding: 10px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .play-icon-glow {
+            transition: all 0.4s ease;
+            filter: drop-shadow(0 0 0px rgba(16, 185, 129, 0));
+        }
+        .replay-card:hover .play-icon-glow {
+            transform: scale(1.1);
             color: #fff !important;
+            filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.8));
         }
-        .fade-up { animation: fadeUp 0.6s ease-out forwards; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .replay-card:hover .play-container {
+            background: rgba(16, 185, 129, 0.1);
+        }
+        .fade-up { animation: fadeUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+        @keyframes fadeUp { 
+           from { opacity: 0; transform: translateY(30px); } 
+           to { opacity: 1; transform: translateY(0); } 
+        }
       `}</style>
     </div>
   );

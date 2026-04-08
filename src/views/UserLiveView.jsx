@@ -113,60 +113,46 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
     );
   }
 
-  return (
-    <div style={{ 
-        position: 'relative', 
-        width: '100%', 
-        paddingBottom: '56.25%', /* 16:9 Aspect Ratio */
-        height: 0, 
-        overflow: 'hidden',
-        borderRadius: 8,
-        border: '1px solid rgba(255,255,255,0.1)',
-        background: '#0a0a0a'
-    }}>
-      {/* Blinking Live Indicator */}
-      <div style={{ 
-          position: 'absolute', 
-          top: 15, 
-          left: 15, 
-          zIndex: 10, 
-          background: '#dc2626', /* Flat minimalist red */
-          color: '#fff', 
-          padding: '4px 8px', 
-          borderRadius: 4, 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 6,
-          animation: 'blink 1.5s infinite'
-      }}>
-        <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%' }} />
-        <Text style={{ color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.5px' }}>EN VIVO</Text>
-      </div>
+    const isDirectVideo = stream_url?.match(/\.(mp4|webm|mov|ogg)$/i) || stream_url?.includes('/storage/v1/object/public/');
 
-      {isHLS ? (
-        <HLSVideoPlayer url={stream_url} />
-      ) : (
-        <iframe 
-            src={stream_url || "https://iframe.dacast.com/live/55197822-2232-7fde-fcf0-9369fe4022fb/013bad74-e5d5-4478-824f-893cedb06b66"} 
-            width="100%" 
-            height="100%" 
-            frameBorder="0" 
-            scrolling="no" 
-            allow="autoplay; encrypted-media" 
-            allowFullScreen 
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-        />
-      )}
-      
-      <style>{`
-        @keyframes blink {
-          0% { opacity: 1; }
-          50% { opacity: 0.6; }
-          100% { opacity: 1; }
-        }
-      `}</style>
-    </div>
-  );
+    if (isHLS) {
+        return (
+            <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', borderRadius: 8, overflow: 'hidden', background: '#000' }}>
+                <div style={{ position: 'absolute', top: 15, left: 15, zIndex: 10, background: '#dc2626', color: '#fff', padding: '4px 8px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, animation: 'blink 1.5s infinite' }}>
+                    <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%' }} />
+                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.5px' }}>EN VIVO</Text>
+                </div>
+                <HLSVideoPlayer url={stream_url} />
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: '#0a0a0a' }}>
+            <div style={{ position: 'absolute', top: 15, left: 15, zIndex: 10, background: '#dc2626', color: '#fff', padding: '4px 8px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, animation: 'blink 1.5s infinite' }}>
+                <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%' }} />
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.5px' }}>EN VIVO</Text>
+            </div>
+
+            {isDirectVideo ? (
+                <video 
+                    src={stream_url} 
+                    controls 
+                    autoPlay 
+                    muted 
+                    playsInline
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+            ) : (
+                <iframe 
+                    src={stream_url || "https://iframe.dacast.com/live/55197822-2232-7fde-fcf0-9369fe4022fb/013bad74-e5d5-4478-824f-893cedb06b66"} 
+                    width="100%" height="100%" frameBorder="0" scrolling="no" allow="autoplay; encrypted-media" allowFullScreen 
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                />
+            )}
+            <style>{`@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }`}</style>
+        </div>
+    );
 };
 
 const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView }) => {
@@ -249,8 +235,14 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     const initData = async () => {
       try {
 
-        const events = await rawFetch(`events?select=*&order=updated_at.desc&limit=1`);
-        if (events && events[0]) setFightInfo(events[0]);
+        // Fetch current active fight (LIVE or CLOSED). Ignore FINISHED for the main top display.
+        const events = await rawFetch(`events?select=*&status=in.(LIVE,CLOSED)&order=updated_at.desc&limit=1`);
+        if (events && events[0]) {
+            setFightInfo(events[0]);
+        } else {
+            // Default empty fight if nothing is active
+            setFightInfo(prev => ({ ...prev, id: null, status: 'PENDING' }));
+        }
 
         const fetchProgram = async () => {
             try {
@@ -319,7 +311,14 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         }
         
         if (payload.new) {
-            setFightInfo(payload.new);
+            // Update main fight only if it's NOT finished
+            if (payload.new.status !== 'FINISHED') {
+                setFightInfo(payload.new);
+            } else if (fightInfo.id === payload.new.id) {
+                // If it was the active fight and just finished, clear it to return to global stream
+                setFightInfo(prev => ({ ...prev, id: null, status: 'PENDING' }));
+            }
+
             // Update program list in real-time
             setTodayProgram(prev => {
                 const index = prev.findIndex(e => e.id === payload.new.id);
@@ -517,10 +516,10 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         </Col>
 
         <Col xs={24} lg={8} style={{ display: 'flex' }}>
-           <Card className="glass-panel chat-card" styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' } }} style={{ width: '100%', border: '1px solid rgba(16,185,129,0.2)', height: '400px' /* Forced Fixed Height match with video typical height */ }}>
-                <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(16,185,129,0.05)' }}>
-                   <Title level={5} style={{ color: '#fff', margin: 0, fontSize: 11, letterSpacing: '1px' }}>CHAT EN VIVO</Title>
-                   <Badge status="processing" color="#10b981" text={<Text style={{ fontSize: 9, color: 'var(--text-muted)' }}>LIVE</Text>} />
+           <Card className="glass-panel chat-card" styles={{ body: { padding: 0, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' } }} style={{ width: '100%', border: '1px solid rgba(255,255,255,0.05)', height: '400px', boxShadow: '0 20px 40px rgba(0,0,0,0.6)' }}>
+                <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
+                   <Title level={5} style={{ color: '#fff', margin: 0, fontSize: 11, letterSpacing: '2px', fontWeight: 900 }}>CHAT EN VIVO</Title>
+                   <Badge status="processing" color="#10b981" text={<Text style={{ fontSize: 9, color: '#10b981', fontWeight: 800 }}>LIVE</Text>} />
                 </div>
                 
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, height: '300px', maxHeight: '300px' }} className="chat-container" ref={chatContainerRef}>
@@ -606,22 +605,31 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
       {/* SECONDARY ACTION ZONE: Betting & Info */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={16}>
-           <div style={{ padding: 24, borderRadius: 12, background: 'var(--charcoal)', border: '1px solid var(--glass-border)' }}>
+           <div style={{ 
+               padding: 24, 
+               borderRadius: 16, 
+               background: 'linear-gradient(135deg, rgba(30,30,30,0.4) 0%, rgba(10,10,10,0.6) 100%)', 
+               border: '1px solid rgba(212,175,55,0.15)',
+               boxShadow: '0 15px 35px rgba(0,0,0,0.4)',
+               backdropFilter: 'blur(10px)'
+           }}>
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                 <Title level={4} style={{ margin: 0, color: '#fff', fontSize: 16, fontWeight: 700 }}>PELEA #{fightInfo.post_number}</Title>
+                 <Title level={4} style={{ margin: 0, color: 'var(--gold)', fontSize: 13, fontWeight: 900, letterSpacing: '3px', textTransform: 'uppercase' }}>PELEA #{fightInfo.post_number}</Title>
               </div>
-
+ 
               <Row gutter={[16, 16]} align="middle">
                 <Col span={10} style={{ textAlign: 'center' }}>
-                    <Title level={4} style={{ margin: 0, color: '#fff', fontSize: 16, fontWeight: 700, textTransform: 'uppercase' }}>{fightInfo.gallo_a_name}</Title>
-                    <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 600 }}>{fightInfo.gallo_a_weight}</Text>
+                    <Title level={4} style={{ margin: 0, color: '#fff', fontSize: 20, fontWeight: 900, textTransform: 'uppercase', fontFamily: 'Outfit', letterSpacing: '0.5px' }}>{fightInfo.gallo_a_name.replace('[ARCHIVED] ', '')}</Title>
+                    <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 800, letterSpacing: '1px' }}>{fightInfo.gallo_a_weight}</Text>
                 </Col>
                 <Col span={4} style={{ textAlign: 'center' }}>
-                    <ThunderboltFilled style={{ color: '#10b981', fontSize: 20 }} />
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', border: '1px solid rgba(212,175,55,0.2)' }}>
+                        <ThunderboltFilled style={{ color: 'var(--gold)', fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(212,175,55,0.5))' }} />
+                    </div>
                 </Col>
                 <Col span={10} style={{ textAlign: 'center' }}>
-                    <Title level={4} style={{ margin: 0, color: '#fff', fontSize: 16, fontWeight: 700, textTransform: 'uppercase' }}>{fightInfo.gallo_b_name}</Title>
-                    <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 600 }}>{fightInfo.gallo_b_weight}</Text>
+                    <Title level={4} style={{ margin: 0, color: '#fff', fontSize: 20, fontWeight: 900, textTransform: 'uppercase', fontFamily: 'Outfit', letterSpacing: '0.5px' }}>{fightInfo.gallo_b_name}</Title>
+                    <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 800, letterSpacing: '1px' }}>{fightInfo.gallo_b_weight}</Text>
                 </Col>
               </Row>
               
@@ -777,15 +785,15 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                             onClick={() => setFightInfo(event)}
                             className="list-item-hover"
                             style={{ 
-                                background: event.id === fightInfo.id ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.02)', 
-                                border: event.id === fightInfo.id ? '1px solid #10b981' : '1px solid var(--glass-border)',
-                                borderRadius: 12,
-                                padding: '16px 20px',
+                                background: event.id === fightInfo.id ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.02)', 
+                                border: event.id === fightInfo.id ? '1px solid #d4af37' : '1px solid rgba(255,255,255,0.05)',
+                                borderRadius: 16,
+                                padding: '18px 24px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                gap: 16,
+                                transition: 'all 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
+                                gap: 20,
                                 position: 'relative',
                                 overflow: 'hidden'
                             }}
