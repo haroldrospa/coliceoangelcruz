@@ -78,7 +78,7 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
         setPlayerError(false);
     }, [stream_url]);
 
-    if (streamMode === 'STANDBY' || playerError) {
+    if (streamMode === 'STANDBY' || playerError || (status !== 'LIVE' && !hasSignal)) {
         return (
           <div style={{ 
               position: 'relative', width: '100%', paddingBottom: '56.25%', 
@@ -90,47 +90,28 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
               justifyContent: 'center'
           }}>
              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '100%', zIndex: 11 }}>
-                <img 
-                    src="/official_logo.png" 
-                    alt="Coliseo Angel Cruz" 
-                    style={{ width: 'clamp(100px, 15vw, 180px)', marginBottom: 20, filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.2))' }} 
-                />
                 <Title level={1} style={{ 
                     color: '#fff', 
                     margin: 0, 
                     fontWeight: 900, 
                     letterSpacing: '8px', 
                     fontFamily: 'Outfit',
-                    fontSize: 'clamp(18px, 3vw, 24px)',
+                    fontSize: 'clamp(20px, 4vw, 36px)',
                     textTransform: 'uppercase',
                     textShadow: '0 0 20px rgba(16,185,129,0.3)'
                 }}>
                     COLISEO ANGEL CRUZ
                 </Title>
-                <div style={{ width: 40, height: 2, background: '#10b981', margin: '15px auto', borderRadius: 2, opacity: 0.6 }} />
-                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, letterSpacing: '4px', textTransform: 'uppercase' }}>
-                    {playerError ? 'RECONECTANDO SEÑAL...' : 'TRANSMISIÓN EN BREVE'}
+                <div style={{ width: 60, height: 2, background: '#10b981', margin: '15px auto', borderRadius: 2, opacity: 0.6 }} />
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 800, letterSpacing: '4px', textTransform: 'uppercase' }}>
+                    {playerError ? 'RECONECTANDO SEÑAL...' : status !== 'LIVE' && !hasSignal ? 'ESPERANDO SEÑAL...' : 'TRANSMISIÓN EN BREVE'}
                 </Text>
              </div>
           </div>
         );
     }
 
-  if (status !== 'LIVE' && !hasSignal) {
-    return (
-      <div style={{ 
-          position: 'relative', width: '100%', paddingBottom: '56.25%', 
-          background: '#0a0a0a', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-      }}>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-            <div style={{ width: 40, height: 40, border: '2px solid rgba(16,185,129,0.1)', borderTopColor: '#10b981', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-            <Text style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, letterSpacing: '3px' }}>ESPERANDO SEÑAL...</Text>
-        </div>
-        <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
+    // The conditional for (status !== 'LIVE' && !hasSignal) is now handled by the standby screen above
 
     const isDirectVideo = stream_url?.match(/\.(mp4|webm|mov|ogg)$/i) || stream_url?.includes('/storage/v1/object/public/');
 
