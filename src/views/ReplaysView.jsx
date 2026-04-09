@@ -379,12 +379,15 @@ const ReplaysView = ({ currentUser }) => {
           <div style={{ position: 'relative' }}>
              <div style={{ position: 'relative', width: '100%', background: '#000' }}>
                {selectedReplay.stream_url?.match(/\.(mp4|webm|ogg|mov)$/i) || selectedReplay.stream_url?.includes('/storage/v1/object/public/') ? (
-                 <video 
-                   src={selectedReplay.stream_url} 
-                   controls 
-                   autoPlay 
-                   style={{ width: '100%', display: 'block' }} 
-                 />
+                  <video 
+                    src={selectedReplay.stream_url} 
+                    controls 
+                    autoPlay 
+                    muted 
+                    playsInline
+                    webkit-playsinline="true"
+                    style={{ width: '100%', display: 'block' }} 
+                  />
                ) : (
                  <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
                     <iframe 

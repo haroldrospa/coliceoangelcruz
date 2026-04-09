@@ -20,12 +20,16 @@ const HLSVideoPlayer = ({ url }) => {
         // Create a dedicated video element for Video.js to manage
         const videoElement = document.createElement("video-js");
         videoElement.classList.add('vjs-big-play-centered', 'vjs-theme-city');
+        videoElement.setAttribute('playsinline', 'true');
+        videoElement.setAttribute('muted', 'true'); // Required for mobile autoplay
         containerRef.current.appendChild(videoElement);
 
         const player = playerRef.current = videojs(videoElement, {
             autoplay: true,
             muted: true,
             controls: true,
+            playsinline: true,
+            preload: 'auto',
             responsive: true,
             fluid: true,
             liveui: true,
@@ -141,6 +145,7 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
                     autoPlay 
                     muted 
                     playsInline
+                    webkit-playsinline="true"
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
                 />
             ) : (
