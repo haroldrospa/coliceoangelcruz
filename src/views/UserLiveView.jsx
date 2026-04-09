@@ -43,7 +43,16 @@ const HLSVideoPlayer = ({ url }) => {
         });
 
         player.on('error', () => {
-            if (onError) onError();
+            const error = player.error();
+            if (error && onError) {
+                console.error('VideoJS Error:', error.message);
+                onError();
+            }
+        });
+
+        // Additional listener for early load failures
+        player.on('stalled', () => {
+             console.warn('Playback stalled, checking signal...');
         });
 
         return () => {
@@ -62,6 +71,9 @@ const HLSVideoPlayer = ({ url }) => {
                 .vjs-theme-city .vjs-big-play-button { background: rgba(16,185,129,0.9); border: none; border-radius: 50%; width: 60px; height: 60px; line-height: 60px; margin-top: -30px; margin-left: -30px; }
                 .vjs-theme-city .vjs-play-progress { background: #10b981; }
                 .video-js { width: 100% !important; height: 100% !important; }
+                /* Hide the technical English error message from the player UI */
+                .vjs-error-display { display: none !important; }
+                .vjs-modal-dialog-content { display: none !important; }
             `}</style>
         </div>
     );
