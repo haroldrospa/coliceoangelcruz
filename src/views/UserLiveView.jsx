@@ -42,6 +42,10 @@ const HLSVideoPlayer = ({ url }) => {
             // Player is ready
         });
 
+        player.on('error', () => {
+            if (onError) onError();
+        });
+
         return () => {
             if (player) {
                 player.dispose();
@@ -65,10 +69,16 @@ const HLSVideoPlayer = ({ url }) => {
 
 // Premium Dacast Iframe Player Wrapper & Standby Mode
 const DacastPlayer = ({ status, stream_url, streamMode }) => {
+    const [playerError, setPlayerError] = React.useState(false);
     const isHLS = stream_url?.toLowerCase().includes('.m3u8');
     const hasSignal = !!stream_url;
 
-    if (streamMode === 'STANDBY') {
+    // Reset error when URL changes
+    React.useEffect(() => {
+        setPlayerError(false);
+    }, [stream_url]);
+
+    if (streamMode === 'STANDBY' || playerError) {
         return (
           <div style={{ 
               position: 'relative', width: '100%', paddingBottom: '56.25%', 
@@ -79,22 +89,27 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
               alignItems: 'center',
               justifyContent: 'center'
           }}>
-             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '100%' }}>
+             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '100%', zIndex: 11 }}>
+                <img 
+                    src="/official_logo.png" 
+                    alt="Coliseo Angel Cruz" 
+                    style={{ width: 'clamp(100px, 15vw, 180px)', marginBottom: 20, filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.2))' }} 
+                />
                 <Title level={1} style={{ 
                     color: '#fff', 
                     margin: 0, 
                     fontWeight: 900, 
                     letterSpacing: '8px', 
                     fontFamily: 'Outfit',
-                    fontSize: 'clamp(18px, 4vw, 32px)',
+                    fontSize: 'clamp(18px, 3vw, 24px)',
                     textTransform: 'uppercase',
                     textShadow: '0 0 20px rgba(16,185,129,0.3)'
                 }}>
                     COLISEO ANGEL CRUZ
                 </Title>
-                <div style={{ width: 40, height: 2, background: '#10b981', margin: '20px auto', borderRadius: 2, opacity: 0.6 }} />
+                <div style={{ width: 40, height: 2, background: '#10b981', margin: '15px auto', borderRadius: 2, opacity: 0.6 }} />
                 <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, letterSpacing: '4px', textTransform: 'uppercase' }}>
-                    TRANSMISIÓN EN BREVE
+                    {playerError ? 'RECONECTANDO SEÑAL...' : 'TRANSMISIÓN EN BREVE'}
                 </Text>
              </div>
           </div>
@@ -126,7 +141,7 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
                     <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%' }} />
                     <Text style={{ color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.5px' }}>EN VIVO</Text>
                 </div>
-                <HLSVideoPlayer url={stream_url} />
+                <HLSVideoPlayer url={stream_url} onError={() => setPlayerError(true)} />
             </div>
         );
     }
@@ -146,6 +161,7 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
                     muted 
                     playsInline
                     webkit-playsinline="true"
+                    onError={() => setPlayerError(true)}
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
                 />
             ) : (
