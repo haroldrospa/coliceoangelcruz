@@ -247,8 +247,8 @@ const AdminDashboard = () => {
             const [post, a, b] = line.split(',').map(s => s.trim());
             return {
                 post_number: post || '0',
-                gallo_a_name: a || 'Gallo A',
-                gallo_b_name: b || 'Gallo B',
+                gallo_a_name: a || 'Gallo Azul',
+                gallo_b_name: b || 'Gallo Blanco',
                 status: 'PENDING',
                 stream_url: globalStream,
                 gallo_a_odds: 1.9,
@@ -469,7 +469,7 @@ const AdminDashboard = () => {
                                     user_id: bet.user_id,
                                     amount_change: payoutAmount.toFixed(2),
                                     type: 'BET_PAYOUT',
-                                    description: winnerSide === 'DRAW' ? `Reembolso Tablas Pelea #${event.post_number}` : `Premio Pelea #${event.post_number} (Gallo ${winnerSide})`
+                                    description: winnerSide === 'DRAW' ? `Reembolso Tablas Pelea #${event.post_number}` : `Premio Pelea #${event.post_number} (Gallo ${winnerSide === 'A' ? 'AZUL' : 'BLANCO'})`
                                 }
                             });
                         } else {
@@ -490,7 +490,7 @@ const AdminDashboard = () => {
                     }
                 }
 
-                message.success(winnerSide === 'DRAW' ? 'PELEA DECLARADA COMO TABLAS' : `LIQUIDACIÓN COMPLETADA: GALLO ${winnerSide}`);
+                message.success(winnerSide === 'DRAW' ? 'PELEA DECLARADA COMO TABLAS' : `LIQUIDACIÓN COMPLETADA: GALLO ${winnerSide === 'A' ? 'AZUL' : 'BLANCO'}`);
                 fetchData();
             } catch (e) { 
                 message.error('Fallo en el motor de pagos: ' + e.message); 
@@ -522,8 +522,8 @@ const AdminDashboard = () => {
         {r.status === 'LIVE' && <Button size="small" onClick={() => updateStatus(r.id, 'CLOSED')}>CERRAR</Button>}
         {r.status === 'CLOSED' && (
           <Space>
-            <Button size="small" type="primary" style={{ background: '#10b981' }} onClick={() => setWinnerAndPayout(r, 'A')}>PAGAR A</Button>
-            <Button size="small" type="primary" style={{ background: '#d4af37' }} onClick={() => setWinnerAndPayout(r, 'B')}>PAGAR B</Button>
+            <Button size="small" type="primary" style={{ background: '#10b981' }} onClick={() => setWinnerAndPayout(r, 'A')}>PAGAR AZUL</Button>
+            <Button size="small" type="primary" style={{ background: '#d4af37' }} onClick={() => setWinnerAndPayout(r, 'B')}>PAGAR BLANCO</Button>
             <Button size="small" type="default" onClick={() => setWinnerAndPayout(r, 'DRAW')}>TABLAS</Button>
           </Space>
         )}
@@ -801,8 +801,8 @@ const AdminDashboard = () => {
           <Form form={form} layout="vertical" onFinish={handleCreateEvent} initialValues={{ gallo_a_odds: 1.9, gallo_b_odds: 1.9 }}>
             <Form.Item name="post_number" label={<Text style={{ color: '#fff' }}>POSTE</Text>} rules={[{required: true}]}><Input /></Form.Item>
             <Row gutter={16}>
-                <Col span={12}><Form.Item name="gallo_a_name" label={<Text style={{ color: '#fff' }}>GALLO A</Text>} rules={[{required: true}]}><Input /></Form.Item></Col>
-                <Col span={12}><Form.Item name="gallo_b_name" label={<Text style={{ color: '#fff' }}>GALLO B</Text>} rules={[{required: true}]}><Input /></Form.Item></Col>
+                <Col span={12}><Form.Item name="gallo_a_name" label={<Text style={{ color: '#fff' }}>GALLO AZUL</Text>} rules={[{required: true}]}><Input /></Form.Item></Col>
+                <Col span={12}><Form.Item name="gallo_b_name" label={<Text style={{ color: '#fff' }}>GALLO BLANCO</Text>} rules={[{required: true}]}><Input /></Form.Item></Col>
             </Row>
             <Button type="primary" block onClick={() => form.submit()} loading={loading}>INICIAR COMBATE</Button>
           </Form>
@@ -854,15 +854,15 @@ const AdminDashboard = () => {
             
             <Form.Item name="post_number" label={<Text style={{ color: '#fff' }}>POSTE / # PELEA</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item>
             <Row gutter={16}>
-                <Col span={12}><Form.Item name="gallo_a_name" label={<Text style={{ color: '#fff' }}>GALLO A</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item></Col>
-                <Col span={12}><Form.Item name="gallo_b_name" label={<Text style={{ color: '#fff' }}>GALLO B</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item></Col>
+                <Col span={12}><Form.Item name="gallo_a_name" label={<Text style={{ color: '#fff' }}>GALLO AZUL</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item></Col>
+                <Col span={12}><Form.Item name="gallo_b_name" label={<Text style={{ color: '#fff' }}>GALLO BLANCO</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item></Col>
             </Row>
             
             {!editingEvent && (
                 <Form.Item name="winner_side" label={<Text style={{ color: '#fff' }}>GANADOR</Text>} rules={[{required: true}]}>
                     <Select placeholder="Seleccionar Ganador" style={{ width: '100%' }}>
-                        <Select.Option value="A">GALLO A</Select.Option>
-                        <Select.Option value="B">GALLO B</Select.Option>
+                        <Select.Option value="A">GALLO AZUL</Select.Option>
+                        <Select.Option value="B">GALLO BLANCO</Select.Option>
                     </Select>
                 </Form.Item>
             )}

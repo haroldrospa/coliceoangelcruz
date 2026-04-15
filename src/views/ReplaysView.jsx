@@ -32,6 +32,7 @@ const ReplaysView = ({ currentUser }) => {
 
   useEffect(() => {
     fetchReplays();
+    return () => setSelectedReplay(null);
   }, []);
 
   const handleDeleteReplay = async (id) => {
@@ -243,14 +244,15 @@ const ReplaysView = ({ currentUser }) => {
                   <div style={{ position: 'relative', height: 180, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                       {/* Premium Thumbnail with Gradient Overlay */}
                       <img 
-                        src={`https://images.unsplash.com/photo-1549464478-f2b700f135e6?auto=format&fit=crop&q=80&w=400`} 
-                        style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4, filter: 'grayscale(100%) contrast(1.2)' }} 
+                        src="/cockfight_thumbnail_placeholder_1776285954679.png" 
+                        style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} 
                         alt=""
+                        onError={(e) => e.target.style.display = 'none'}
                       />
                       <div style={{ 
                          position: 'absolute', 
                          top: 0, left: 0, width: '100%', height: '100%', 
-                         background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 50%, rgba(0,0,0,0.9) 100%)',
+                         background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%)',
                          zIndex: 1 
                       }} />
 
@@ -301,7 +303,7 @@ const ReplaysView = ({ currentUser }) => {
                                size="small" 
                                icon={<EditOutlined />} 
                                onClick={(e) => { e.stopPropagation(); openEditor(event); }}
-                               style={{ background: 'var(--gold)', borderColor: 'var(--gold)', color: '#000', borderRadius: 8, height: 32, width: 32 }}
+                               style={{ background: 'rgba(212,175,55,0.85)', borderColor: 'var(--gold)', color: '#000', borderRadius: 8, height: 32, width: 32, backdropFilter: 'blur(4px)' }}
                             />
                             <Popconfirm
                                title="¿ELIMINAR REPETICIÓN?"
@@ -316,7 +318,7 @@ const ReplaysView = ({ currentUser }) => {
                                   danger
                                   icon={<DeleteOutlined />} 
                                   onClick={e => e.stopPropagation()}
-                                  style={{ borderRadius: 8, height: 32, width: 32 }}
+                                  style={{ borderRadius: 8, height: 32, width: 32, background: 'rgba(255,77,79,0.85)', backdropFilter: 'blur(4px)' }}
                                />
                             </Popconfirm>
                          </div>
@@ -369,6 +371,7 @@ const ReplaysView = ({ currentUser }) => {
         footer={null}
         width={900}
         centered
+        destroyOnClose={true}
         styles={{ 
             body: { padding: 0, overflow: 'hidden', background: '#000', borderRadius: 20 },
             mask: { backdropFilter: 'blur(10px)', background: 'rgba(0,0,0,0.8)' }
@@ -479,11 +482,11 @@ const ReplaysView = ({ currentUser }) => {
             border: 1px solid rgba(212, 175, 55, 0.1) !important;
         }
         .replay-card:hover {
-            transform: translateY(-12px) scale(1.02);
-            border-color: rgba(212, 175, 55, 0.5) !important;
+            transform: translateY(-8px) scale(1.01);
+            border-color: rgba(16, 185, 129, 0.4) !important;
             box-shadow: 
                0 30px 60px rgba(0,0,0,0.8),
-               0 0 20px rgba(212, 175, 55, 0.15);
+               0 0 30px rgba(16, 185, 129, 0.1);
         }
         .play-container {
             cursor: pointer;
@@ -501,11 +504,19 @@ const ReplaysView = ({ currentUser }) => {
         .replay-card:hover .play-icon-glow {
             transform: scale(1.1);
             color: #fff !important;
-            filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.8));
+            filter: drop-shadow(0 0 20px rgba(16, 185, 129, 1));
+            animation: pulsePlay 1.5s infinite;
         }
-        .replay-card:hover .play-container {
-            background: rgba(16, 185, 129, 0.1);
+        .replay-card:hover img {
+            transform: scale(1.15);
+            opacity: 0.8 !important;
         }
+        @keyframes pulsePlay {
+            0% { filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.5)); }
+            50% { filter: drop-shadow(0 0 25px rgba(16, 185, 129, 1)); }
+            100% { filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.5)); }
+        }
+        .replay-card img { transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1); }
         .fade-up { animation: fadeUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
         @keyframes fadeUp { 
            from { opacity: 0; transform: translateY(30px); } 

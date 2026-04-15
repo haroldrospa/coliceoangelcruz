@@ -197,8 +197,8 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   // Fight State
   const [fightInfo, setFightInfo] = useState({
     id: null,
-    gallo_a_name: 'Gallo A',
-    gallo_b_name: 'Gallo B',
+    gallo_a_name: 'Gallo Azul',
+    gallo_b_name: 'Gallo Blanco',
     gallo_a_weight: '3.2 lbs',
     gallo_b_weight: '3.1 lbs',
     post_number: '14',
@@ -448,7 +448,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
           user_id: userId,
           amount_change: -amount,
           type: 'BET_PLACED',
-          description: `Apuesta Pelea #${fightInfo.post_number} (Gallo ${betSide})`
+          description: `Apuesta Pelea #${fightInfo.post_number} (Gallo ${betSide === 'A' ? 'AZUL' : 'BLANCO'})`
         }
       });
 
@@ -616,113 +616,9 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         </Col>
       </Row>
 
-      {/* SECONDARY ACTION ZONE: Betting & Info */}
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24} lg={16}>
-           <div style={{ 
-               padding: 24, 
-               borderRadius: 16, 
-               background: 'linear-gradient(135deg, rgba(30,30,30,0.4) 0%, rgba(10,10,10,0.6) 100%)', 
-               border: '1px solid rgba(212,175,55,0.15)',
-               boxShadow: '0 15px 35px rgba(0,0,0,0.4)',
-               backdropFilter: 'blur(10px)'
-           }}>
-              <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                 <Title level={4} style={{ margin: 0, color: 'var(--gold)', fontSize: 13, fontWeight: 900, letterSpacing: '3px', textTransform: 'uppercase' }}>PELEA #{fightInfo.post_number}</Title>
-              </div>
- 
-              <Row gutter={[16, 16]} align="middle">
-                <Col span={10} style={{ textAlign: 'center' }}>
-                    <Title level={4} style={{ margin: 0, color: '#fff', fontSize: 20, fontWeight: 900, textTransform: 'uppercase', fontFamily: 'Outfit', letterSpacing: '0.5px' }}>{fightInfo.gallo_a_name.replace('[ARCHIVED] ', '')}</Title>
-                    <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 800, letterSpacing: '1px' }}>{fightInfo.gallo_a_weight}</Text>
-                </Col>
-                <Col span={4} style={{ textAlign: 'center' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', border: '1px solid rgba(212,175,55,0.2)' }}>
-                        <ThunderboltFilled style={{ color: 'var(--gold)', fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(212,175,55,0.5))' }} />
-                    </div>
-                </Col>
-                <Col span={10} style={{ textAlign: 'center' }}>
-                    <Title level={4} style={{ margin: 0, color: '#fff', fontSize: 20, fontWeight: 900, textTransform: 'uppercase', fontFamily: 'Outfit', letterSpacing: '0.5px' }}>{fightInfo.gallo_b_name}</Title>
-                    <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 800, letterSpacing: '1px' }}>{fightInfo.gallo_b_weight}</Text>
-                </Col>
-              </Row>
-              
-              {!currentUser ? (
-                 <div style={{ marginTop: 24, textAlign: 'center', padding: '20px', background: 'rgba(16,185,129,0.05)', borderRadius: 12, border: '1px solid rgba(16,185,129,0.2)' }}>
-                    <Title level={5} style={{ color: '#fff', fontSize: 14, margin: '0 0 12px 0' }}>¿QUIERES APOSTAR EN ESTA PELEA?</Title>
-                    <Button 
-                       type="primary" 
-                       onClick={() => setCurrentView('login')}
-                       style={{ background: '#10b981', borderColor: '#10b981', fontWeight: 700, borderRadius: 8, height: 40, padding: '0 32px' }}
-                    >
-                       INICIAR SESIÓN AHORA
-                    </Button>
-                 </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 24 }}>
-                   <Button 
-                      block 
-                      disabled={fightInfo.status !== 'LIVE'} 
-                      onClick={() => openBetModal('A')} 
-                      style={{ 
-                          height: 50, 
-                          background: '#10b981', 
-                          color: '#fff', 
-                          border: 'none', 
-                          fontWeight: 600, 
-                          fontSize: 16, 
-                          borderRadius: 8, 
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: 'none'
-                      }}
-                   >
-                      {fightInfo.gallo_a_odds}
-                   </Button>
-                   <Button 
-                      block 
-                      type="primary" 
-                      ghost 
-                      disabled={fightInfo.status !== 'LIVE'} 
-                      onClick={() => openBetModal('B')} 
-                      style={{ 
-                          height: 50, 
-                          fontWeight: 600, 
-                          fontSize: 16, 
-                          borderRadius: 8, 
-                          border: '1px solid #10b981', 
-                          color: '#10b981',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: 'none'
-                      }}
-                   >
-                      {fightInfo.gallo_b_odds}
-                   </Button>
-                </div>
-              )}
-           </div>
-        </Col>
-         
-         <Col xs={24} lg={8}>
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                <Card className="glass-panel" styles={{ body: { padding: 16 } }}>
-                    <Row gutter={[12, 12]}>
-                        <Col span={12}>
-                            <Text style={{ fontSize: 9, color: 'var(--text-muted)' }}>STREAM STATUS</Text>
-                            <div style={{ color: '#fff', fontSize: 14, fontWeight: 800 }}>Dacast Relay</div>
-                        </Col>
-                        <Col span={12} style={{ textAlign: 'right' }}>
-                            <Text style={{ fontSize: 9, color: 'var(--text-muted)' }}>LATENCIA</Text>
-                            <div style={{ color: '#22c55e', fontSize: 14, fontWeight: 800 }}>MODO TÁCTICO</div>
-                        </Col>
-                    </Row>
-                </Card>
-            </Space>
-         </Col>
-      </Row>
+
+      {/* ESPACIO ELIMINADO SEGÚN SOLICITUD DEL USUARIO */}
+
 
       {/* NEW PROMINENT PROGRAM SECTION UNDERNEATH */}
       {showCartelera && (

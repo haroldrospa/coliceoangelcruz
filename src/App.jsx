@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, ensureUserProfile, rawFetch } from './lib/supabase';
 import { Layout, Typography, Badge, Space, Button, App as AntApp } from 'antd';
-import { PlayCircleOutlined, HistoryOutlined, WalletOutlined, ControlOutlined, LogoutOutlined, RocketOutlined, CrownFilled, SettingOutlined, FilePdfOutlined } from '@ant-design/icons';
+import { PlayCircleOutlined, ControlOutlined, LogoutOutlined, RocketOutlined, CrownFilled, SettingOutlined, FilePdfOutlined } from '@ant-design/icons';
 import { useSound } from './hooks/useSound';
 import UserLiveView from './views/UserLiveView';
-import UserHistoryView from './views/UserHistoryView';
-import UserWalletView from './views/UserWalletView';
 import AdminDashboard from './views/AdminDashboard';
 import LoginView from './views/LoginView';
 import SplashScreen from './components/SplashScreen';
@@ -34,8 +32,7 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
   const navItems = [
     { key: 'live', icon: <PlayCircleOutlined />, label: 'EN VIVO', public: true },
     { key: 'replays', icon: <PlayCircleOutlined />, label: 'REPETICIONES', public: false },
-    { key: 'history', icon: <HistoryOutlined />, label: 'RESULTADOS', public: false },
-    { key: 'wallet', icon: <WalletOutlined />, label: 'BILLETERA', public: false },
+    // Removed Resultados and Billetera
   ];
 
   const adminItems = [
@@ -58,8 +55,8 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
       case 'live': return <UserLiveView userBalance={balance} setUserBalance={setBalance} currentUser={currentUser} setCurrentView={setCurrentView} />;
       case 'login': return <LoginView onLogin={handleLogin} />;
       case 'replays': return <ReplaysView currentUser={currentUser} />;
-      case 'history': return <UserHistoryView />;
-      case 'wallet': return <UserWalletView balance={balance} setBalance={setBalance} />;
+      // case 'history': return <UserHistoryView />;
+      // case 'wallet': return <UserWalletView balance={balance} setBalance={setBalance} />;
       case 'settings': return <UserSettingsView onLogout={onLogout} />;
       case 'admin-dashboard': return currentUser?.role === 'admin' ? <AdminDashboard /> : <UserLiveView userBalance={balance} setUserBalance={setBalance} currentUser={currentUser} setCurrentView={setCurrentView} />;
       case 'admin-cartelera': return currentUser?.role === 'admin' ? <AdminCarteleraView /> : <UserLiveView userBalance={balance} setUserBalance={setBalance} currentUser={currentUser} setCurrentView={setCurrentView} />;
@@ -113,24 +110,12 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
            {currentUser ? (
               <>
-                <div style={{ 
-                   background: '#10b981', 
-                   padding: '6px 16px', 
-                   borderRadius: 8, 
-                   display: 'flex', 
-                   alignItems: 'center', 
-                   gap: 10,
-                   border: 'none'
-                }}>
-                   <WalletOutlined style={{ color: '#fff', fontSize: 16 }} />
-                   <Text style={{ color: '#fff', fontSize: 16, fontWeight: 700, fontFamily: 'Outfit' }}>${parseFloat(balance).toLocaleString()}</Text>
-                </div>
-                <Button 
-                   type="text" 
-                   icon={<SettingOutlined style={{ color: '#fff' }} />} 
-                   onClick={() => setCurrentView('settings')} 
-                   style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '50%', width: 45, height: 45 }} 
-                />
+                 <Button 
+                    type="text" 
+                    icon={<SettingOutlined style={{ color: '#fff' }} />} 
+                    onClick={() => setCurrentView('settings')} 
+                    style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '50%', width: 45, height: 45 }} 
+                 />
               </>
            ) : (
               <Button 
@@ -176,14 +161,6 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {currentUser ? (
               <>
-                <div style={{ 
-                    background: '#10b981', 
-                    padding: '4px 12px', 
-                    borderRadius: 6, 
-                    border: 'none'
-                }}>
-                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Outfit' }}>${parseFloat(balance).toLocaleString()}</Text>
-                </div>
                 <Button 
                   type="text" 
                   icon={<SettingOutlined style={{ color: '#fff', fontSize: 18 }} />} 

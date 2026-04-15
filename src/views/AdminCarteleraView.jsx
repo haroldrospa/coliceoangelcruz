@@ -434,7 +434,7 @@ const AdminCarteleraView = () => {
   const columns = [
     { title: '#', dataIndex: 'numero_pelea', key: 'num', width: 40, align: 'center' },
     { 
-      title: 'LADO A (IZQUIERDO)', 
+      title: 'LADO AZUL (IZQUIERDO)', 
       className: 'column-group-border',
       children: [
         { title: 'T', dataIndex: 'turno_a', width: 40, align: 'center', render: t => <Text type="secondary">{t || '-'}</Text> },
@@ -452,7 +452,7 @@ const AdminCarteleraView = () => {
       render: () => <ThunderboltFilled style={{ color: '#10b981', fontSize: 18 }} />
     },
     { 
-      title: 'LADO B (DERECHO)', 
+      title: 'LADO BLANCO (DERECHO)', 
       className: 'column-group-border',
       children: [
         { title: 'T', dataIndex: 'turno_b', width: 40, align: 'center', render: t => <Text type="secondary">{t || '-'}</Text> },
@@ -751,7 +751,7 @@ const AdminCarteleraView = () => {
               }}>
                 <div style={{ borderBottom: '1px solid rgba(16,185,129,0.1)', marginBottom: 20, paddingBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />
-                   <Title level={5} style={{ color: '#fff', margin: 0, textTransform: 'uppercase', fontSize: 13 }}>COMPETIDOR LADO A</Title>
+                   <Title level={5} style={{ color: '#fff', margin: 0, textTransform: 'uppercase', fontSize: 13 }}>COMPETIDOR AZUL</Title>
                 </div>
 
                 <Form.Item name="traba_a" label="NOMBRE DE TRABA (SOCIOS)" rules={[{ required: true }]}>
@@ -811,7 +811,7 @@ const AdminCarteleraView = () => {
               }}>
                 <div style={{ borderBottom: '1px solid rgba(212,175,55,0.1)', marginBottom: 20, paddingBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#d4af37' }} />
-                   <Title level={5} style={{ color: '#fff', margin: 0, textTransform: 'uppercase', fontSize: 13 }}>COMPETIDOR LADO B</Title>
+                   <Title level={5} style={{ color: '#fff', margin: 0, textTransform: 'uppercase', fontSize: 13 }}>COMPETIDOR BLANCO</Title>
                 </div>
 
                 <Form.Item name="traba_b" label="NOMBRE DE TRABA (SOCIOS)" rules={[{ required: true }]}>
