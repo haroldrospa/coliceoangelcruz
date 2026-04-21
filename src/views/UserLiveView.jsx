@@ -80,7 +80,7 @@ const HLSVideoPlayer = ({ url }) => {
 };
 
 // Premium Dacast Iframe Player Wrapper & Standby Mode
-const DacastPlayer = ({ status, stream_url, streamMode }) => {
+const DacastPlayer = ({ status, stream_url, streamMode, viewerCount }) => {
     const [playerError, setPlayerError] = React.useState(false);
     const isHLS = stream_url?.toLowerCase().includes('.m3u8');
     const hasSignal = !!stream_url;
@@ -130,9 +130,15 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
     if (isHLS) {
         return (
             <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', borderRadius: 8, overflow: 'hidden', background: '#000' }}>
-                <div style={{ position: 'absolute', top: 15, left: 15, zIndex: 10, background: '#dc2626', color: '#fff', padding: '4px 8px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, animation: 'blink 1.5s infinite' }}>
-                    <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%' }} />
-                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.5px' }}>EN VIVO</Text>
+                <div style={{ position: 'absolute', top: 15, left: 15, zIndex: 10, display: 'flex', gap: 8 }}>
+                    <div style={{ background: '#dc2626', color: '#fff', padding: '4px 10px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, animation: 'blink 1.5s infinite' }}>
+                        <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%', animation: 'pulse-live 2s infinite' }} />
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '0.5px' }}>EN VIVO</Text>
+                    </div>
+                    <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', color: '#fff', padding: '4px 10px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <EyeOutlined style={{ color: '#10b981', fontSize: 12 }} />
+                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>{viewerCount} <span style={{ opacity: 0.7, fontWeight: 400, marginLeft: 2, fontSize: 9 }}>VIENDO</span></Text>
+                    </div>
                 </div>
                 <HLSVideoPlayer url={stream_url} onError={() => setPlayerError(true)} />
             </div>
@@ -141,9 +147,15 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
 
     return (
         <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: '#0a0a0a' }}>
-            <div style={{ position: 'absolute', top: 15, left: 15, zIndex: 10, background: '#dc2626', color: '#fff', padding: '4px 8px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, animation: 'blink 1.5s infinite' }}>
-                <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%' }} />
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.5px' }}>EN VIVO</Text>
+            <div style={{ position: 'absolute', top: 15, left: 15, zIndex: 10, display: 'flex', gap: 8 }}>
+                <div style={{ background: '#dc2626', color: '#fff', padding: '4px 10px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, animation: 'blink 1.5s infinite' }}>
+                    <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%', animation: 'pulse-live 2s infinite' }} />
+                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '0.5px' }}>EN VIVO</Text>
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', color: '#fff', padding: '4px 10px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <EyeOutlined style={{ color: '#10b981', fontSize: 12 }} />
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>{viewerCount} <span style={{ opacity: 0.7, fontWeight: 400, marginLeft: 2, fontSize: 9 }}>VIENDO</span></Text>
+                </div>
             </div>
 
             {isDirectVideo ? (
@@ -164,7 +176,14 @@ const DacastPlayer = ({ status, stream_url, streamMode }) => {
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
                 />
             )}
-            <style>{`@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }`}</style>
+            <style>{`
+                @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+                @keyframes pulse-live {
+                    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+                    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+                    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+                }
+            `}</style>
         </div>
     );
 };
@@ -179,6 +198,10 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const [betAmount, setBetAmount] = useState(10);
   const [loading, setLoading] = useState(false);
   const [showRoosterStrike, setShowRoosterStrike] = useState(false);
+  
+  // Real-time Presence State
+  const [viewerCount, setViewerCount] = useState(1);
+  const sessionUuid = useRef(Math.random().toString(36).substring(2, 12)).current;
   
   // User & Chat State
   const [userId, setUserId] = useState(null);
@@ -371,8 +394,33 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
           }
       });
 
+    // 4. Presence Engine: track active connections
+    const presenceChannel = supabase.channel('online_viewers', {
+        config: {
+            presence: {
+                key: userId || 'anonymous',
+            },
+        },
+    });
+
+    presenceChannel
+        .on('presence', { event: 'sync' }, () => {
+            const state = presenceChannel.presenceState();
+            const total = Object.values(state).reduce((acc, presences) => acc + presences.length, 0);
+            setViewerCount(total > 0 ? total : 1);
+        })
+        .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await presenceChannel.track({
+                    id: sessionUuid,
+                    online_at: new Date().toISOString(),
+                });
+            }
+        });
+
     return () => {
         supabase.removeChannel(channel);
+        supabase.removeChannel(presenceChannel);
     };
   }, [userId]);
 
@@ -526,6 +574,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                 status={fightInfo.status} 
                 stream_url={fightInfo.stream_url || globalStream} 
                 streamMode={streamMode}
+                viewerCount={viewerCount}
            />
         </Col>
 

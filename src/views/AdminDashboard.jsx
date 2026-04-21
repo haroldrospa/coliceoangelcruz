@@ -120,7 +120,10 @@ const AdminDashboard = () => {
                 if (xhr.status === 200 || xhr.status === 201) resolve(xhr.response);
                 else {
                     console.error('Storage Error Detail:', xhr.responseText);
-                    reject(new Error(`Upload failed ${xhr.status}: ${xhr.responseText}`));
+                    const errorMsg = xhr.status === 413 
+                        ? 'VIDEO DEMASIADO PESADO. Por defecto Supabase limita a 50MB. Sube el "Maximum File Size" a 1GB en Supabase -> Storage -> Settings.'
+                        : `Upload failed ${xhr.status}: ${xhr.responseText}`;
+                    reject(new Error(errorMsg));
                 }
             };
             xhr.onerror = () => reject(new Error('Network Error'));
@@ -192,7 +195,10 @@ const AdminDashboard = () => {
                 if (xhr.status === 200 || xhr.status === 201) resolve(xhr.response);
                 else {
                     console.error('Storage Error Detail:', xhr.responseText);
-                    reject(new Error(`Upload failed ${xhr.status}: ${xhr.responseText}`));
+                    const errorMsg = xhr.status === 413 
+                        ? 'ARCHIVO MUY PESADO. Aumenta el límite de MB en Supabase -> Storage -> Settings -> Maximum File Size.'
+                        : `Error ${xhr.status}: ${xhr.responseText}`;
+                    reject(new Error(errorMsg));
                 }
             };
             xhr.onerror = () => reject(new Error('Network Error'));
@@ -384,7 +390,9 @@ const AdminDashboard = () => {
                         <li>Entra a la sección <b>Storage</b> en el menú izquierdo.</li>
                         <li>Haz clic en <b>New Bucket</b>.</li>
                         <li>Escribe <b>media</b> en el nombre.</li>
-                        <li>Marca la casilla <b>Public bucket</b> y haz clic en Save.</li>
+                        <li>Marca la casilla <b>Public bucket</b>.</li>
+                        <li><b>IMPORTANTE:</b> Busca la opción <b>Maximum File Size</b> y cámbiala de 50MB a <b>1000MB</b> (1GB) para permitir videos pesados.</li>
+                        <li>Haz clic en <b>Save</b>.</li>
                         <li>(Opcional) Ve a Policies y permite "Insert" para la carpeta "media".</li>
                     </ol>
                 </div>
@@ -828,29 +836,33 @@ const AdminDashboard = () => {
             layout="vertical" 
             onFinish={editingEvent ? handleUpdateReplay : handleCreateReplay}
           >
-            <Form.Item label={<Text style={{ color: '#fff' }}>VIDEO DE LA PELEA</Text>} required>
+            <Form.Item name="stream_url" label={<Text style={{ color: '#fff' }}>URL DE VIDEO (YouTube / Vimeo / Directo)</Text>} extra={<Text type="secondary" style={{ fontSize: 10 }}>RECOMENDADO: Usa YouTube (Oculto) si el video pesa más de 50MB.</Text>}>
+                <Input placeholder="https://www.youtube.com/watch?v=..." style={{ background: '#000', border: '1px solid var(--gold)', color: '#fff' }} />
+            </Form.Item>
+
+            <Divider style={{ borderColor: 'rgba(255,255,255,0.05)' }}><Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9 }}>Ó SUBE UN ARCHIVO PEQUEÑO</Text></Divider>
+            
+            <Form.Item label={<Text style={{ color: '#fff' }}>ARCHIVO LOCAL (Máx 50MB por Plan Gratuito)</Text>}>
                 <Upload.Dragger 
                     name="file" 
                     multiple={false} 
                     fileList={fileList}
                     onChange={({ fileList }) => setFileList(fileList)}
                     beforeUpload={() => false}
-                    style={{ background: 'rgba(0,0,0,0.3)', border: '1px dashed var(--glass-border)', borderRadius: 12, padding: 20 }}
+                    style={{ background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(212,175,55,0.3)', borderRadius: 12, padding: 20 }}
                 >
                     <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#d4af37' }} /></p>
-                    <p className="ant-upload-text" style={{ color: '#fff' }}>Haz clic o arrastra el video (MP4/MOV)</p>
-                    <p className="ant-upload-hint" style={{ color: 'var(--text-muted)' }}>El archivo se subirá directamente a la nube.</p>
+                    <p className="ant-upload-text" style={{ color: '#fff', fontSize: 13 }}>Haz clic o arrastra el video</p>
+                    <p className="ant-upload-hint" style={{ color: 'var(--text-muted)', fontSize: 11 }}>Solo MP4/MOV </p>
                 </Upload.Dragger>
             </Form.Item>
             
             {loading && uploadProgress > 0 && (
                 <div style={{ marginBottom: 24 }}>
-                    <Text style={{ color: '#fff', fontSize: 10 }}>SUBIENDO VIDEO: {uploadProgress}%</Text>
+                    <Text style={{ color: '#fff', fontSize: 10 }}>SUBIENDO A SUPABASE: {uploadProgress}%</Text>
                     <Progress percent={uploadProgress} status="active" strokeColor="#d4af37" trailColor="rgba(255,255,255,0.05)" showInfo={false} style={{ marginTop: 8 }} />
                 </div>
             )}
-            
-            <Form.Item name="stream_url" label={<Text style={{ color: '#fff' }}>URL ALTERNATIVA (YouTube/Directo)</Text>}><Input placeholder="https://..." /></Form.Item>
             
             <Form.Item name="post_number" label={<Text style={{ color: '#fff' }}>POSTE / # PELEA</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item>
             <Row gutter={16}>

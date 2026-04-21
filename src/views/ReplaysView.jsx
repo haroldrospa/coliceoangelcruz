@@ -90,7 +90,12 @@ const ReplaysView = ({ currentUser }) => {
             };
             xhr.onload = () => {
                 if (xhr.status === 200 || xhr.status === 201) resolve(xhr.response);
-                else reject(new Error(`Upload failed ${xhr.status}`));
+                else {
+                    const errorMsg = xhr.status === 413 
+                        ? 'VIDEO MUY GRANDE (+50MB). Aumenta el límite en los ajustes de Supabase Storage.'
+                        : `Upload failed ${xhr.status}`;
+                    reject(new Error(errorMsg));
+                }
             };
             xhr.onerror = () => reject(new Error('Network Error'));
             xhr.send(file);
@@ -380,31 +385,45 @@ const ReplaysView = ({ currentUser }) => {
       >
         {selectedReplay && (
           <div style={{ position: 'relative' }}>
-             <div style={{ position: 'relative', width: '100%', background: '#000' }}>
-               {selectedReplay.stream_url?.match(/\.(mp4|webm|ogg|mov)$/i) || selectedReplay.stream_url?.includes('/storage/v1/object/public/') ? (
-                  <video 
-                    src={selectedReplay.stream_url} 
-                    controls 
-                    autoPlay 
-                    muted 
-                    playsInline
-                    webkit-playsinline="true"
-                    style={{ width: '100%', display: 'block' }} 
-                  />
-               ) : (
-                 <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-                    <iframe 
-                        src={selectedReplay.stream_url} 
-                        width="100%" 
-                        height="100%" 
-                        frameBorder="0" 
-                        scrolling="no" 
-                        allow="autoplay; encrypted-media" 
-                        allowFullScreen 
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-                    />
-                 </div>
-               )}
+              <div style={{ position: 'relative', width: '100%', background: '#000' }}>
+               {(() => {
+                  const url = selectedReplay.stream_url || '';
+                  const isDirectVideo = url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/storage/v1/object/public/');
+                  
+                  // YouTube Transformation Logic
+                  let finalUrl = url;
+                  if (url.includes('youtube.com/watch?v=')) finalUrl = url.replace('watch?v=', 'embed/');
+                  else if (url.includes('youtu.be/')) finalUrl = `https://www.youtube.com/embed/${url.split('/').pop()}`;
+                  
+                  if (isDirectVideo) {
+                    return (
+                        <video 
+                            src={url} 
+                            controls 
+                            autoPlay 
+                            muted 
+                            playsInline
+                            webkit-playsinline="true"
+                            style={{ width: '100%', display: 'block' }} 
+                        />
+                    );
+                  }
+
+                  return (
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                        <iframe 
+                            src={finalUrl} 
+                            width="100%" 
+                            height="100%" 
+                            frameBorder="0" 
+                            scrolling="no" 
+                            allow="autoplay; encrypted-media; picture-in-picture" 
+                            allowFullScreen 
+                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                        />
+                    </div>
+                  );
+               })()}
              </div>
              <div style={{ padding: '24px', background: 'var(--charcoal)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                 <Row justify="space-between" align="middle">
@@ -537,12 +556,14 @@ const ReplaysView = ({ currentUser }) => {
           }}
        >
           <Form form={form} layout="vertical" onFinish={handleUpdateReplay}>
-              <Form.Item name="stream_url" label={<Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 900 }}>URL DEL VIDEO (DACAST/HLS)</Text>}>
+              <Form.Item name="stream_url" label={<Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 900 }}>URL DEL VIDEO (YouTube / Dacast / HLS)</Text>} extra={<Text type="secondary" style={{ fontSize: 9 }}>Sugerencia: Usa YouTube (Oculto) para videos de más de 50MB.</Text>}>
                  <Input 
-                   style={{ background: '#0a0a0a', border: '1px solid rgba(212,175,55,0.2)', color: '#fff', borderRadius: 10, height: 44 }} 
-                   placeholder="Pega el enlace directo aquí..."
+                   style={{ background: '#0a0a0a', border: '1px solid rgba(212,175,55,0.4)', color: '#fff', borderRadius: 10, height: 44 }} 
+                   placeholder="https://..."
                  />
               </Form.Item>
+
+              <Divider style={{ borderColor: 'rgba(255,255,255,0.05)' }}><Text style={{ color: 'rgba(255,255,255,0.1)', fontSize: 9 }}>Ó SUBE ARCHIVO LOCAL</Text></Divider>
 
               <div style={{ margin: '24px 0', padding: '20px', background: 'rgba(212,175,55,0.05)', borderRadius: 12, border: '1px dashed rgba(212,175,55,0.2)' }}>
                   <Text style={{ color: 'var(--gold)', fontSize: 10, fontWeight: 900, display: 'block', marginBottom: 16, textAlign: 'center' }}>O SUBE UN ARCHIVO MP4</Text>
