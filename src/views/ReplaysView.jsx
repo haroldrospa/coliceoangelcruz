@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, message, Popconfirm, Form, Upload, Progress } from 'antd';
+import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, message, Popconfirm, Form, Upload, Progress, Divider } from 'antd';
 import { PlayCircleOutlined, HistoryOutlined, ThunderboltFilled, TrophyOutlined, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined, DeleteOutlined, EditOutlined, InboxOutlined } from '@ant-design/icons';
 import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 
@@ -125,17 +125,29 @@ const ReplaysView = ({ currentUser }) => {
     }
   };
 
-  const filteredReplays = replays.filter(event => {
+  const filteredReplays = (replays || []).filter(event => {
+    if (!event) return false;
+    
+    // Safer search logic
+    const galloA = (event.gallo_a_name || '').toLowerCase();
+    const galloB = (event.gallo_b_name || '').toLowerCase();
+    const post = (event.post_number || '').toString();
+    const term = (searchTerm || '').toLowerCase();
+
     const matchesSearch = 
-        event.gallo_a_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        event.gallo_b_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.post_number?.toString().includes(searchTerm);
+        galloA.includes(term) || 
+        galloB.includes(term) ||
+        post.includes(term);
     
     if (!selectedDate) return matchesSearch;
 
-    const eventDate = new Date(event.created_at).setHours(0, 0, 0, 0);
-    const filterDate = selectedDate.toDate().setHours(0, 0, 0, 0);
-    return matchesSearch && eventDate === filterDate;
+    try {
+        const eventDate = new Date(event.created_at).setHours(0, 0, 0, 0);
+        const filterDate = selectedDate.toDate().setHours(0, 0, 0, 0);
+        return matchesSearch && eventDate === filterDate;
+    } catch (e) {
+        return matchesSearch;
+    }
   });
 
   const openReplay = (event) => {
@@ -171,10 +183,14 @@ const ReplaysView = ({ currentUser }) => {
   };
 
   const handleShare = async (event) => {
-    const winnerName = (event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name).replace('[ARCHIVED] ', '');
+    if (!event) return;
+    const nameA = (event.gallo_a_name || '').replace('[ARCHIVED] ', '');
+    const nameB = (event.gallo_b_name || '');
+    const winnerName = (event.winner_side === 'A' ? nameA : nameB).replace('[ARCHIVED] ', '');
+    
     const shareData = {
-      title: `Coliseo Ángel Cruz - Poste #${event.post_number}`,
-      text: `¡Mira esta pelea! Poste #${event.post_number}: ${event.gallo_a_name.replace('[ARCHIVED] ', '')} vs ${event.gallo_b_name}. Ganador: ${winnerName}`,
+      title: `Coliseo Ángel Cruz - Poste #${event.post_number || ''}`,
+      text: `¡Mira esta pelea! Poste #${event.post_number || ''}: ${nameA} vs ${nameB}. Ganador: ${winnerName}`,
       url: window.location.href,
     };
 
@@ -297,7 +313,7 @@ const ReplaysView = ({ currentUser }) => {
                             textTransform: 'uppercase',
                             letterSpacing: '1px'
                          }}>
-                            <TrophyOutlined /> {(event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name).replace('[ARCHIVED] ', '')}
+                            <TrophyOutlined /> {((event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name) || 'FINALIZADA').replace('[ARCHIVED] ', '')}
                          </div>
                       </div>
 
@@ -332,7 +348,7 @@ const ReplaysView = ({ currentUser }) => {
 
                   <div style={{ padding: '24px', background: 'rgba(255,255,255,0.01)' }}>
                       <Title level={5} style={{ color: '#fff', margin: 0, fontSize: 15, fontWeight: 900, fontFamily: 'Outfit', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                         {event.gallo_a_name.replace('[ARCHIVED] ', '')} <span style={{ color: 'rgba(212,175,55,0.4)', fontSize: 10, fontWeight: 300, margin: '0 4px' }}>VS</span> {event.gallo_b_name}
+                         {(event.gallo_a_name || 'Gallo A').replace('[ARCHIVED] ', '')} <span style={{ color: 'rgba(212,175,55,0.4)', fontSize: 10, fontWeight: 300, margin: '0 4px' }}>VS</span> {event.gallo_b_name || 'Gallo B'}
                       </Title>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
                          <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 800, letterSpacing: '1px' }}>
@@ -429,15 +445,15 @@ const ReplaysView = ({ currentUser }) => {
                 <Row justify="space-between" align="middle">
                    <Col>
                       <Title level={4} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit' }}>
-                        POSTE #{selectedReplay.post_number}: {selectedReplay.gallo_a_name.replace('[ARCHIVED] ', '')} VS {selectedReplay.gallo_b_name}
+                        POSTE #{selectedReplay.post_number || '0'}: {(selectedReplay.gallo_a_name || '').replace('[ARCHIVED] ', '')} VS {selectedReplay.gallo_b_name || ''}
                       </Title>
                       <Text style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                        Finalizado el {new Date(selectedReplay.created_at).toLocaleString()}
+                        Finalizado el {selectedReplay.created_at ? new Date(selectedReplay.created_at).toLocaleString() : 'Fecha desconocida'}
                       </Text>
                    </Col>
                     <Col>
                       <div style={{ background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)', color: '#fff', padding: '8px 20px', borderRadius: 10, fontWeight: 900, fontSize: 13, boxShadow: '0 4px 12px rgba(16,185,129,0.3)', letterSpacing: '0.5px' }}>
-                         GANADOR: {(selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : selectedReplay.gallo_b_name).replace('[ARCHIVED] ', '')}
+                         GANADOR: {((selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : selectedReplay.gallo_b_name) || 'FINALIZADA').replace('[ARCHIVED] ', '')}
                       </div>
                    </Col>
                 </Row>
