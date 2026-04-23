@@ -242,7 +242,11 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     }
   };
 
-  // Audio Unlock Mechanism
+  useEffect(() => {
+    if (isReplayModalOpen && selectedReplay && !selectedReplay.stream_url) {
+        setIsVideoLoading(false);
+    }
+  }, [isReplayModalOpen, selectedReplay]);
   useEffect(() => {
     const unlockAudio = () => {
       preload();
@@ -1062,7 +1066,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                {(() => {
                   const url = selectedReplay.stream_url || '';
                   if (!url) {
-                      if (isVideoLoading) setIsVideoLoading(false);
                       return (
                          <div style={{ padding: '60px 20px', width: '100%', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
                             <PlayCircleFilled style={{ fontSize: 40, marginBottom: 16, opacity: 0.2 }} />

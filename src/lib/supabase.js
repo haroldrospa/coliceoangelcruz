@@ -42,8 +42,14 @@ export const rawFetch = async (endpoint, options = {}) => {
 
   if (!response.ok) {
     const errorText = await response.text();
+    let detail = '';
+    try {
+        const errJson = JSON.parse(errorText);
+        detail = errJson.message || errJson.error || errorText;
+    } catch(e) { detail = errorText; }
+    
     console.error(`Fetch API Error [${response.status}]:`, errorText);
-    throw new Error(`Fetch Error: ${response.status}`);
+    throw new Error(`Error ${response.status}: ${detail}`);
   }
 
   const text = await response.text();

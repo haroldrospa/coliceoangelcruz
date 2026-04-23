@@ -96,8 +96,9 @@ const AdminDashboard = () => {
         body: { 
             ...values, 
             status: 'FINISHED',
-            gallo_a_odds: values.gallo_a_odds || 1.9,
-            gallo_b_odds: values.gallo_b_odds || 1.9
+            post_number: parseInt(values.post_number, 10),
+            gallo_a_odds: parseFloat(values.gallo_a_odds || 1.9),
+            gallo_b_odds: parseFloat(values.gallo_b_odds || 1.9)
         } 
       });
       message.success('REPETICIÓN REGISTRADA CON ÉXITO');
@@ -118,8 +119,9 @@ const AdminDashboard = () => {
         method: 'PATCH', 
         body: {
             ...values,
-            gallo_a_odds: values.gallo_a_odds || editingEvent.gallo_a_odds || 1.9,
-            gallo_b_odds: values.gallo_b_odds || editingEvent.gallo_b_odds || 1.9
+            post_number: parseInt(values.post_number, 10),
+            gallo_a_odds: parseFloat(values.gallo_a_odds || editingEvent.gallo_a_odds || 1.9),
+            gallo_b_odds: parseFloat(values.gallo_b_odds || editingEvent.gallo_b_odds || 1.9)
         } 
       });
       message.success('REPETICIÓN ACTUALIZADA');
@@ -414,10 +416,10 @@ const AdminDashboard = () => {
   };
 
   const setWinnerAndPayout = async (event, winnerSide) => {
-    const winnerName = winnerSide === 'DRAW' ? 'TABLAS / EMPATE' : (winnerSide === 'A' ? event.gallo_a_name : event.gallo_b_name);
+    const winnerName = winnerSide === 'D' ? 'TABLAS / EMPATE' : (winnerSide === 'A' ? event.gallo_a_name : event.gallo_b_name);
     modal.confirm({
         title: 'LIQUIDACIÓN DE MERCADO',
-        content: `¿Declarar ganador a: ${winnerName.toUpperCase()}? ${winnerSide === 'DRAW' ? 'Se reembolsarán todas las apuestas.' : 'Se iniciará la acreditación masiva de premios.'}`,
+        content: `¿Declarar ganador a: ${winnerName.toUpperCase()}? ${winnerSide === 'D' ? 'Se reembolsarán todas las apuestas.' : 'Se iniciará la acreditación masiva de premios.'}`,
         onOk: async () => {
             setLoading(true);
             try {
@@ -434,7 +436,7 @@ const AdminDashboard = () => {
                         let isWinner = false;
                         let payoutAmount = 0;
 
-                        if (winnerSide === 'DRAW') {
+                        if (winnerSide === 'D') {
                            // Refund the original amount
                            isWinner = true; 
                            payoutAmount = parseFloat(bet.amount);
@@ -497,7 +499,7 @@ const AdminDashboard = () => {
     { title: 'GALLOS', key: 'ga', render: (_, r) => <div style={{ color: '#fff' }}>{r.gallo_a_name.replace('[ARCHIVED] ', '')} vs {r.gallo_b_name}</div> },
     { title: 'GANADOR', key: 'winner', render: (_, r) => {
         if (r.status !== 'FINISHED' && r.status !== 'CLOSED') return <Text style={{ color: 'rgba(255,255,255,0.1)' }}>-</Text>;
-        if (r.winner_side === 'DRAW') return <Tag color="orange" style={{ fontWeight: 800 }}>TABLAS</Tag>;
+        if (r.winner_side === 'D') return <Tag color="orange" style={{ fontWeight: 800 }}>TABLAS</Tag>;
         return <Tag color={r.winner_side === 'A' ? 'blue' : 'default'} style={{ fontWeight: 800 }}>{r.winner_side === 'A' ? 'AZUL' : 'BLANCO'}</Tag>;
     }},
     { title: 'ESTADO', dataIndex: 'status', key: 'status', render: (s, r) => {
@@ -520,7 +522,7 @@ const AdminDashboard = () => {
           <Space>
             <Button size="small" type="primary" style={{ background: '#10b981' }} onClick={() => setWinnerAndPayout(r, 'A')}>PAGAR AZUL</Button>
             <Button size="small" type="primary" style={{ background: '#d4af37' }} onClick={() => setWinnerAndPayout(r, 'B')}>PAGAR BLANCO</Button>
-            <Button size="small" type="default" onClick={() => setWinnerAndPayout(r, 'DRAW')}>TABLAS</Button>
+            <Button size="small" type="default" onClick={() => setWinnerAndPayout(r, 'D')}>TABLAS</Button>
           </Space>
         )}
         {r.status === 'FINISHED' && (
@@ -882,7 +884,7 @@ const AdminDashboard = () => {
                     <Select placeholder="Seleccionar Ganador" style={{ width: '100%' }}>
                         <Select.Option value="A">GALLO AZUL</Select.Option>
                         <Select.Option value="B">GALLO BLANCO</Select.Option>
-                        <Select.Option value="DRAW">TABLAS</Select.Option>
+                        <Select.Option value="D">TABLAS</Select.Option>
                     </Select>
                 </Form.Item>
             )}
