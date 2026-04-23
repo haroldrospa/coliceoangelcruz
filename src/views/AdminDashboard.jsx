@@ -868,6 +868,7 @@ const AdminDashboard = () => {
                     <Select placeholder="Seleccionar Ganador" style={{ width: '100%' }}>
                         <Select.Option value="A">GALLO AZUL</Select.Option>
                         <Select.Option value="B">GALLO BLANCO</Select.Option>
+                        <Select.Option value="DRAW">TABLAS</Select.Option>
                     </Select>
                 </Form.Item>
             )}
