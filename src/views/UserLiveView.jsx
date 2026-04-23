@@ -438,20 +438,12 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     const ticker = setInterval(async () => {
       const now = Date.now();
       const cutoff = now - 300000; // 5 Minutes
-      const cutoffISO = new Date(cutoff).toISOString();
       
-      // 1. UI Pruning: Remove from screen immediately
+      // SOLO limpieza visual inmediata (No toca la DB para ahorrar Disk IO)
       setChatMessages(prev => prev.filter(msg => {
         return new Date(msg.created_at).getTime() > cutoff;
       }));
-
-      // 2. DB Pruning: Keep the table clean in background
-      try {
-        await supabase.from('messages').delete().lt('created_at', cutoffISO);
-      } catch (e) {
-        console.error('Chat Auto-Prune Err:', e);
-      }
-    }, 120000); // Check every 2 minutes (Reduces Disk IO significantly)
+    }, 120000); 
     return () => clearInterval(ticker);
   }, []);
 
