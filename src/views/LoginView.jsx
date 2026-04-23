@@ -17,6 +17,11 @@ const LoginView = ({ onLogin }) => {
       return message.warning('Por favor completa todos los campos');
     }
     setLoading(true);
+    const loginTimeout = setTimeout(() => {
+        setLoading(false);
+        message.error('LATENCIA ALTA: El servidor no responde. Reintenta en unos segundos.');
+    }, 12000);
+
     try {
       if (isRegistering) {
         const { data, error } = await supabase.auth.signUp({
@@ -26,6 +31,7 @@ const LoginView = ({ onLogin }) => {
             data: { role: email.includes('admin') ? 'admin' : 'user' }
           }
         });
+        clearTimeout(loginTimeout);
         if (error) throw error;
         if (data.session) {
            const role = data.user.user_metadata?.role || 'user';
@@ -36,7 +42,12 @@ const LoginView = ({ onLogin }) => {
            setIsRegistering(false);
         }
       } else {
+        // Limpiar sesión previa para evitar conflictos
+        await supabase.auth.signOut().catch(() => {});
+        
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        clearTimeout(loginTimeout);
+        
         if (error) throw error;
         const user = data.user;
         const role = user.user_metadata?.role || 'user';
@@ -44,6 +55,7 @@ const LoginView = ({ onLogin }) => {
         message.success(`Bienvenido, ${user.email}`);
       }
     } catch (error) {
+      clearTimeout(loginTimeout);
       message.error('Error: ' + error.message);
     } finally {
       setLoading(false);
