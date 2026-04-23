@@ -197,13 +197,20 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
 
       <Content>{renderContent()}</Content>
 
-      <div className="mobile-nav mobile-only" style={{ background: 'rgba(4, 8, 6, 0.95)', padding: '12px 0 20px', borderTop: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', justifyContent: 'space-evenly' }}>
+      <div className="mobile-nav mobile-only">
         {itemsToShow.map(item => {
           const isActive = currentView === item.key;
           return (
-            <div key={item.key} onClick={() => setCurrentView(item.key)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'all 0.2s', width: 64 }}>
-              <span style={{ color: isActive ? '#10b981' : 'rgba(255,255,255,0.3)', fontSize: 18 }}>{item.icon}</span>
-              <Text style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.4)', fontSize: 8, fontWeight: 700, letterSpacing: '0.5px' }}>{item.label}</Text>
+            <div 
+              key={item.key} 
+              onClick={() => setCurrentView(item.key)} 
+              className={`mobile-nav-item ${isActive ? 'active' : ''}`}
+            >
+              <div className="nav-icon-wrapper">
+                {item.icon}
+                {isActive && <div className="nav-active-dot" />}
+              </div>
+              <span className="nav-label">{item.label}</span>
             </div>
           );
         })}
