@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button, Space, Typography, Card, Modal, InputNumber, Row, Col, Divider, Badge, App as AntApp, Tag } from 'antd';
-import { SendOutlined, MessageFilled, SignalFilled, ThunderboltFilled, PlayCircleFilled, EyeOutlined, TrophyOutlined } from '@ant-design/icons';
+import { SendOutlined, MessageFilled, SignalFilled, ThunderboltFilled, PlayCircleFilled, EyeOutlined, TrophyOutlined, DownloadOutlined, WhatsAppOutlined, CopyOutlined, ShareAltOutlined } from '@ant-design/icons';
 import { supabase, rawFetch } from '../lib/supabase';
 import { useSound } from '../hooks/useSound';
 import videojs from 'video.js';
@@ -567,6 +567,57 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     }
   };
 
+  const handleDownload = async (url, postNumber) => {
+    const hide = msg.loading('Preparando descarga...', 0);
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `Pelea_${postNumber}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      msg.success('Descarga iniciada');
+    } catch (err) {
+      window.open(url, '_blank');
+      msg.warning('Iniciando descarga en nueva pestaña');
+    } finally {
+      hide();
+    }
+  };
+
+  const handleShare = async (event) => {
+    if (!event) return;
+    const nameA = (event.gallo_a_name || '').replace('[ARCHIVED] ', '');
+    const nameB = (event.gallo_b_name || '');
+    const winnerName = (event.winner_side === 'A' ? nameA : nameB).replace('[ARCHIVED] ', '');
+    
+    const shareData = {
+      title: `Coliseo Ángel Cruz - Pelea #${event.post_number || ''}`,
+      text: `¡Mira esta pelea! Pelea #${event.post_number || ''}: ${nameA} vs ${nameB}. Ganador: ${winnerName}`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error('Share Error:', err);
+      }
+    } else {
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(shareData.text + ' ' + shareData.url)}`;
+      window.open(waUrl, '_blank');
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    msg.success('Enlace copiado al portapapeles');
+  };
+
   return (
     <div style={{ background: 'var(--obsidian)', minHeight: '100vh', padding: '16px', maxWidth: 1200, margin: '0 auto', paddingBottom: 100 }}>
       {/* PRIMARY BATTLE ZONE: Video & Chat Aligned */}
@@ -975,7 +1026,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         footer={null}
         width={800}
         centered
-        destroyOnClose
+        destroyOnClose={true}
         styles={{ 
             body: { padding: 0, overflow: 'hidden', background: '#000', borderRadius: 12 },
             mask: { backdropFilter: 'blur(10px)', background: 'rgba(0,0,0,0.8)' }
@@ -1014,12 +1065,45 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                })()}
               </div>
               <div style={{ padding: '24px', background: 'var(--charcoal)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                 <Title level={4} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit' }}>
-                    {selectedReplay.gallo_a_name.replace('[ARCHIVED] ', '')} VS {selectedReplay.gallo_b_name}
-                 </Title>
-                 <Text style={{ color: 'var(--text-muted)', fontSize: 13, fontWeight: 500 }}>
-                    Poste #{selectedReplay.post_number} • Ganador: {(selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : (selectedReplay.winner_side === 'B' ? selectedReplay.gallo_b_name : 'TABLAS')).replace('[ARCHIVED] ', '')}
-                 </Text>
+                 <Row justify="space-between" align="middle" gutter={[16, 16]}>
+                    <Col xs={24} md={16}>
+                       <Title level={4} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit' }}>
+                          {selectedReplay.gallo_a_name.replace('[ARCHIVED] ', '')} VS {selectedReplay.gallo_b_name}
+                       </Title>
+                       <Text style={{ color: 'var(--text-muted)', fontSize: 13, fontWeight: 500 }}>
+                          Pelea #{selectedReplay.post_number} • Ganador: {(selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : (selectedReplay.winner_side === 'B' ? selectedReplay.gallo_b_name : 'TABLAS')).replace('[ARCHIVED] ', '')}
+                       </Text>
+                    </Col>
+                    
+                    <Col xs={24} md={8}>
+                       <Space size="small" wrap style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          {selectedReplay.stream_url?.match(/\.(mp4|webm|ogg|mov)$/i) || selectedReplay.stream_url?.includes('/storage/v1/object/public/') ? (
+                             <Button 
+                                type="primary" 
+                                icon={<DownloadOutlined />} 
+                                onClick={() => handleDownload(selectedReplay.stream_url, selectedReplay.post_number)}
+                                style={{ background: '#d4af37', borderColor: '#d4af37', color: '#000', fontWeight: 900, fontSize: 10, height: 36 }}
+                             >
+                                DESCARGAR
+                             </Button>
+                          ) : null}
+                          
+                          <Button 
+                             icon={<WhatsAppOutlined />} 
+                             onClick={() => handleShare(selectedReplay)}
+                             style={{ background: '#25D366', borderColor: '#25D366', color: '#fff', fontWeight: 900, fontSize: 10, height: 36 }}
+                          >
+                             COMPARTIR
+                          </Button>
+
+                          <Button 
+                             icon={<CopyOutlined />} 
+                             onClick={() => copyToClipboard(window.location.href)}
+                             style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 900, fontSize: 10, height: 36 }}
+                          />
+                       </Space>
+                    </Col>
+                 </Row>
               </div>
            </div>
         )}
