@@ -215,6 +215,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const [streamMode, setStreamMode] = useState('LIVE');
   const [isReplayModalOpen, setIsReplayModalOpen] = useState(false);
   const [selectedReplay, setSelectedReplay] = useState(null);
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
   const chatEndRef = useRef(null);
   const channelRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -797,6 +798,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                             onClick={() => {
                                 if (event.status === 'FINISHED') {
                                     setSelectedReplay(event);
+                                    setIsVideoLoading(true);
                                     setIsReplayModalOpen(true);
                                 } else {
                                     setFightInfo(event);
@@ -1022,28 +1024,53 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
       {/* REPLAY MODAL FOR CARTELERA ITEMS */}
       <Modal
         open={isReplayModalOpen}
-        onCancel={() => setIsReplayModalOpen(false)}
-        footer={null}
-        width={800}
-        centered
         destroyOnHidden={true}
+        onCancel={() => {
+            setIsReplayModalOpen(false);
+            setIsVideoLoading(false);
+        }}
         styles={{ 
-            body: { padding: 0, overflow: 'hidden', background: '#000', borderRadius: 12 },
-            mask: { backdropFilter: 'blur(10px)', background: 'rgba(0,0,0,0.8)' }
+            body: { padding: 0, overflow: 'hidden', background: '#0a0a0a', borderRadius: 12, minHeight: 200 },
+            mask: { backdropFilter: 'blur(15px)', background: 'rgba(0,0,0,0.85)' }
         }}
       >
         {selectedReplay && (
            <div style={{ position: 'relative' }}>
-              <div style={{ width: '100%', background: '#000' }}>
+              {/* Spinner Overlay */}
+              {isVideoLoading && (
+                  <div style={{ 
+                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                      zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      background: '#0a0a0a', gap: 15
+                  }}>
+                      <div className="loader-ring" />
+                      <Text style={{ color: 'var(--gold)', fontSize: 10, fontWeight: 900, letterSpacing: '4px', textTransform: 'uppercase' }}>Cargando Repetición...</Text>
+                      <style>{`
+                          .loader-ring {
+                              width: 50px; height: 50px;
+                              border: 3px solid rgba(212,175,55,0.1);
+                              border-radius: 50%;
+                              border-top-color: var(--gold);
+                              animation: spin 1s ease-in-out infinite;
+                          }
+                          @keyframes spin { to { transform: rotate(360deg); } }
+                      `}</style>
+                  </div>
+              )}
+
+              <div style={{ width: '100%', background: '#000', minHeight: 300, display: 'flex', alignItems: 'center' }}>
                {(() => {
                   const url = selectedReplay.stream_url || '';
-                  if (!url) return (
-                     <div style={{ padding: '60px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
-                        <PlayCircleFilled style={{ fontSize: 40, marginBottom: 16, opacity: 0.2 }} />
-                        <br />
-                        ESTA PELEA NO TIENE REPETICIÓN DISPONIBLE AÚN
-                     </div>
-                  );
+                  if (!url) {
+                      if (isVideoLoading) setIsVideoLoading(false);
+                      return (
+                         <div style={{ padding: '60px 20px', width: '100%', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+                            <PlayCircleFilled style={{ fontSize: 40, marginBottom: 16, opacity: 0.2 }} />
+                            <br />
+                            ESTA PELEA NO TIENE REPETICIÓN DISPONIBLE AÚN
+                         </div>
+                      );
+                  }
 
                   const isDirectVideo = url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/storage/v1/object/public/');
                   
@@ -1053,13 +1080,25 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                   
                   if (isDirectVideo) {
                     return (
-                        <video src={url} controls autoPlay style={{ width: '100%', display: 'block' }} />
+                        <video 
+                            src={url} 
+                            controls 
+                            autoPlay 
+                            onLoadedData={() => setIsVideoLoading(false)}
+                            style={{ width: '100%', display: 'block', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.5s' }} 
+                        />
                     );
                   }
 
                   return (
-                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-                        <iframe src={finalUrl} width="100%" height="100%" frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen style={{ position: 'absolute', top: 0, left: 0 }} />
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, width: '100%', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.5s' }}>
+                        <iframe 
+                            src={finalUrl} 
+                            width="100%" height="100%" 
+                            frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen 
+                            onLoad={() => setIsVideoLoading(false)}
+                            style={{ position: 'absolute', top: 0, left: 0 }} 
+                        />
                     </div>
                   );
                })()}

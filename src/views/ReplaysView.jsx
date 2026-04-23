@@ -15,6 +15,7 @@ const ReplaysView = ({ currentUser }) => {
   const [editingReplay, setEditingReplay] = useState(null);
   const [form] = Form.useForm();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
 
   const fetchReplays = async () => {
     try {
@@ -103,10 +104,12 @@ const ReplaysView = ({ currentUser }) => {
 
   const openReplay = (event) => {
     setSelectedReplay(event);
+    setIsVideoLoading(true);
   };
 
   const closeReplay = () => {
     setSelectedReplay(null);
+    setIsVideoLoading(false);
   };
 
   const handleDownload = async (url, postNumber) => {
@@ -344,15 +347,37 @@ const ReplaysView = ({ currentUser }) => {
         width={900}
         centered
         destroyOnHidden={true}
+        onCancel={closeReplay}
         styles={{ 
-            body: { padding: 0, overflow: 'hidden', background: '#000', borderRadius: 20 },
-            mask: { backdropFilter: 'blur(10px)', background: 'rgba(0,0,0,0.8)' }
+            body: { padding: 0, overflow: 'hidden', background: '#0a0a0a', borderRadius: 20, minHeight: 300 },
+            mask: { backdropFilter: 'blur(15px)', background: 'rgba(0,0,0,0.85)' }
         }}
         closeIcon={<Title level={4} style={{ color: '#fff', margin: 0 }}>&times;</Title>}
       >
         {selectedReplay && (
           <div style={{ position: 'relative' }}>
-              <div style={{ position: 'relative', width: '100%', background: '#000' }}>
+              {/* Spinner Overlay */}
+              {isVideoLoading && (
+                  <div style={{ 
+                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                      zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      background: '#0a0a0a', gap: 15
+                  }}>
+                      <div className="loader-ring" />
+                      <Text style={{ color: 'var(--gold)', fontSize: 10, fontWeight: 900, letterSpacing: '4px', textTransform: 'uppercase' }}>Analizando Combate...</Text>
+                      <style>{`
+                          .loader-ring {
+                              width: 50px; height: 50px;
+                              border: 3px solid rgba(212,175,55,0.1);
+                              border-radius: 50%;
+                              border-top-color: var(--gold);
+                              animation: spin 1s ease-in-out infinite;
+                          }
+                          @keyframes spin { to { transform: rotate(360deg); } }
+                      `}</style>
+                  </div>
+              )}
+              <div style={{ position: 'relative', width: '100%', background: '#000', minHeight: 400, display: 'flex', alignItems: 'center' }}>
                {(() => {
                   const url = selectedReplay.stream_url || '';
                   const isDirectVideo = url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/storage/v1/object/public/');
@@ -371,13 +396,14 @@ const ReplaysView = ({ currentUser }) => {
                             muted 
                             playsInline
                             webkit-playsinline="true"
-                            style={{ width: '100%', display: 'block' }} 
+                            onLoadedData={() => setIsVideoLoading(false)}
+                            style={{ width: '100%', display: 'block', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.5s' }} 
                         />
                     );
                   }
 
                   return (
-                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, width: '100%', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.5s' }}>
                         <iframe 
                             src={finalUrl} 
                             width="100%" 
@@ -386,6 +412,7 @@ const ReplaysView = ({ currentUser }) => {
                             scrolling="no" 
                             allow="autoplay; encrypted-media; picture-in-picture" 
                             allowFullScreen 
+                            onLoad={() => setIsVideoLoading(false)}
                             style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
                         />
                     </div>
