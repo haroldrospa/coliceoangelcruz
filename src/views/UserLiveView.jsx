@@ -451,7 +451,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
       } catch (e) {
         console.error('Chat Auto-Prune Err:', e);
       }
-    }, 10000); // Check every 10 seconds
+    }, 120000); // Check every 2 minutes (Reduces Disk IO significantly)
     return () => clearInterval(ticker);
   }, []);
 
