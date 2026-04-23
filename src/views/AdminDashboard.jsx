@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Table, Tag, Button, Modal, Form, Input, InputNumber, Space, Typography, Row, Col, Divider, App as AntApp, Tabs, Image, Select, Badge, Popconfirm } from 'antd';
 import { PlusOutlined, ThunderboltFilled, TrophyOutlined, SignalFilled, SettingOutlined, EyeOutlined, CheckCircleFilled, WalletOutlined, DollarOutlined, VideoCameraOutlined, InboxOutlined, DeleteOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
+import { scanScoreboard } from '../lib/gemini';
 
 const { Title, Text } = Typography;
 
@@ -21,6 +22,7 @@ const AdminDashboard = () => {
   const [isSavingStream, setIsSavingStream] = useState(false);
   const [isSavingMode, setIsSavingMode] = useState(false);
   const [form] = Form.useForm();
+  const [isScanning, setIsScanning] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -123,6 +125,41 @@ const AdminDashboard = () => {
       setEditingEvent(event);
       setIsReplayModalOpen(true);
       form.setFieldsValue(event);
+  };
+
+  const handleScanImage = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    const hide = message.loading('IA ANALIZANDO MARCADOR...', 0);
+    
+    try {
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve) => {
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+        });
+        
+        const base64 = await base64Promise;
+        const data = await scanScoreboard(base64);
+        
+        if (data) {
+            form.setFieldsValue({
+                post_number: data.post_number || '',
+                gallo_a_name: data.gallo_a_name || '',
+                gallo_b_name: data.gallo_b_name || ''
+            });
+            message.success('DATOS EXTRAÍDOS CON ÉXITO');
+        }
+    } catch (err) {
+        console.error('Scan Error:', err);
+        message.error('FALLO AL EXTRAER DATOS: ' + err.message);
+    } finally {
+        setIsScanning(false);
+        hide();
+        e.target.value = ''; // Clean input
+    }
   };
 
   const handleBulkCreate = async (values) => {
@@ -691,9 +728,42 @@ const AdminDashboard = () => {
         width={500}
       >
         <div style={{ background: 'var(--charcoal)', padding: 30, borderRadius: 12, border: '1px solid rgba(212,175,55,0.2)' }}>
-          <Title level={3} style={{ color: '#d4af37', textAlign: 'center', fontFamily: 'Outfit' }}>
+          <Title level={3} style={{ color: '#d4af37', textAlign: 'center', fontFamily: 'Outfit', marginBottom: 24 }}>
             {editingEvent ? 'Actualizar Repetición' : 'Registrar Repetición'}
           </Title>
+
+          {!editingEvent && (
+             <div style={{ marginBottom: 30, textAlign: 'center' }}>
+                <input 
+                    type="file" 
+                    id="scoreboard-scanner" 
+                    hidden 
+                    accept="image/*" 
+                    onChange={handleScanImage} 
+                />
+                <Button 
+                    icon={<ThunderboltFilled />} 
+                    loading={isScanning}
+                    onClick={() => document.getElementById('scoreboard-scanner').click()}
+                    style={{ 
+                        height: 54, 
+                        width: '100%',
+                        background: 'rgba(16,185,129,0.1)', 
+                        color: '#10b981', 
+                        borderColor: '#10b981', 
+                        borderRadius: 12,
+                        fontWeight: 900,
+                        fontSize: 13,
+                        letterSpacing: '1px',
+                        boxShadow: '0 0 15px rgba(16,185,129,0.1)'
+                    }}
+                >
+                    {isScanning ? 'PROCESANDO CON IA...' : '⚡ ESCANEAR DESDE CAPTURA (IA)'}
+                </Button>
+                <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, display: 'block', marginTop: 10 }}>Sube una foto del marcador para auto-rellenar los nombres</Text>
+             </div>
+          )}
+
           <Form 
             form={form} 
             layout="vertical" 
