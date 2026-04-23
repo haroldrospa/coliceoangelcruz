@@ -226,7 +226,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     gallo_b_name: 'Gallo Blanco',
     gallo_a_weight: '3.2 lbs',
     gallo_b_weight: '3.1 lbs',
-    post_number: '14',
+    post_number: '1',
     gallo_a_odds: 1.90,
     gallo_b_odds: 1.90,
     status: 'PENDING'
@@ -776,8 +776,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                            <div style={{ width: 4, height: 40, background: event.status === 'LIVE' ? '#10b981' : (event.status === 'FINISHED' ? '#d4af37' : 'rgba(255,255,255,0.1)'), borderRadius: 2 }} />
     
                            <div style={{ width: 80 }}>
-                              <Text style={{ color: event.id === fightInfo.id ? '#10b981' : 'var(--text-muted)', fontSize: 10, fontWeight: 900, display: 'block' }}>PELEA #{index + 1}</Text>
-                              <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 8, fontWeight: 800 }}>POSTE {event.post_number}</Text>
+                              <Text style={{ color: event.id === fightInfo.id ? '#10b981' : 'var(--text-muted)', fontSize: 12, fontWeight: 900, display: 'block' }}>PELEA {event.post_number}</Text>
                            </div>
     
                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 24, paddingLeft: 20 }}>

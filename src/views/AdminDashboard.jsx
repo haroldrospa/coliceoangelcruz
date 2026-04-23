@@ -484,7 +484,7 @@ const AdminDashboard = () => {
   };
 
   const eventColumns = [
-    { title: 'PELEA', dataIndex: 'post_number', key: 'post', render: (t) => <Text style={{ color: 'var(--champagne)', fontWeight: 900 }}>{t}</Text> },
+    { title: 'PELEA #', dataIndex: 'post_number', key: 'post', render: (t) => <Text style={{ color: 'var(--champagne)', fontWeight: 900 }}>{t}</Text> },
     { title: 'GALLOS', key: 'ga', render: (_, r) => <div style={{ color: '#fff' }}>{r.gallo_a_name.replace('[ARCHIVED] ', '')} vs {r.gallo_b_name}</div> },
     { title: 'ESTADO', dataIndex: 'status', key: 'status', render: (s, r) => {
       if (s === 'LIVE') return <Tag color="green">VIVO</Tag>;
@@ -791,7 +791,7 @@ const AdminDashboard = () => {
         <div style={{ background: 'var(--charcoal)', padding: 30, borderRadius: 12 }}>
           <Title level={3} style={{ color: '#fff', textAlign: 'center', fontFamily: 'Outfit' }}>Nueva Pelea en Vivo</Title>
           <Form form={form} layout="vertical" onFinish={handleCreateEvent} initialValues={{ gallo_a_odds: 1.9, gallo_b_odds: 1.9 }}>
-            <Form.Item name="post_number" label={<Text style={{ color: '#fff' }}>POSTE</Text>} rules={[{required: true}]}><Input /></Form.Item>
+            <Form.Item name="post_number" label={<Text style={{ color: '#fff' }}>PELEA #</Text>} rules={[{required: true}]}><Input /></Form.Item>
             <Row gutter={16}>
                 <Col span={12}><Form.Item name="gallo_a_name" label={<Text style={{ color: '#fff' }}>GALLO AZUL</Text>} rules={[{required: true}]}><Input /></Form.Item></Col>
                 <Col span={12}><Form.Item name="gallo_b_name" label={<Text style={{ color: '#fff' }}>GALLO BLANCO</Text>} rules={[{required: true}]}><Input /></Form.Item></Col>
@@ -857,7 +857,7 @@ const AdminDashboard = () => {
                 <Input placeholder="https://www.youtube.com/watch?v=..." style={{ background: '#000', border: '1px solid var(--gold)', color: '#fff', height: 45, borderRadius: 8 }} />
             </Form.Item>
             
-            <Form.Item name="post_number" label={<Text style={{ color: '#fff' }}>POSTE / # PELEA</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item>
+            <Form.Item name="post_number" label={<Text style={{ color: '#fff' }}>Nº DE PELEA</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item>
             <Row gutter={16}>
                 <Col span={12}><Form.Item name="gallo_a_name" label={<Text style={{ color: '#fff' }}>GALLO AZUL</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item></Col>
                 <Col span={12}><Form.Item name="gallo_b_name" label={<Text style={{ color: '#fff' }}>GALLO BLANCO</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item></Col>
@@ -884,7 +884,7 @@ const AdminDashboard = () => {
         <div style={{ background: 'var(--charcoal)', padding: 30, borderRadius: 12, border: '1px solid #10b981' }}>
           <Title level={3} style={{ color: '#fff', textAlign: 'center', fontFamily: 'Outfit' }}>Programa de Jornada (Carga en Bloque)</Title>
           <Text style={{ color: 'var(--text-muted)', display: 'block', marginBottom: 20, textAlign: 'center' }}>
-            Pega tu programa aquí. Formato: <span style={{ color: '#10b981' }}>Poste, Gallo A, Gallo B</span> (una por línea)
+            Pega tu programa aquí. Formato: <span style={{ color: '#10b981' }}>Pelea, Gallo A, Gallo B</span> (una por línea)
           </Text>
           <Form form={form} layout="vertical" onFinish={handleBulkCreate}>
             <Form.Item name="bulkText" rules={[{required: true, message: 'Ingresa al menos una pelea'}]}>

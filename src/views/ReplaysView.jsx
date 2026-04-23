@@ -117,7 +117,7 @@ const ReplaysView = ({ currentUser }) => {
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `Pelea_Poste_${postNumber}.mp4`;
+      link.download = `Pelea_${postNumber}.mp4`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -140,8 +140,8 @@ const ReplaysView = ({ currentUser }) => {
     const winnerName = (event.winner_side === 'A' ? nameA : nameB).replace('[ARCHIVED] ', '');
     
     const shareData = {
-      title: `Coliseo Ángel Cruz - Poste #${event.post_number || ''}`,
-      text: `¡Mira esta pelea! Poste #${event.post_number || ''}: ${nameA} vs ${nameB}. Ganador: ${winnerName}`,
+      title: `Coliseo Ángel Cruz - Pelea #${event.post_number || ''}`,
+      text: `¡Mira esta pelea! Pelea #${event.post_number || ''}: ${nameA} vs ${nameB}. Ganador: ${winnerName}`,
       url: window.location.href,
     };
 
@@ -179,7 +179,7 @@ const ReplaysView = ({ currentUser }) => {
         <Row gutter={[16, 16]} align="middle">
             <Col xs={24} md={12}>
                 <Input 
-                    placeholder="Buscar por gallo o poste (#)..." 
+                    placeholder="Buscar por gallo o pelea (#)..." 
                     value={searchTerm} 
                     onChange={e => setSearchTerm(e.target.value)}
                     style={{ background: '#0a0a0a', border: '1px solid var(--glass-border)', color: '#fff', borderRadius: 8, height: 45 }}
@@ -234,7 +234,7 @@ const ReplaysView = ({ currentUser }) => {
                           </div>
                           <div style={{ marginTop: 12 }}>
                              <Badge 
-                                count={`POSTE ${event.post_number}`} 
+                                count={`PELEA ${event.post_number}`} 
                                 style={{ 
                                    backgroundColor: 'rgba(16,185,129,0.15)', 
                                    color: '#10b981', 
