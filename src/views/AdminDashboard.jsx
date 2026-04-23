@@ -131,12 +131,11 @@ const AdminDashboard = () => {
       form.setFieldsValue(event);
   };
 
-  const handleScanImage = async (e) => {
-    const file = e.target.files[0];
+  const processScoreboardImage = async (file) => {
     if (!file) return;
 
     setIsScanning(true);
-    const hide = message.loading('IA ANALIZANDO MARCADOR...', 0);
+    const hide = message.loading('IA ANALIZANDO CAPTURA PEGADA...', 0);
     
     try {
         const reader = new FileReader();
@@ -154,7 +153,7 @@ const AdminDashboard = () => {
                 gallo_a_name: data.gallo_a_name || '',
                 gallo_b_name: data.gallo_b_name || ''
             });
-            message.success('DATOS EXTRAÍDOS CON ÉXITO');
+            message.success('CAPTURA PROCESADA CON ÉXITO');
         }
     } catch (err) {
         console.error('Scan Error:', err);
@@ -162,9 +161,34 @@ const AdminDashboard = () => {
     } finally {
         setIsScanning(false);
         hide();
-        e.target.value = ''; // Clean input
     }
   };
+
+  const handleScanImage = async (e) => {
+    const file = e.target.files[0];
+    await processScoreboardImage(file);
+    e.target.value = ''; // Clean input
+  };
+
+  useEffect(() => {
+    const handlePaste = (event) => {
+        if (!isReplayModalOpen) return;
+        
+        const items = event.clipboardData?.items;
+        if (!items) return;
+
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                processScoreboardImage(blob);
+                break;
+            }
+        }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isReplayModalOpen]);
 
   const handleBulkCreate = async (values) => {
     setLoading(true);
