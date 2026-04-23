@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Tag, Button, Modal, Form, Input, InputNumber, Space, Typography, Row, Col, Divider, App as AntApp, Tabs, Image, Select, Upload, Progress, Badge, Popconfirm } from 'antd';
+import { Card, Table, Tag, Button, Modal, Form, Input, InputNumber, Space, Typography, Row, Col, Divider, App as AntApp, Tabs, Image, Select, Badge, Popconfirm } from 'antd';
 import { PlusOutlined, ThunderboltFilled, TrophyOutlined, SignalFilled, SettingOutlined, EyeOutlined, CheckCircleFilled, WalletOutlined, DollarOutlined, VideoCameraOutlined, InboxOutlined, DeleteOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 
@@ -15,14 +15,12 @@ const AdminDashboard = () => {
   const [editingEvent, setEditingEvent] = useState(null);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [globalStream, setGlobalStream] = useState('');
   const [showCartelera, setShowCartelera] = useState(true);
   const [streamMode, setStreamMode] = useState('LIVE');
   const [isSavingStream, setIsSavingStream] = useState(false);
   const [isSavingMode, setIsSavingMode] = useState(false);
   const [form] = Form.useForm();
-  const [fileList, setFileList] = useState([]);
 
   const fetchData = async () => {
     try {
@@ -86,163 +84,45 @@ const AdminDashboard = () => {
 
   const handleCreateReplay = async (values) => {
     setLoading(true);
-    setUploadProgress(0);
     try {
-      let videoUrl = values.stream_url;
-      
-      // REAL UPLOAD with PROGRESS
-      if (fileList.length > 0) {
-        const file = fileList[0].originFileObj;
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `${fileName}`; // Just file name, bucket path handled below
-
-        // Raw XHR to handle progress accurately
-        const uploadPromise = new Promise(async (resolve, reject) => {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token || supabaseAnonKey;
-            
-            const xhr = new XMLHttpRequest();
-            const storageUrl = `${supabaseUrl}/storage/v1/object/media/${filePath}`;
-            xhr.open('PUT', storageUrl);
-            xhr.setRequestHeader('apikey', supabaseAnonKey);
-            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-            xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
-            xhr.setRequestHeader('x-upsert', 'true');
-
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const percent = Math.round((e.loaded / e.total) * 100);
-                    setUploadProgress(percent);
-                }
-            };
-            xhr.onload = () => {
-                if (xhr.status === 200 || xhr.status === 201) resolve(xhr.response);
-                else {
-                    console.error('Storage Error Detail:', xhr.responseText);
-                    const errorMsg = xhr.status === 413 
-                        ? 'VIDEO DEMASIADO PESADO. Por defecto Supabase limita a 50MB. Sube el "Maximum File Size" a 1GB en Supabase -> Storage -> Settings.'
-                        : `Upload failed ${xhr.status}: ${xhr.responseText}`;
-                    reject(new Error(errorMsg));
-                }
-            };
-            xhr.onerror = () => reject(new Error('Network Error'));
-            xhr.send(file);
-        });
-
-
-        await uploadPromise;
-        
-        // Get result URL
-        const { data } = supabase.storage
-          .from('media')
-          .getPublicUrl(filePath);
-        
-        videoUrl = data.publicUrl;
-      }
-
-      await rawFetch('events', { method: 'POST', body: { ...values, stream_url: videoUrl, status: 'FINISHED' } });
-      message.success('REPETICIÓN CARGADA CON ÉXITO');
+      await rawFetch('events', { 
+        method: 'POST', 
+        body: { ...values, status: 'FINISHED' } 
+      });
+      message.success('REPETICIÓN REGISTRADA CON ÉXITO');
       setIsReplayModalOpen(false);
-      setFileList([]);
       form.resetFields();
       fetchData();
     } catch (e) { 
-        console.error('Upload Error:', e);
-        if (e.message.includes('Bucket not found')) {
-            message.error('CARPETA DE VIDEOS NO EXISTE. Haz clic en el botón dorado [REPARAR CARPETA VIDEOS] arriba.');
-        } else {
-            message.error('Fallo al subir video: ' + e.message); 
-        }
-    }
-    finally { 
+        message.error('Error al guardar repetición: ' + e.message); 
+    } finally { 
         setLoading(false); 
-        setTimeout(() => setUploadProgress(0), 1000);
     }
   };
 
   const handleUpdateReplay = async (values) => {
     setLoading(true);
-    setUploadProgress(0);
     try {
-      let videoUrl = values.stream_url;
-      
-      if (fileList.length > 0) {
-        const file = fileList[0].originFileObj;
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `${fileName}`;
-        
-        const uploadPromise = new Promise(async (resolve, reject) => {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token || supabaseAnonKey;
-
-            const xhr = new XMLHttpRequest();
-            const storageUrl = `${supabaseUrl}/storage/v1/object/media/${filePath}`;
-            xhr.open('PUT', storageUrl);
-            xhr.setRequestHeader('apikey', supabaseAnonKey);
-            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-            xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
-            xhr.setRequestHeader('x-upsert', 'true');
-
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const percent = Math.round((e.loaded / e.total) * 100);
-                    setUploadProgress(percent);
-                }
-            };
-            xhr.onload = () => {
-                if (xhr.status === 200 || xhr.status === 201) resolve(xhr.response);
-                else {
-                    console.error('Storage Error Detail:', xhr.responseText);
-                    const errorMsg = xhr.status === 413 
-                        ? 'ARCHIVO MUY PESADO. Aumenta el límite de MB en Supabase -> Storage -> Settings -> Maximum File Size.'
-                        : `Error ${xhr.status}: ${xhr.responseText}`;
-                    reject(new Error(errorMsg));
-                }
-            };
-            xhr.onerror = () => reject(new Error('Network Error'));
-            xhr.send(file);
-        });
-
-        await uploadPromise;
-        const { data } = supabase.storage.from('media').getPublicUrl(filePath);
-        videoUrl = data.publicUrl;
-      }
-
       await rawFetch(`events?id=eq.${editingEvent.id}`, { 
         method: 'PATCH', 
-        body: { stream_url: videoUrl } 
+        body: values 
       });
-      
       message.success('REPETICIÓN ACTUALIZADA');
       setIsReplayModalOpen(false);
       setEditingEvent(null);
-      setFileList([]);
       form.resetFields();
       fetchData();
     } catch (e) {
-      if (e.message.includes('Bucket not found')) {
-          message.error('CARPETA DE VIDEOS NO EXISTE. Haz clic en el botón dorado [REPARAR CARPETA VIDEOS] arriba.');
-      } else {
-          message.error('Error al actualizar repetición: ' + e.message);
-      }
+      message.error('Error al actualizar: ' + e.message);
     } finally {
       setLoading(false);
-      setTimeout(() => setUploadProgress(0), 1000);
     }
   };
 
   const openReplayEditor = (event) => {
       setEditingEvent(event);
       setIsReplayModalOpen(true);
-      form.setFieldsValue({
-          post_number: event.post_number,
-          gallo_a_name: event.gallo_a_name,
-          gallo_b_name: event.gallo_b_name,
-          stream_url: event.stream_url,
-          winner_side: event.winner_side
-      });
+      form.setFieldsValue(event);
   };
 
   const handleBulkCreate = async (values) => {
@@ -689,23 +569,6 @@ const AdminDashboard = () => {
 
          {/* Maintenance Actions Grouped at the Bottom */}
          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-            <Button 
-               icon={<SettingOutlined />}
-               onClick={handleFixStorage} 
-               loading={loading}
-               style={{ 
-                  background: 'rgba(212,175,55,0.05)', 
-                  color: '#d4af37', 
-                  borderColor: 'rgba(212,175,55,0.2)', 
-                  height: 38,
-                  borderRadius: 10,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  textTransform: 'uppercase'
-               }}
-            >
-               REPARAR CARPETA VIDEOS
-            </Button>
 
             <Popconfirm
                title="¿VACIAR TODO EL CHAT?"
@@ -825,44 +688,20 @@ const AdminDashboard = () => {
         }} 
         footer={null} 
         centered 
-        width={600}
+        width={500}
       >
         <div style={{ background: 'var(--charcoal)', padding: 30, borderRadius: 12, border: '1px solid rgba(212,175,55,0.2)' }}>
           <Title level={3} style={{ color: '#d4af37', textAlign: 'center', fontFamily: 'Outfit' }}>
-            {editingEvent ? 'Actualizar Repetición' : 'Cargar Repetición Manual'}
+            {editingEvent ? 'Actualizar Repetición' : 'Registrar Repetición'}
           </Title>
           <Form 
             form={form} 
             layout="vertical" 
             onFinish={editingEvent ? handleUpdateReplay : handleCreateReplay}
           >
-            <Form.Item name="stream_url" label={<Text style={{ color: '#fff' }}>URL DE VIDEO (YouTube / Vimeo / Directo)</Text>} extra={<Text type="secondary" style={{ fontSize: 10 }}>RECOMENDADO: Usa YouTube (Oculto) si el video pesa más de 50MB.</Text>}>
-                <Input placeholder="https://www.youtube.com/watch?v=..." style={{ background: '#000', border: '1px solid var(--gold)', color: '#fff' }} />
+            <Form.Item name="stream_url" label={<Text style={{ color: '#fff' }}>ENLACE DE VIDEO (YouTube / Dacast / Externo)</Text>} rules={[{required: true, message: 'Ingresa el link del video'}]}>
+                <Input placeholder="https://www.youtube.com/watch?v=..." style={{ background: '#000', border: '1px solid var(--gold)', color: '#fff', height: 45, borderRadius: 8 }} />
             </Form.Item>
-
-            <Divider style={{ borderColor: 'rgba(255,255,255,0.05)' }}><Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9 }}>Ó SUBE UN ARCHIVO PEQUEÑO</Text></Divider>
-            
-            <Form.Item label={<Text style={{ color: '#fff' }}>ARCHIVO LOCAL (Máx 50MB por Plan Gratuito)</Text>}>
-                <Upload.Dragger 
-                    name="file" 
-                    multiple={false} 
-                    fileList={fileList}
-                    onChange={({ fileList }) => setFileList(fileList)}
-                    beforeUpload={() => false}
-                    style={{ background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(212,175,55,0.3)', borderRadius: 12, padding: 20 }}
-                >
-                    <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: '#d4af37' }} /></p>
-                    <p className="ant-upload-text" style={{ color: '#fff', fontSize: 13 }}>Haz clic o arrastra el video</p>
-                    <p className="ant-upload-hint" style={{ color: 'var(--text-muted)', fontSize: 11 }}>Solo MP4/MOV </p>
-                </Upload.Dragger>
-            </Form.Item>
-            
-            {loading && uploadProgress > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                    <Text style={{ color: '#fff', fontSize: 10 }}>SUBIENDO A SUPABASE: {uploadProgress}%</Text>
-                    <Progress percent={uploadProgress} status="active" strokeColor="#d4af37" trailColor="rgba(255,255,255,0.05)" showInfo={false} style={{ marginTop: 8 }} />
-                </div>
-            )}
             
             <Form.Item name="post_number" label={<Text style={{ color: '#fff' }}>POSTE / # PELEA</Text>} rules={[{required: true}]}><Input disabled={!!editingEvent} /></Form.Item>
             <Row gutter={16}>
@@ -879,8 +718,8 @@ const AdminDashboard = () => {
                 </Form.Item>
             )}
 
-            <Button type="primary" block onClick={() => form.submit()} loading={loading} style={{ background: '#d4af37', border: 'none', height: 45, fontWeight: 700 }}>
-                {editingEvent ? 'ACTUALIZAR VIDEO REPETICIÓN' : 'GUARDAR REPETICIÓN NUEVA'}
+            <Button type="primary" block onClick={() => form.submit()} loading={loading} style={{ background: '#d4af37', border: 'none', height: 50, fontWeight: 700, borderRadius: 10, marginTop: 10 }}>
+                {editingEvent ? 'ACTUALIZAR REPETICIÓN' : 'GUARDAR REPETICIÓN'}
             </Button>
           </Form>
         </div>

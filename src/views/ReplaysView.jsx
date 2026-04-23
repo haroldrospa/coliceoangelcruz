@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, message, Popconfirm, Form, Upload, Progress, Divider } from 'antd';
+import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, message, Popconfirm, Form, Divider } from 'antd';
 import { PlayCircleOutlined, HistoryOutlined, ThunderboltFilled, TrophyOutlined, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined, DeleteOutlined, EditOutlined, InboxOutlined } from '@ant-design/icons';
 import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 
@@ -15,8 +15,6 @@ const ReplaysView = ({ currentUser }) => {
   const [editingReplay, setEditingReplay] = useState(null);
   const [form] = Form.useForm();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [fileList, setFileList] = useState([]);
 
   const fetchReplays = async () => {
     try {
@@ -60,68 +58,21 @@ const ReplaysView = ({ currentUser }) => {
 
   const handleUpdateReplay = async (values) => {
     setLoading(true);
-    setUploadProgress(0);
     try {
-      let videoUrl = values.stream_url;
-      
-      if (fileList.length > 0) {
-        const file = fileList[0].originFileObj;
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `${fileName}`;
-        
-        const uploadPromise = new Promise(async (resolve, reject) => {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token || supabaseAnonKey;
-
-            const xhr = new XMLHttpRequest();
-            const storageUrl = `${supabaseUrl}/storage/v1/object/media/${filePath}`;
-            xhr.open('PUT', storageUrl);
-            xhr.setRequestHeader('apikey', supabaseAnonKey);
-            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-            xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
-            xhr.setRequestHeader('x-upsert', 'true');
-
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const percent = Math.round((e.loaded / e.total) * 100);
-                    setUploadProgress(percent);
-                }
-            };
-            xhr.onload = () => {
-                if (xhr.status === 200 || xhr.status === 201) resolve(xhr.response);
-                else {
-                    const errorMsg = xhr.status === 413 
-                        ? 'VIDEO MUY GRANDE (+50MB). Aumenta el límite en los ajustes de Supabase Storage.'
-                        : `Upload failed ${xhr.status}`;
-                    reject(new Error(errorMsg));
-                }
-            };
-            xhr.onerror = () => reject(new Error('Network Error'));
-            xhr.send(file);
-        });
-
-        await uploadPromise;
-        const { data } = supabase.storage.from('media').getPublicUrl(filePath);
-        videoUrl = data.publicUrl;
-      }
-
       await rawFetch(`events?id=eq.${editingReplay.id}`, { 
         method: 'PATCH', 
-        body: { stream_url: videoUrl } 
+        body: { stream_url: values.stream_url } 
       });
       
       message.success('REPETICIÓN ACTUALIZADA');
       setIsAdminOpen(false);
       setEditingReplay(null);
-      setFileList([]);
       form.resetFields();
       fetchReplays();
     } catch (e) {
       message.error('Error al actualizar: ' + e.message);
     } finally {
       setLoading(false);
-      setTimeout(() => setUploadProgress(0), 1000);
     }
   };
 
@@ -562,7 +513,7 @@ const ReplaysView = ({ currentUser }) => {
        <Modal
           title={<span style={{ color: 'var(--gold)', fontWeight: 900, letterSpacing: '2px' }}>🛠️ PANEL DE EDICIÓN ADMIN</span>}
           open={isAdminOpen}
-          onCancel={() => { setIsAdminOpen(false); setEditingReplay(null); setFileList([]); }}
+          onCancel={() => { setIsAdminOpen(false); setEditingReplay(null); }}
           footer={null}
           centered
           width={500}
@@ -572,28 +523,12 @@ const ReplaysView = ({ currentUser }) => {
           }}
        >
           <Form form={form} layout="vertical" onFinish={handleUpdateReplay}>
-              <Form.Item name="stream_url" label={<Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 900 }}>URL DEL VIDEO (YouTube / Dacast / HLS)</Text>} extra={<Text type="secondary" style={{ fontSize: 9 }}>Sugerencia: Usa YouTube (Oculto) para videos de más de 50MB.</Text>}>
-                 <Input 
-                   style={{ background: '#0a0a0a', border: '1px solid rgba(212,175,55,0.4)', color: '#fff', borderRadius: 10, height: 44 }} 
-                   placeholder="https://..."
-                 />
+              <Form.Item name="stream_url" label={<Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 900 }}>ENLACE DE REPETICIÓN (YouTube / Dacast / HLS)</Text>} extra={<Text type="secondary" style={{ fontSize: 9 }}>Pega aquí el enlace directo al video o el enlace de YouTube.</Text>}>
+                  <Input 
+                    style={{ background: '#0a0a0a', border: '1px solid rgba(212,175,55,0.4)', color: '#fff', borderRadius: 10, height: 44 }} 
+                    placeholder="https://..."
+                  />
               </Form.Item>
-
-              <Divider style={{ borderColor: 'rgba(255,255,255,0.05)' }}><Text style={{ color: 'rgba(255,255,255,0.1)', fontSize: 9 }}>Ó SUBE ARCHIVO LOCAL</Text></Divider>
-
-              <div style={{ margin: '24px 0', padding: '20px', background: 'rgba(212,175,55,0.05)', borderRadius: 12, border: '1px dashed rgba(212,175,55,0.2)' }}>
-                  <Text style={{ color: 'var(--gold)', fontSize: 10, fontWeight: 900, display: 'block', marginBottom: 16, textAlign: 'center' }}>O SUBE UN ARCHIVO MP4</Text>
-                  <Upload.Dragger
-                      fileList={fileList}
-                      beforeUpload={() => false}
-                      onChange={({ fileList }) => setFileList(fileList.slice(-1))}
-                      style={{ background: 'transparent', border: 'none' }}
-                  >
-                      <p className="ant-upload-drag-icon"><InboxOutlined style={{ color: 'var(--gold)' }} /></p>
-                      <p style={{ color: '#fff', fontSize: 12 }}>Haz clic o arrastra un video aquí</p>
-                  </Upload.Dragger>
-                  {uploadProgress > 0 && <Progress percent={uploadProgress} strokeColor="var(--gold)" trailColor="rgba(255,255,255,0.05)" style={{ marginTop: 20 }} />}
-              </div>
 
               <Button 
                 type="primary" 

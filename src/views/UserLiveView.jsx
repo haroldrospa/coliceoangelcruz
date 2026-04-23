@@ -213,6 +213,8 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const [globalStream, setGlobalStream] = useState('');
   const [showCartelera, setShowCartelera] = useState(true);
   const [streamMode, setStreamMode] = useState('LIVE');
+  const [isReplayModalOpen, setIsReplayModalOpen] = useState(false);
+  const [selectedReplay, setSelectedReplay] = useState(null);
   const chatEndRef = useRef(null);
   const channelRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -741,7 +743,16 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                         return (
                         <div 
                             key={event.id}
-                            onClick={() => setFightInfo(event)}
+                            onClick={() => {
+                                if (event.status === 'FINISHED') {
+                                    setSelectedReplay(event);
+                                    setIsReplayModalOpen(true);
+                                } else {
+                                    setFightInfo(event);
+                                    const player = document.querySelector('.player-container');
+                                    player?.scrollIntoView({ behavior: 'smooth' });
+                                }
+                            }}
                             className="list-item-hover"
                             style={{ 
                                 background: event.id === fightInfo.id ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.02)', 
@@ -957,6 +968,63 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
            `}</style>
         </div>
       )}
+
+      {/* REPLAY MODAL FOR CARTELERA ITEMS */}
+      <Modal
+        open={isReplayModalOpen}
+        onCancel={() => setIsReplayModalOpen(false)}
+        footer={null}
+        width={800}
+        centered
+        destroyOnClose
+        styles={{ 
+            body: { padding: 0, overflow: 'hidden', background: '#000', borderRadius: 12 },
+            mask: { backdropFilter: 'blur(10px)', background: 'rgba(0,0,0,0.8)' }
+        }}
+      >
+        {selectedReplay && (
+           <div style={{ position: 'relative' }}>
+              <div style={{ width: '100%', background: '#000' }}>
+               {(() => {
+                  const url = selectedReplay.stream_url || '';
+                  if (!url) return (
+                     <div style={{ padding: '60px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+                        <PlayCircleFilled style={{ fontSize: 40, marginBottom: 16, opacity: 0.2 }} />
+                        <br />
+                        ESTA PELEA NO TIENE REPETICIÓN DISPONIBLE AÚN
+                     </div>
+                  );
+
+                  const isDirectVideo = url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/storage/v1/object/public/');
+                  
+                  let finalUrl = url;
+                  if (url.includes('youtube.com/watch?v=')) finalUrl = url.replace('watch?v=', 'embed/');
+                  else if (url.includes('youtu.be/')) finalUrl = `https://www.youtube.com/embed/${url.split('/').pop()}`;
+                  
+                  if (isDirectVideo) {
+                    return (
+                        <video src={url} controls autoPlay style={{ width: '100%', display: 'block' }} />
+                    );
+                  }
+
+                  return (
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                        <iframe src={finalUrl} width="100%" height="100%" frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen style={{ position: 'absolute', top: 0, left: 0 }} />
+                    </div>
+                  );
+               })()}
+              </div>
+              <div style={{ padding: '24px', background: 'var(--charcoal)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                 <Title level={4} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit' }}>
+                    {selectedReplay.gallo_a_name.replace('[ARCHIVED] ', '')} VS {selectedReplay.gallo_b_name}
+                 </Title>
+                 <Text style={{ color: 'var(--text-muted)', fontSize: 13, fontWeight: 500 }}>
+                    Poste #{selectedReplay.post_number} • Ganador: {(selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : (selectedReplay.winner_side === 'B' ? selectedReplay.gallo_b_name : 'TABLAS')).replace('[ARCHIVED] ', '')}
+                 </Text>
+              </div>
+           </div>
+        )}
+      </Modal>
     </div>
   );
 };
