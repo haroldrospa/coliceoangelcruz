@@ -563,21 +563,28 @@ const AdminDashboard = () => {
   ];
 
   const tabItems = [
-    { key: '1', label: 'PELEAS', children: (
-        <Table 
-            columns={eventColumns} 
-            dataSource={events} 
-            pagination={false} 
-            rowKey="id" 
-            onRow={(record) => ({
-                onClick: () => {
-                    if (record.status === 'FINISHED') openReplayEditor(record);
-                }
-            })}
-            rowClassName={(record) => record.status === 'FINISHED' ? 'clickable-row' : ''}
-        />
+    { key: '1', label: <span>PELEAS</span>, children: (
+        <div className="responsive-table-container">
+            <Table 
+                columns={eventColumns} 
+                dataSource={events} 
+                pagination={false} 
+                rowKey="id" 
+                scroll={{ x: 800 }}
+                onRow={(record) => ({
+                    onClick: () => {
+                        if (record.status === 'FINISHED') openReplayEditor(record);
+                    }
+                })}
+                rowClassName={(record) => record.status === 'FINISHED' ? 'clickable-row' : ''}
+            />
+        </div>
     )},
-    { key: '2', label: 'TESORERÍA', children: <Table columns={depositColumns} dataSource={deposits} pagination={false} rowKey="id" /> }
+    { key: '2', label: <span>TESORERÍA</span>, children: (
+        <div className="responsive-table-container">
+            <Table columns={depositColumns} dataSource={deposits} pagination={false} rowKey="id" scroll={{ x: 600 }} />
+        </div>
+    )}
   ];
 
   return (
@@ -588,7 +595,7 @@ const AdminDashboard = () => {
       {/* 🚀 PREMIUM ACTION PANEL: JORNADA DE HOY */}
       <div style={{ 
           background: 'linear-gradient(135deg, rgba(30,30,30,0.5) 0%, rgba(10,10,10,0.8) 100%)', 
-          padding: '36px', 
+          padding: 'clamp(20px, 4vw, 36px)', 
           borderRadius: 24, 
           marginBottom: 44, 
           border: '1px solid rgba(212,175,55,0.15)',
@@ -609,7 +616,7 @@ const AdminDashboard = () => {
             </Col>
 
             <Col xs={24} lg={14}>
-               <div style={{ background: 'rgba(0,0,0,0.3)', padding: '28px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.4)' }}>
+               <div style={{ background: 'rgba(0,0,0,0.3)', padding: 'clamp(16px, 3vw, 28px)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.4)' }}>
                   <Row gutter={[24, 24]} align="bottom">
                      <Col xs={24} md={12}>
                         <Text style={{ color: 'var(--gold)', fontSize: 10, fontWeight: 900, letterSpacing: '3px', display: 'block', marginBottom: 10, textTransform: 'uppercase' }}>SEÑAL GLOBAL MASTER</Text>
@@ -666,7 +673,7 @@ const AdminDashboard = () => {
                            dropdownStyle={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12 }}
                            options={[
                               { value: true, label: <span style={{ fontWeight: 900, fontSize: 12 }}>VISIBLE</span> },
-                              { value: false, label: <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 900, fontSize: 12 }}>OCULTA</span> }
+                              { value: false, label: <span style={{ fontWeight: 900, fontSize: 12, opacity: 0.5 }}>OCULTA</span> }
                            ]}
                         />
                      </Col>

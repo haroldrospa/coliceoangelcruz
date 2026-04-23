@@ -803,50 +803,55 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                                     player?.scrollIntoView({ behavior: 'smooth' });
                                 }
                             }}
-                            className="list-item-hover"
+                            className="list-item-hover cart-item"
                             style={{ 
                                 background: event.id === fightInfo.id ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.02)', 
                                 border: event.id === fightInfo.id ? '1px solid #d4af37' : '1px solid rgba(255,255,255,0.05)',
                                 borderRadius: 16,
-                                padding: '18px 24px',
+                                padding: 'clamp(12px, 3vw, 18px) clamp(16px, 4vw, 24px)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 cursor: 'pointer',
                                 transition: 'all 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
-                                gap: 20,
+                                gap: 'clamp(10px, 3vw, 20px)',
                                 position: 'relative',
                                 overflow: 'hidden'
                             }}
                         >
                            <style>{`
                               .list-item-hover:hover { background: rgba(255,255,255,0.05) !important; transform: translateX(5px); }
+                              @media (max-width: 768px) {
+                                .cart-item { flex-direction: column; align-items: flex-start !important; gap: 12px !important; }
+                                .cart-item-header { width: 100% !important; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
+                                .cart-item-body { width: 100% !important; padding-left: 0 !important; gap: 16px !important; }
+                                .cart-item-team { align-items: flex-start !important; }
+                              }
                            `}</style>
     
                            {/* Status Indicator Bar */}
                            <div style={{ width: 4, height: 40, background: event.status === 'LIVE' ? '#10b981' : (event.status === 'FINISHED' ? '#d4af37' : 'rgba(255,255,255,0.1)'), borderRadius: 2 }} />
     
-                           <div style={{ width: 80 }}>
+                           <div className="cart-item-header" style={{ width: 80 }}>
                               <Text style={{ color: event.id === fightInfo.id ? '#10b981' : 'var(--text-muted)', fontSize: 12, fontWeight: 900, display: 'block' }}>PELEA {event.post_number}</Text>
                            </div>
     
-                           <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 24, paddingLeft: 20 }}>
-                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                           <div className="cart-item-body" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 24, paddingLeft: 20 }}>
+                              <div className="cart-item-team" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     {aData.clase === 'P' && <Tag color="gold" style={{ margin: 0, padding: '0 4px', fontSize: 10, borderRadius: 4, fontWeight: 800 }}>P</Tag>}
-                                    <Text style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{event.gallo_a_name}</Text>
-                                    <Tag style={{ background: 'rgba(16,185,129,0.1)', border: 'none', color: '#10b981', fontSize: 11, fontWeight: 800 }}>{event.gallo_a_odds}</Tag>
+                                    <Text style={{ color: '#fff', fontWeight: 800, fontSize: 'clamp(14px, 2vw, 15px)' }}>{event.gallo_a_name}</Text>
+                                    <Tag style={{ background: 'rgba(16,185,129,0.1)', border: 'none', color: '#10b981', fontSize: 11, fontWeight: 800, margin: 0 }}>{event.gallo_a_odds}</Tag>
                                  </div>
                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
                                     {aData.turno && <span>T: {aData.turno}</span>}
                                     {aData.marca && <span>M: {aData.marca}</span>}
-                                    {aData.color && <span>{aData.color}</span>}
                                     <span style={{ color: '#10b981', fontWeight: 800, background: 'rgba(16,185,129,0.1)', padding: '2px 6px', borderRadius: 4 }}>{aData.weight}</span>
                                  </div>
                               </div>
     
                               <div style={{ color: 'rgba(255,255,255,0.1)', fontSize: 10, fontWeight: 900 }}>VS</div>
     
-                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+                              <div className="cart-item-team" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     <Tag style={{ background: 'rgba(16,185,129,0.1)', border: 'none', color: '#10b981', fontSize: 11, fontWeight: 800 }}>{event.gallo_b_odds}</Tag>
                                     <Text style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{event.gallo_b_name}</Text>
