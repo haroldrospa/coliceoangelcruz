@@ -268,19 +268,27 @@ const AdminDashboard = () => {
   const handleSaveGroqKey = async () => {
     setIsSavingGroq(true);
     try {
-        await rawFetch(`settings?id=eq.groq_api_key`, { 
-            method: 'PATCH', 
-            body: { value: groqKey } 
-        });
-        message.success('API KEY DE GROQ ACTUALIZADA');
-    } catch (e) {
-        // If it doesn't exist, try to insert (though it should exist by default)
-        try {
-            await rawFetch(`settings`, { method: 'POST', body: { id: 'groq_api_key', value: groqKey } });
-            message.success('API KEY DE GROQ REGISTRADA');
-        } catch (err) {
-            message.error('Error al guardar API Key');
+        const payload = { id: 'groq_api_key', value: groqKey };
+        // Check if exists
+        const currentSettings = await rawFetch('settings');
+        const exists = currentSettings.find(s => s.id === 'groq_api_key');
+
+        if (exists) {
+            await rawFetch(`settings?id=eq.groq_api_key`, { 
+                method: 'PATCH', 
+                body: { value: groqKey } 
+            });
+        } else {
+            await rawFetch(`settings`, { 
+                method: 'POST', 
+                body: payload 
+            });
         }
+        message.success('API KEY GUARDADA EN BASE DE DATOS');
+        fetchData();
+    } catch (e) {
+        console.error('Save Key Error:', e);
+        message.error('Error al guardar llave en DB');
     } finally {
         setIsSavingGroq(false);
     }

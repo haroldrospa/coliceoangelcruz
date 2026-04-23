@@ -1,13 +1,16 @@
 import { rawFetch } from "./supabase";
 
+// TO THE USER: Key updated with the one provided
+const FALLBACK_GROQ_KEY = "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";
+
 export const scanScoreboardWithGroq = async (base64Image) => {
     try {
-        // 1. Get API Key from current settings (already fetched in AdminDashboard or we fetch directly here)
+        // 1. Get API Key from current settings 
         const settings = await rawFetch('settings');
-        const groqKey = settings.find(s => s.id === 'groq_api_key')?.value;
+        let groqKey = settings?.find(s => s.id === 'groq_api_key')?.value;
 
         if (!groqKey || groqKey.length < 10) {
-            throw new Error("API KEY DE GROQ NO CONFIGURADA. Ve a la pestaña de ajustes en el panel admin.");
+            groqKey = FALLBACK_GROQ_KEY;
         }
 
         const prompt = `
