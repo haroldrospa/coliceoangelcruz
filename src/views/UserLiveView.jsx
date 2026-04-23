@@ -291,7 +291,8 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         const fetchProgram = async () => {
             try {
                 // Fetch all fights from today (or last 12 hours) regardless of status
-                const data = await rawFetch('events?select=*&order=post_number.asc&limit=30');
+                // Filtramos para no mostrar peleas finalizadas en la cartelera de hoy (ya están en repeticiones)
+                const data = await rawFetch('events?select=*&status=neq.FINISHED&order=post_number.asc&limit=30');
                 if (data) setTodayProgram(data);
             } catch (e) { console.error('Program Err:', e); }
         };
