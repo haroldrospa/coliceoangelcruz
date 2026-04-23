@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Table, Tag, Button, Modal, Form, Input, InputNumber, Space, Typography, Row, Col, Divider, App as AntApp, Tabs, Image, Select, Badge, Popconfirm } from 'antd';
 import { PlusOutlined, ThunderboltFilled, TrophyOutlined, SignalFilled, SettingOutlined, EyeOutlined, CheckCircleFilled, WalletOutlined, DollarOutlined, VideoCameraOutlined, InboxOutlined, DeleteOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
-import { scanScoreboard } from '../lib/gemini';
+import { scanScoreboardWithGroq } from '../lib/groq';
 
 const { Title, Text } = Typography;
 
@@ -23,6 +23,8 @@ const AdminDashboard = () => {
   const [isSavingMode, setIsSavingMode] = useState(false);
   const [form] = Form.useForm();
   const [isScanning, setIsScanning] = useState(false);
+  const [groqKey, setGroqKey] = useState('');
+  const [isSavingGroq, setIsSavingGroq] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -38,9 +40,11 @@ const AdminDashboard = () => {
             const stream = settings.find(s => s.id === 'live_stream_url');
             const cartelera = settings.find(s => s.id === 'show_cartelera');
             const mode = settings.find(s => s.id === 'stream_logic_mode');
+            const groq = settings.find(s => s.id === 'groq_api_key');
             if (stream) setGlobalStream(stream.value);
             if (cartelera) setShowCartelera(cartelera.value === 'true');
             if (mode) setStreamMode(mode.value);
+            if (groq) setGroqKey(groq.value);
         }
       } else {
         const deps = await rawFetch(`deposits?select=*,users(email)&order=created_at.desc`);
@@ -142,7 +146,7 @@ const AdminDashboard = () => {
         });
         
         const base64 = await base64Promise;
-        const data = await scanScoreboard(base64);
+        const data = await scanScoreboardWithGroq(base64);
         
         if (data) {
             form.setFieldsValue({
@@ -234,6 +238,27 @@ const AdminDashboard = () => {
       message.error('Error al cambiar modo de transmisión');
     } finally {
       setIsSavingMode(false);
+    }
+  };
+
+  const handleSaveGroqKey = async () => {
+    setIsSavingGroq(true);
+    try {
+        await rawFetch(`settings?id=eq.groq_api_key`, { 
+            method: 'PATCH', 
+            body: { value: groqKey } 
+        });
+        message.success('API KEY DE GROQ ACTUALIZADA');
+    } catch (e) {
+        // If it doesn't exist, try to insert (though it should exist by default)
+        try {
+            await rawFetch(`settings`, { method: 'POST', body: { id: 'groq_api_key', value: groqKey } });
+            message.success('API KEY DE GROQ REGISTRADA');
+        } catch (err) {
+            message.error('Error al guardar API Key');
+        }
+    } finally {
+        setIsSavingGroq(false);
     }
   };
 
@@ -632,6 +657,33 @@ const AdminDashboard = () => {
                </Button>
             </Popconfirm>
          </div>
+
+         <Divider style={{ borderColor: 'rgba(255,255,255,0.05)', margin: '24px 0' }} />
+
+         <Row gutter={[24, 24]} align="middle">
+             <Col xs={24} md={18}>
+                <Space direction="vertical" size={2} style={{ width: '100%' }}>
+                    <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 900, letterSpacing: '2px' }}>CONFIGURACIÓN IA (GROQ API KEY)</Text>
+                    <Input.Password 
+                        placeholder="gsk_..." 
+                        value={groqKey} 
+                        onChange={e => setGroqKey(e.target.value)}
+                        style={{ background: '#000', border: '1px solid rgba(16,185,129,0.2)', color: '#fff', borderRadius: 8, height: 40 }}
+                    />
+                </Space>
+             </Col>
+             <Col xs={24} md={6}>
+                 <Button 
+                    type="primary" 
+                    block 
+                    onClick={handleSaveGroqKey} 
+                    loading={isSavingGroq}
+                    style={{ background: '#10b981', borderRadius: 8, height: 40, fontWeight: 700, marginTop: 15 }}
+                >
+                    GUARDAR LLAVE
+                </Button>
+             </Col>
+          </Row>
       </div>
 
 
