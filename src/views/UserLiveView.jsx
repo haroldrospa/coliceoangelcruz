@@ -1026,7 +1026,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         footer={null}
         width={800}
         centered
-        destroyOnClose={true}
+        destroyOnHidden={true}
         styles={{ 
             body: { padding: 0, overflow: 'hidden', background: '#000', borderRadius: 12 },
             mask: { backdropFilter: 'blur(10px)', background: 'rgba(0,0,0,0.8)' }

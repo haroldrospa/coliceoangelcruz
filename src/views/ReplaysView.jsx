@@ -343,7 +343,7 @@ const ReplaysView = ({ currentUser }) => {
         footer={null}
         width={900}
         centered
-        destroyOnClose={true}
+        destroyOnHidden={true}
         styles={{ 
             body: { padding: 0, overflow: 'hidden', background: '#000', borderRadius: 20 },
             mask: { backdropFilter: 'blur(10px)', background: 'rgba(0,0,0,0.8)' }
