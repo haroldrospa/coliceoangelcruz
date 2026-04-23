@@ -11,14 +11,16 @@ export const scanScoreboardWithGroq = async (base64Image) => {
         }
 
         const prompt = `
-            Analyze this image of a cockfighting scoreboard. 
-            Extract:
-            - post_number (integer or string)
-            - gallo_a_name (string, top rooster)
-            - gallo_b_name (string, bottom rooster)
+            Eres un experto en OCR y análisis de marcadores de peleas de gallos. Analiza la imagen y extrae los datos siguiendo estrictamente estas reglas visuales:
             
-            Return ONLY a valid JSON object. 
-            Example: {"post_number": 3, "gallo_a_name": "DOCTOR ROSSO", "gallo_b_name": "TBA. DE LEON"}
+            1. post_number: Es el número que aparece dentro del recuadro de color ROJO a la izquierda (dice PELEA seguido del número).
+            2. gallo_a_name (Gallo Azul): Es el texto que aparece dentro del recuadro largo con fondo de color AZUL.
+            3. gallo_b_name (Gallo Blanco): Es el texto que aparece dentro del recuadro largo con fondo de color BLANCO o GRIS CLARO.
+
+            IMPORTANTE: No mezcles los nombres. Si el recuadro azul dice "VIDRIERA RODRIGUEZ", ese es el nombre completo para gallo_a_name.
+            
+            Devuelve un objeto JSON válido con este formato:
+            {"post_number": "N", "gallo_a_name": "NOMBRE_AZUL", "gallo_b_name": "NOMBRE_BLANCO"}
         `;
 
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
