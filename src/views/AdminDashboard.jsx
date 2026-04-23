@@ -93,7 +93,12 @@ const AdminDashboard = () => {
     try {
       await rawFetch('events', { 
         method: 'POST', 
-        body: { ...values, status: 'FINISHED' } 
+        body: { 
+            ...values, 
+            status: 'FINISHED',
+            gallo_a_odds: values.gallo_a_odds || 1.9,
+            gallo_b_odds: values.gallo_b_odds || 1.9
+        } 
       });
       message.success('REPETICIÓN REGISTRADA CON ÉXITO');
       setIsReplayModalOpen(false);
@@ -111,7 +116,11 @@ const AdminDashboard = () => {
     try {
       await rawFetch(`events?id=eq.${editingEvent.id}`, { 
         method: 'PATCH', 
-        body: values 
+        body: {
+            ...values,
+            gallo_a_odds: values.gallo_a_odds || editingEvent.gallo_a_odds || 1.9,
+            gallo_b_odds: values.gallo_b_odds || editingEvent.gallo_b_odds || 1.9
+        } 
       });
       message.success('REPETICIÓN ACTUALIZADA');
       setIsReplayModalOpen(false);
@@ -486,6 +495,11 @@ const AdminDashboard = () => {
   const eventColumns = [
     { title: 'PELEA #', dataIndex: 'post_number', key: 'post', render: (t) => <Text style={{ color: 'var(--champagne)', fontWeight: 900 }}>{t}</Text> },
     { title: 'GALLOS', key: 'ga', render: (_, r) => <div style={{ color: '#fff' }}>{r.gallo_a_name.replace('[ARCHIVED] ', '')} vs {r.gallo_b_name}</div> },
+    { title: 'GANADOR', key: 'winner', render: (_, r) => {
+        if (r.status !== 'FINISHED' && r.status !== 'CLOSED') return <Text style={{ color: 'rgba(255,255,255,0.1)' }}>-</Text>;
+        if (r.winner_side === 'DRAW') return <Tag color="orange" style={{ fontWeight: 800 }}>TABLAS</Tag>;
+        return <Tag color={r.winner_side === 'A' ? 'blue' : 'default'} style={{ fontWeight: 800 }}>{r.winner_side === 'A' ? 'AZUL' : 'BLANCO'}</Tag>;
+    }},
     { title: 'ESTADO', dataIndex: 'status', key: 'status', render: (s, r) => {
       if (s === 'LIVE') return <Tag color="green">VIVO</Tag>;
       if (s === 'FINISHED') {
