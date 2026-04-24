@@ -1019,7 +1019,22 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     z-index: 10;
                     opacity: 0;
                 }
-           `}</style>
+                @keyframes pulse-green {
+                    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+                    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+                    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+                }
+                .pulse-dot { animation: pulse-green 2s infinite; }
+                .premium-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; }
+                .premium-btn:hover { transform: translateY(-3px); filter: brightness(1.1); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+                .premium-btn:active { transform: translateY(-1px); }
+                .close-float-btn:hover {
+                    background: rgba(16,185,129,0.2) !important;
+                    border-color: #10b981 !important;
+                    transform: scale(1.1);
+                    box-shadow: 0 0 20px rgba(16,185,129,0.4);
+                }
+            `}</style>
         </div>
       )}
 
@@ -1027,54 +1042,62 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
       <Modal
         open={isReplayModalOpen}
         destroyOnHidden={true}
+        footer={null}
+        closable={false}
+        width="min(95%, 900px)"
+        centered
+        zIndex={9999}
         onCancel={() => {
             setIsReplayModalOpen(false);
             setIsVideoLoading(false);
         }}
+        style={{ top: 0 }}
         styles={{ 
-            body: { padding: 0, overflow: 'hidden', background: '#0a0a0a', borderRadius: 12, minHeight: 200 },
-            mask: { backdropFilter: 'blur(15px)', background: 'rgba(0,0,0,0.85)' }
+            body: { padding: 0, overflow: 'hidden', background: '#040806', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 0 50px rgba(0,0,0,0.5)' },
+            mask: { backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.92)' }
         }}
       >
         {selectedReplay && (
            <div style={{ position: 'relative' }}>
-              {/* Spinner Overlay */}
-              {isVideoLoading && (
-                  <div style={{ 
-                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-                      zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      background: '#0a0a0a', gap: 15
-                  }}>
-                      <div className="loader-ring" />
-                      <Text style={{ color: 'var(--gold)', fontSize: 10, fontWeight: 900, letterSpacing: '4px', textTransform: 'uppercase' }}>Cargando Repetición...</Text>
-                      <style>{`
-                          .loader-ring {
-                              width: 50px; height: 50px;
-                              border: 3px solid rgba(212,175,55,0.1);
-                              border-radius: 50%;
-                              border-top-color: var(--gold);
-                              animation: spin 1s ease-in-out infinite;
-                          }
-                          @keyframes spin { to { transform: rotate(360deg); } }
-                      `}</style>
-                  </div>
-              )}
+              <div 
+                onClick={() => { setIsReplayModalOpen(false); setIsVideoLoading(false); }}
+                style={{ 
+                    position: 'absolute', top: 20, right: 20, zIndex: 1000, 
+                    width: 44, height: 44, background: 'rgba(0,0,0,0.65)', 
+                    borderRadius: '50%', display: 'flex', alignItems: 'center', 
+                    justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.15)',
+                    backdropFilter: 'blur(12px)', color: '#fff', fontSize: 20, transition: 'all 0.3s ease',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                }}
+                className="close-float-btn"
+              >
+                ✕
+              </div>
 
-              <div style={{ width: '100%', background: '#000', minHeight: 300, display: 'flex', alignItems: 'center' }}>
+              <div style={{ position: 'relative', width: '100%', background: '#000', minHeight: 400, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+                  {isVideoLoading && (
+                      <div style={{ 
+                          position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                          zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                          background: '#040806', gap: 15
+                      }}>
+                          <div className="loader-ring" />
+                          <Text style={{ color: '#10b981', fontSize: 9, fontWeight: 900, letterSpacing: '4px', textTransform: 'uppercase' }}>Analizando Jugada...</Text>
+                      </div>
+                  )}
                {(() => {
                   const url = selectedReplay.stream_url || '';
                   if (!url) {
                       return (
-                         <div style={{ padding: '60px 20px', width: '100%', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
-                            <PlayCircleFilled style={{ fontSize: 40, marginBottom: 16, opacity: 0.2 }} />
+                         <div style={{ padding: '100px 20px', width: '100%', textAlign: 'center', color: 'rgba(255,255,255,0.2)' }}>
+                            <PlayCircleFilled style={{ fontSize: 60, marginBottom: 20, opacity: 0.1 }} />
                             <br />
-                            ESTA PELEA NO TIENE REPETICIÓN DISPONIBLE AÚN
+                            <Text style={{ fontSize: 12, fontWeight: 800, letterSpacing: '2px', color: 'rgba(255,255,255,0.3)' }}>CONTENIDO NO DISPONIBLE</Text>
                          </div>
                       );
                   }
 
                   const isDirectVideo = url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/storage/v1/object/public/');
-                  
                   let finalUrl = url;
                   if (url.includes('youtube.com/watch?v=')) finalUrl = url.replace('watch?v=', 'embed/');
                   else if (url.includes('youtu.be/')) finalUrl = `https://www.youtube.com/embed/${url.split('/').pop()}`;
@@ -1086,13 +1109,13 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                             controls 
                             autoPlay 
                             onLoadedData={() => setIsVideoLoading(false)}
-                            style={{ width: '100%', display: 'block', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.5s' }} 
+                            style={{ width: '100%', display: 'block', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.8s' }} 
                         />
                     );
                   }
 
                   return (
-                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, width: '100%', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.5s' }}>
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, width: '100%', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.8s' }}>
                         <iframe 
                             src={finalUrl} 
                             width="100%" height="100%" 
@@ -1104,46 +1127,59 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                   );
                })()}
               </div>
-              <div style={{ padding: '24px', background: 'var(--charcoal)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                 <Row justify="space-between" align="middle" gutter={[16, 16]}>
-                    <Col xs={24} md={16}>
-                       <Title level={4} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit' }}>
-                          {selectedReplay.gallo_a_name.replace('[ARCHIVED] ', '')} VS {selectedReplay.gallo_b_name}
-                       </Title>
-                       <Text style={{ color: 'var(--text-muted)', fontSize: 13, fontWeight: 500 }}>
-                          Pelea #{selectedReplay.post_number} • Ganador: {(selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : (selectedReplay.winner_side === 'B' ? selectedReplay.gallo_b_name : 'TABLAS')).replace('[ARCHIVED] ', '')}
-                       </Text>
-                    </Col>
-                    
-                    <Col xs={24} md={8}>
-                       <Space size="small" wrap style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                          {selectedReplay.stream_url?.match(/\.(mp4|webm|ogg|mov)$/i) || selectedReplay.stream_url?.includes('/storage/v1/object/public/') ? (
-                             <Button 
-                                type="primary" 
-                                icon={<DownloadOutlined />} 
-                                onClick={() => handleDownload(selectedReplay.stream_url, selectedReplay.post_number)}
-                                style={{ background: '#d4af37', borderColor: '#d4af37', color: '#000', fontWeight: 900, fontSize: 10, height: 36 }}
-                             >
-                                DESCARGAR
-                             </Button>
-                          ) : null}
-                          
-                          <Button 
-                             icon={<WhatsAppOutlined />} 
-                             onClick={() => handleShare(selectedReplay)}
-                             style={{ background: '#25D366', borderColor: '#25D366', color: '#fff', fontWeight: 900, fontSize: 10, height: 36 }}
-                          >
-                             COMPARTIR
-                          </Button>
 
-                          <Button 
-                             icon={<CopyOutlined />} 
-                             onClick={() => copyToClipboard(window.location.href)}
-                             style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 900, fontSize: 10, height: 36 }}
-                          />
-                       </Space>
-                    </Col>
-                 </Row>
+                <div style={{ padding: '40px', background: 'linear-gradient(180deg, #0a1410 0%, #040806 100%)', borderTop: '2px solid rgba(16,185,129,0.15)' }}>
+                  <Row gutter={[32, 32]}>
+                     <Col xs={24} lg={16}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                           <div className="pulse-dot" style={{ width: 8, height: 8, background: '#10b981', borderRadius: '50%' }} />
+                           <Text style={{ color: 'rgba(16,185,129,0.8)', fontSize: 11, fontWeight: 900, letterSpacing: '4px', textTransform: 'uppercase' }}>Análisis Finalizado</Text>
+                        </div>
+                        
+                        <Title level={2} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit', letterSpacing: '-0.5px', fontSize: 'clamp(24px, 5vw, 36px)', textTransform: 'uppercase', lineHeight: 1.1 }}>
+                           {(selectedReplay.gallo_a_name || '').replace('[ARCHIVED] ', '')} 
+                           <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 300, margin: '0 15px', fontSize: '0.6em' }}>VS</span> 
+                           {selectedReplay.gallo_b_name || ''}
+                        </Title>
+
+                        <div style={{ marginTop: 32, display: 'flex', flexWrap: 'wrap', gap: 20 }}>
+                           <div style={{ 
+                              background: 'rgba(16,185,129,0.05)', 
+                              border: '1px solid rgba(16,185,129,0.2)', 
+                              padding: '24px 30px', 
+                              borderRadius: 20,
+                              position: 'relative',
+                              overflow: 'hidden',
+                              minWidth: 280
+                           }}>
+                              <div style={{ position: 'absolute', top: -10, right: -10, opacity: 0.1 }}>
+                                 <TrophyOutlined style={{ fontSize: 80, color: '#10b981' }} />
+                              </div>
+                              <Text style={{ color: 'rgba(16,185,129,0.6)', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', display: 'block', marginBottom: 8, letterSpacing: '2px' }}>Resultado Oficial</Text>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                 <TrophyOutlined style={{ color: '#10b981', fontSize: 24 }} />
+                                 <Text style={{ color: '#fff', fontWeight: 900, fontSize: 22, letterSpacing: '0.5px', fontFamily: 'Outfit' }}>
+                                    {((selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : (selectedReplay.winner_side === 'B' ? selectedReplay.gallo_b_name : 'TABLAS')) || '').replace('[ARCHIVED] ', '').toUpperCase()}
+                                 </Text>
+                              </div>
+                           </div>
+                           
+                           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                              <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px' }}>Pelea Identificador</Text>
+                              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 600 }}>PELEA #{selectedReplay.post_number}</Text>
+                           </div>
+                        </div>
+                     </Col>
+                     
+                     <Col xs={24} lg={8}>
+                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'flex-end' }}>
+                           <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', textAlign: 'right', marginBottom: 4 }}>Opciones Rápidas</Text>
+                           <Button block icon={<WhatsAppOutlined />} onClick={() => handleShare(selectedReplay)} className="premium-btn whatsapp" style={{ height: 54, borderRadius: 16, border: 'none', background: '#25D366', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>WhatsApp</Button>
+                           <Button block icon={<CopyOutlined />} onClick={() => copyToClipboard(window.location.href)} className="premium-btn copy" style={{ height: 54, borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Copiar</Button>
+                           <Button block onClick={() => { setIsReplayModalOpen(false); setIsVideoLoading(false); }} className="premium-btn close" style={{ height: 54, borderRadius: 16, border: '1px solid rgba(255,77,79,0.2)', background: 'rgba(255,77,79,0.05)', color: '#ff4d4f', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Cerrar Pelea</Button>
+                        </div>
+                     </Col>
+                  </Row>
               </div>
            </div>
         )}

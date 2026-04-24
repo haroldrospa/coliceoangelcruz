@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, message, Popconfirm, Form, Divider } from 'antd';
-import { PlayCircleOutlined, HistoryOutlined, ThunderboltFilled, TrophyOutlined, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined, DeleteOutlined, EditOutlined, InboxOutlined } from '@ant-design/icons';
+import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, Select, message, Popconfirm, Form, Divider } from 'antd';
+import { PlayCircleOutlined, PlayCircleFilled, HistoryOutlined, ThunderboltFilled, TrophyOutlined, TrophyFilled, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined, DeleteOutlined, EditOutlined, InboxOutlined } from '@ant-design/icons';
 import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 
 const { Title, Text } = Typography;
@@ -13,6 +13,7 @@ const ReplaysView = ({ currentUser }) => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [editingReplay, setEditingReplay] = useState(null);
+  const [sortBy, setSortBy] = useState('newest'); // newest, oldest, number-asc, number-desc
   const [form] = Form.useForm();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isVideoLoading, setIsVideoLoading] = useState(false);
@@ -77,30 +78,37 @@ const ReplaysView = ({ currentUser }) => {
     }
   };
 
-  const filteredReplays = (replays || []).filter(event => {
-    if (!event) return false;
-    
-    // Safer search logic
-    const galloA = (event.gallo_a_name || '').toLowerCase();
-    const galloB = (event.gallo_b_name || '').toLowerCase();
-    const post = (event.post_number || '').toString();
-    const term = (searchTerm || '').toLowerCase();
+  const filteredReplays = (replays || [])
+    .filter(event => {
+        if (!event) return false;
+        
+        const galloA = (event.gallo_a_name || '').toLowerCase();
+        const galloB = (event.gallo_b_name || '').toLowerCase();
+        const post = (event.post_number || '').toString();
+        const term = (searchTerm || '').toLowerCase();
 
-    const matchesSearch = 
-        galloA.includes(term) || 
-        galloB.includes(term) ||
-        post.includes(term);
-    
-    if (!selectedDate) return matchesSearch;
+        const matchesSearch = 
+            galloA.includes(term) || 
+            galloB.includes(term) ||
+            post.includes(term);
+        
+        if (!selectedDate) return matchesSearch;
 
-    try {
-        const eventDate = new Date(event.created_at).setHours(0, 0, 0, 0);
-        const filterDate = selectedDate.toDate().setHours(0, 0, 0, 0);
-        return matchesSearch && eventDate === filterDate;
-    } catch (e) {
-        return matchesSearch;
-    }
-  });
+        try {
+            const eventDate = new Date(event.created_at).setHours(0, 0, 0, 0);
+            const filterDate = selectedDate.toDate().setHours(0, 0, 0, 0);
+            return matchesSearch && eventDate === filterDate;
+        } catch (e) {
+            return matchesSearch;
+        }
+    })
+    .sort((a, b) => {
+        if (sortBy === 'newest') return new Date(b.created_at) - new Date(a.created_at);
+        if (sortBy === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
+        if (sortBy === 'number-asc') return parseInt(a.post_number || 0) - parseInt(b.post_number || 0);
+        if (sortBy === 'number-desc') return parseInt(b.post_number || 0) - parseInt(a.post_number || 0);
+        return 0;
+    });
 
   const openReplay = (event) => {
     setSelectedReplay(event);
@@ -164,177 +172,138 @@ const ReplaysView = ({ currentUser }) => {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     message.success('Enlace copiado al portapapeles');
-  };
-
-  return (
-    <div style={{ padding: '30px 20px', maxWidth: 1000, margin: '0 auto', background: 'var(--obsidian)', minHeight: '100vh', paddingBottom: 100 }}>
+  };  return (
+    <div style={{ padding: '30px 20px', maxWidth: 1200, margin: '0 auto', background: 'var(--obsidian)', minHeight: '100vh', paddingBottom: 100 }}>
       {/* Dynamic Header */}
-      <div style={{ marginBottom: 32, textAlign: 'center' }}>
-        <Title level={4} style={{ color: '#fff', fontSize: 26, fontWeight: 900, margin: 0, fontFamily: 'Outfit' }}>CÁMARA DE REPETICIONES</Title>
-        <Text style={{ color: 'var(--text-muted)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '5px', fontWeight: 700 }}>Análisis de Combates Finalizados</Text>
+      <div style={{ marginBottom: 40, textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 8, padding: '4px 12px', background: 'rgba(16,185,129,0.1)', borderRadius: 20, border: '1px solid rgba(16,185,129,0.2)' }}>
+          <HistoryOutlined style={{ color: '#10b981', fontSize: 14 }} />
+          <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px' }}>Historial de Combates</Text>
+        </div>
+        <Title level={1} style={{ color: '#fff', fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, margin: 0, fontFamily: 'Outfit', letterSpacing: '-1px' }}>
+          CÁMARA DE <span style={{ color: '#10b981' }}>REPETICIONES</span>
+        </Title>
       </div>
 
       {/* Filter Controls */}
       <Card 
-        styles={{ body: { padding: '20px 24px' } }} 
-        style={{ marginBottom: 44, background: 'rgba(212,175,55,0.02)', border: '1px solid rgba(212,175,55,0.1)', borderRadius: 20, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}
+        styles={{ body: { padding: '24px' } }} 
+        style={{ marginBottom: 44, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 24, backdropFilter: 'blur(10px)' }}
       >
         <Row gutter={[16, 16]} align="middle">
-            <Col xs={24} md={12}>
+            <Col xs={24} md={10}>
                 <Input 
                     placeholder="Buscar por gallo o pelea (#)..." 
                     value={searchTerm} 
+                    prefix={<HistoryOutlined style={{ color: 'rgba(255,255,255,0.2)' }} />}
                     onChange={e => setSearchTerm(e.target.value)}
-                    style={{ background: '#0a0a0a', border: '1px solid var(--glass-border)', color: '#fff', borderRadius: 8, height: 45 }}
+                    style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 12, height: 50 }}
                     allowClear
                 />
             </Col>
-            <Col xs={24} md={12}>
+            <Col xs={12} md={7}>
                 <DatePicker 
                     placeholder="Filtrar por fecha" 
-                    style={{ width: '100%', background: '#0a0a0a', border: '1px solid var(--glass-border)', color: '#fff', borderRadius: 8, height: 45 }}
+                    style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 12, height: 50 }}
                     onChange={date => setSelectedDate(date)}
                     format="DD/MM/YYYY"
                     allowClear
                 />
             </Col>
+            <Col xs={12} md={7}>
+                <Select 
+                    placeholder="Ordenar por..."
+                    value={sortBy}
+                    onChange={val => setSortBy(val)}
+                    style={{ width: '100%', height: 50 }}
+                    className="premium-select"
+                    options={[
+                        { label: 'Más Recientes', value: 'newest' },
+                        { label: 'Más Antiguos', value: 'oldest' },
+                        { label: 'Pelea (Menor a Mayor)', value: 'number-asc' },
+                        { label: 'Pelea (Mayor a Menor)', value: 'number-desc' }
+                    ]}
+                />
+            </Col>
         </Row>
       </Card>
 
-      <Row gutter={[20, 20]}>
+      <Row gutter={[24, 24]}>
         {loading ? (
             Array(6).fill(0).map((_, idx) => (
-                <Col xs={24} sm={12} md={8} key={idx}>
-                    <Skeleton.Button active style={{ width: '100%', height: 200, borderRadius: 20 }} />
+                <Col xs={24} sm={12} md={8} lg={6} key={idx}>
+                    <Skeleton.Button active style={{ width: '100%', height: 280, borderRadius: 24 }} />
                 </Col>
             ))
         ) : filteredReplays.length > 0 ? (
           filteredReplays.map((event) => (
-            <Col xs={24} sm={12} md={8} key={event.id}>
-                <Card 
-                  className="glass-panel replay-card fade-up"
-                  styles={{ body: { padding: 0 } }}
-                  style={{ border: '1px solid rgba(212,175,55,0.1)', borderRadius: 20, overflow: 'hidden' }}
+            <Col xs={24} sm={12} md={8} lg={6} key={event.id}>
+                <div 
+                  className="premium-replay-card fade-up"
+                  onClick={() => openReplay(event)}
+                  style={{ 
+                    position: 'relative', 
+                    background: 'rgba(255,255,255,0.02)', 
+                    borderRadius: 20, 
+                    padding: '16px',
+                    cursor: 'pointer',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12
+                  }}
                 >
-                  <div style={{ position: 'relative', height: 180, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                      {/* Premium Thumbnail with Gradient Overlay */}
-                      <img 
-                        src="/cockfight_thumbnail_placeholder_1776285954679.png" 
-                        style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} 
-                        alt=""
-                        onError={(e) => e.target.style.display = 'none'}
-                      />
-                      <div style={{ 
-                         position: 'absolute', 
-                         top: 0, left: 0, width: '100%', height: '100%', 
-                         background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%)',
-                         zIndex: 1 
-                      }} />
-
-                      <div style={{ zIndex: 2, textAlign: 'center' }}>
-                          <div className="play-container" onClick={() => openReplay(event)}>
-                             <PlayCircleOutlined style={{ fontSize: 64, color: '#10b981' }} className="play-icon-glow" />
-                          </div>
-                          <div style={{ marginTop: 12 }}>
-                             <Badge 
-                                count={`PELEA ${event.post_number}`} 
-                                style={{ 
-                                   backgroundColor: 'rgba(16,185,129,0.15)', 
-                                   color: '#10b981', 
-                                   fontWeight: 900, 
-                                   fontSize: 10, 
-                                   border: '1px solid rgba(16,185,129,0.3)',
-                                   borderRadius: 4,
-                                   padding: '0 8px'
-                                }} 
-                             />
-                          </div>
+                  {/* Top Row: IDs & Play */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ background: 'rgba(16,185,129,0.08)', padding: '4px 10px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.15)' }}>
+                          <Text style={{ color: '#10b981', fontSize: 9, fontWeight: 900, letterSpacing: '1px' }}>PELEA #{event.post_number}</Text>
                       </div>
-                      
-                      {/* Winner Floating Pill */}
-                      <div style={{ position: 'absolute', top: 16, right: 16, zIndex: 3 }}>
-                         <div style={{ 
-                            background: 'linear-gradient(135deg, #d4af37 0%, #b8860b 100%)', 
-                            color: '#000', 
-                            padding: '6px 14px', 
-                            borderRadius: '50px', 
-                            fontSize: 10, 
-                            fontWeight: 900,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            boxShadow: '0 8px 20px rgba(212,175,55,0.3)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '1px'
-                         }}>
-                            <TrophyOutlined /> {((event.winner_side === 'A' ? event.gallo_a_name : event.gallo_b_name) || 'FINALIZADA').replace('[ARCHIVED] ', '')}
-                         </div>
+                      <div className="card-play-icon" style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.08)', transition: '0.3s' }}>
+                          <PlayCircleFilled style={{ color: '#10b981', fontSize: 13 }} />
                       </div>
-
-                      {/* Admin Actions Overlay */}
-                      {currentUser?.role === 'admin' && (
-                         <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 3, display: 'flex', gap: 8 }}>
-                            <Button 
-                               size="small" 
-                               icon={<EditOutlined />} 
-                               onClick={(e) => { e.stopPropagation(); openEditor(event); }}
-                               style={{ background: 'rgba(212,175,55,0.85)', borderColor: 'var(--gold)', color: '#000', borderRadius: 8, height: 32, width: 32, backdropFilter: 'blur(4px)' }}
-                            />
-                            <Popconfirm
-                               title="¿ELIMINAR REPETICIÓN?"
-                               description="Se borrará definitivamente de la base de datos."
-                               onConfirm={() => handleDeleteReplay(event.id)}
-                               okText="SÍ, ELIMINAR"
-                               cancelText="NO"
-                               okButtonProps={{ danger: true, loading: isDeleting }}
-                            >
-                               <Button 
-                                  size="small" 
-                                  danger
-                                  icon={<DeleteOutlined />} 
-                                  onClick={e => e.stopPropagation()}
-                                  style={{ borderRadius: 8, height: 32, width: 32, background: 'rgba(255,77,79,0.85)', backdropFilter: 'blur(4px)' }}
-                               />
-                            </Popconfirm>
-                         </div>
-                      )}
                   </div>
 
-                  <div style={{ padding: '24px', background: 'rgba(255,255,255,0.01)' }}>
-                      <Title level={5} style={{ color: '#fff', margin: 0, fontSize: 15, fontWeight: 900, fontFamily: 'Outfit', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                         {(event.gallo_a_name || 'Gallo A').replace('[ARCHIVED] ', '')} <span style={{ color: 'rgba(212,175,55,0.4)', fontSize: 10, fontWeight: 300, margin: '0 4px' }}>VS</span> {event.gallo_b_name || 'Gallo B'}
+                  {/* Main Content: Names */}
+                  <div style={{ flex: 1 }}>
+                      <Title level={5} style={{ color: '#fff', margin: 0, fontSize: 14, fontWeight: 800, fontFamily: 'Outfit', lineHeight: 1.2 }}>
+                         {(event.gallo_a_name || 'Gallo A').replace('[ARCHIVED] ', '')}
+                         <span style={{ color: 'rgba(255,255,255,0.1)', fontSize: 10, fontWeight: 400, margin: '0 8px' }}>VS</span>
+                         {(event.gallo_b_name || 'Gallo B')}
                       </Title>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
-                         <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 800, letterSpacing: '1px' }}>
-                            {new Date(event.created_at).toLocaleDateString()}
-                         </Text>
-                         <Button 
-                            type="text" 
-                            icon={<VideoCameraOutlined />} 
-                            onClick={() => openReplay(event)}
-                            style={{ 
-                               color: '#10b981', 
-                               fontSize: 11, 
-                               fontWeight: 900, 
-                               padding: 0,
-                               display: 'flex',
-                               alignItems: 'center',
-                               gap: 4
-                            }}
-                         >
-                            VER REPETICIÓN
-                         </Button>
+                  </div>
+
+                  {/* Bottom Row: Results & Actions */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: 12 }}>
+                      <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                             <TrophyFilled style={{ color: '#10b981', fontSize: 9 }} />
+                             <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
+                                {((event.winner_side === 'A' ? event.gallo_a_name : (event.winner_side === 'B' ? event.gallo_b_name : 'TABLAS')) || '').replace('[ARCHIVED] ', '').substring(0, 15)}
+                                {((event.winner_side === 'A' ? event.gallo_a_name : (event.winner_side === 'B' ? event.gallo_b_name : 'TABLAS')) || '').length > 15 ? '...' : ''}
+                             </Text>
+                          </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <Text style={{ color: 'rgba(255,255,255,0.15)', fontSize: 9 }}>{new Date(event.created_at).toLocaleDateString('es-ES')}</Text>
+                          {currentUser?.role === 'admin' && (
+                            <Space size={4} onClick={e => e.stopPropagation()}>
+                               <Button size="small" type="text" icon={<EditOutlined style={{ fontSize: 12 }} />} onClick={(e) => { e.stopPropagation(); openEditor(event); }} style={{ color: 'rgba(255,255,255,0.1)', padding: 0, width: 22 }} />
+                               <Popconfirm title="ELIMINAR?" onConfirm={() => handleDeleteReplay(event.id)} okText="SÍ" cancelText="NO"><Button size="small" type="text" danger icon={<DeleteOutlined style={{ fontSize: 12 }} />} onClick={e => e.stopPropagation()} style={{ opacity: 0.2, padding: 0, width: 22 }} /></Popconfirm>
+                            </Space>
+                          )}
                       </div>
                   </div>
-                </Card>
+                </div>
             </Col>
           ))
         ) : (
           <Col span={24}>
-              <div style={{ textAlign: 'center', padding: '120px 0', background: 'rgba(212,175,55,0.02)', borderRadius: 24, border: '1px dashed rgba(212,175,55,0.1)' }}>
-                 <HistoryOutlined style={{ fontSize: 56, color: 'rgba(212,175,55,0.1)', marginBottom: 24 }} />
+              <div style={{ textAlign: 'center', padding: '120px 0', background: 'rgba(255,255,255,0.02)', borderRadius: 24, border: '1px dashed rgba(255,255,255,0.1)' }}>
+                 <HistoryOutlined style={{ fontSize: 56, color: 'rgba(255,255,255,0.05)', marginBottom: 24 }} />
                  <br />
-                 <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, letterSpacing: '2px', fontWeight: 700 }}>SIN REPETICIONES DISPONIBLES</Text>
+                 <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12, letterSpacing: '2px', fontWeight: 700 }}>SIN REPETICIONES DISPONIBLES</Text>
               </div>
           </Col>
         )}
@@ -344,45 +313,50 @@ const ReplaysView = ({ currentUser }) => {
         open={!!selectedReplay}
         onCancel={closeReplay}
         footer={null}
-        width={900}
+        width="min(95%, 900px)"
         centered
+        zIndex={9999}
         destroyOnHidden={true}
-        onCancel={closeReplay}
+        closable={false}
         styles={{ 
-            body: { padding: 0, overflow: 'hidden', background: '#0a0a0a', borderRadius: 20, minHeight: 300 },
-            mask: { backdropFilter: 'blur(15px)', background: 'rgba(0,0,0,0.85)' }
+            body: { padding: 0, overflow: 'hidden', background: '#040806', borderRadius: 24, border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 0 50px rgba(0,0,0,0.5)' },
+            mask: { backdropFilter: 'blur(20px)', background: 'rgba(0,0,0,0.92)' }
         }}
-        closeIcon={<Title level={4} style={{ color: '#fff', margin: 0 }}>&times;</Title>}
       >
         {selectedReplay && (
           <div style={{ position: 'relative' }}>
-              {/* Spinner Overlay */}
-              {isVideoLoading && (
-                  <div style={{ 
-                      position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
-                      zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      background: '#0a0a0a', gap: 15
-                  }}>
-                      <div className="loader-ring" />
-                      <Text style={{ color: 'var(--gold)', fontSize: 10, fontWeight: 900, letterSpacing: '4px', textTransform: 'uppercase' }}>Analizando Combate...</Text>
-                      <style>{`
-                          .loader-ring {
-                              width: 50px; height: 50px;
-                              border: 3px solid rgba(212,175,55,0.1);
-                              border-radius: 50%;
-                              border-top-color: var(--gold);
-                              animation: spin 1s ease-in-out infinite;
-                          }
-                          @keyframes spin { to { transform: rotate(360deg); } }
-                      `}</style>
-                  </div>
-              )}
-              <div style={{ position: 'relative', width: '100%', background: '#000', minHeight: 400, display: 'flex', alignItems: 'center' }}>
+              {/* Botón Cerrar Flotante Premium */}
+              <div 
+                onClick={closeReplay}
+                style={{ 
+                    position: 'absolute', top: 20, right: 20, zIndex: 1000, 
+                    width: 44, height: 44, background: 'rgba(0,0,0,0.65)', 
+                    borderRadius: '50%', display: 'flex', alignItems: 'center', 
+                    justifyContent: 'center', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.15)',
+                    backdropFilter: 'blur(12px)', color: '#fff', fontSize: 20, transition: 'all 0.3s ease',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                }}
+                className="close-float-btn"
+              >
+                ✕
+              </div>
+
+              <div style={{ position: 'relative', width: '100%', background: '#000', minHeight: 400, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+                  {isVideoLoading && (
+                      <div style={{ 
+                          position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', 
+                          zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                          background: '#040806', gap: 15
+                      }}>
+                          <div className="loader-ring" />
+                          <Text style={{ color: '#10b981', fontSize: 9, fontWeight: 900, letterSpacing: '4px', textTransform: 'uppercase' }}>Analizando Jugada...</Text>
+                      </div>
+                  )}
                {(() => {
                   const url = selectedReplay.stream_url || '';
-                  const isDirectVideo = url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/storage/v1/object/public/');
+                  if (!url) return <div style={{ padding: 100, textAlign: 'center', width: '100%' }}><Text style={{ color: 'rgba(255,255,255,0.2)' }}>VIDEO NO DISPONIBLE</Text></div>;
                   
-                  // YouTube Transformation Logic
+                  const isDirectVideo = url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/storage/v1/object/public/');
                   let finalUrl = url;
                   if (url.includes('youtube.com/watch?v=')) finalUrl = url.replace('watch?v=', 'embed/');
                   else if (url.includes('youtu.be/')) finalUrl = `https://www.youtube.com/embed/${url.split('/').pop()}`;
@@ -393,187 +367,147 @@ const ReplaysView = ({ currentUser }) => {
                             src={url} 
                             controls 
                             autoPlay 
-                            muted 
-                            playsInline
-                            webkit-playsinline="true"
                             onLoadedData={() => setIsVideoLoading(false)}
-                            style={{ width: '100%', display: 'block', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.5s' }} 
+                            style={{ width: '100%', display: 'block', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.8s' }} 
                         />
                     );
                   }
 
                   return (
-                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, width: '100%', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.5s' }}>
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, width: '100%', opacity: isVideoLoading ? 0 : 1, transition: 'opacity 0.8s' }}>
                         <iframe 
                             src={finalUrl} 
-                            width="100%" 
-                            height="100%" 
-                            frameBorder="0" 
-                            scrolling="no" 
-                            allow="autoplay; encrypted-media; picture-in-picture" 
-                            allowFullScreen 
+                            width="100%" height="100%" 
+                            frameBorder="0" allow="autoplay; encrypted-media" allowFullScreen 
                             onLoad={() => setIsVideoLoading(false)}
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                            style={{ position: 'absolute', top: 0, left: 0 }} 
                         />
                     </div>
                   );
                })()}
-             </div>
-             <div style={{ padding: '24px', background: 'var(--charcoal)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                <Row justify="space-between" align="middle">
-                   <Col>
-                      <Title level={4} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit' }}>
-                        POSTE #{selectedReplay.post_number || '0'}: {(selectedReplay.gallo_a_name || '').replace('[ARCHIVED] ', '')} VS {selectedReplay.gallo_b_name || ''}
-                      </Title>
-                      <Text style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                        Finalizado el {selectedReplay.created_at ? new Date(selectedReplay.created_at).toLocaleString() : 'Fecha desconocida'}
-                      </Text>
-                   </Col>
-                    <Col>
-                      <div style={{ background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)', color: '#fff', padding: '8px 20px', borderRadius: 10, fontWeight: 900, fontSize: 13, boxShadow: '0 4px 12px rgba(16,185,129,0.3)', letterSpacing: '0.5px' }}>
-                         GANADOR: {((selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : selectedReplay.gallo_b_name) || 'FINALIZADA').replace('[ARCHIVED] ', '')}
-                      </div>
-                   </Col>
-                </Row>
+              </div>
+              <div style={{ padding: '40px', background: 'linear-gradient(180deg, #0a1410 0%, #040806 100%)', borderTop: '2px solid rgba(16,185,129,0.15)' }}>
+                  <Row gutter={[32, 32]}>
+                     <Col xs={24} lg={16}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                           <div className="pulse-dot" style={{ width: 8, height: 8, background: '#10b981', borderRadius: '50%' }} />
+                           <Text style={{ color: 'rgba(16,185,129,0.8)', fontSize: 11, fontWeight: 900, letterSpacing: '4px', textTransform: 'uppercase' }}>Análisis Finalizado</Text>
+                        </div>
+                        
+                        <Title level={2} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit', letterSpacing: '-0.5px', fontSize: 'clamp(24px, 5vw, 36px)', textTransform: 'uppercase', lineHeight: 1.1 }}>
+                           {(selectedReplay.gallo_a_name || '').replace('[ARCHIVED] ', '')} 
+                           <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 300, margin: '0 15px', fontSize: '0.6em' }}>VS</span> 
+                           {selectedReplay.gallo_b_name || ''}
+                        </Title>
 
-                <div style={{ marginTop: 24, padding: '16px', background: 'rgba(212,175,55,0.05)', borderRadius: 12, border: '1px solid rgba(212,175,55,0.1)' }}>
-                   <Text style={{ color: 'rgba(212,175,55,0.7)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, display: 'block', marginBottom: 12 }}>
-                     Acciones y Compartir
-                   </Text>
-                   <Space size="middle" wrap>
-                      {selectedReplay.stream_url?.match(/\.(mp4|webm|ogg|mov)$/i) || selectedReplay.stream_url?.includes('/storage/v1/object/public/') ? (
-                         <Button 
-                            type="primary" 
-                            icon={<DownloadOutlined />} 
-                            onClick={() => handleDownload(selectedReplay.stream_url, selectedReplay.post_number)}
-                            style={{ background: 'var(--gold)', borderColor: 'var(--gold)', color: '#000', fontWeight: 700 }}
-                         >
-                            Descargar Video
-                         </Button>
-                      ) : null}
-                      
-                      <Button 
-                         icon={<WhatsAppOutlined />} 
-                         onClick={() => handleShare(selectedReplay)}
-                         style={{ background: '#25D366', borderColor: '#25D366', color: '#fff', fontWeight: 700 }}
-                      >
-                         WhatsApp
-                      </Button>
-
-                      <Button 
-                         icon={<CopyOutlined />} 
-                         onClick={() => copyToClipboard(window.location.href)}
-                         style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 700 }}
-                      >
-                         Copiar Enlace
-                      </Button>
-
-                      <Button 
-                         icon={<ShareAltOutlined />} 
-                         onClick={() => handleShare(selectedReplay)}
-                         style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', fontWeight: 700 }}
-                      >
-                         Más opciones
-                      </Button>
-                   </Space>
-                </div>
-             </div>
+                        <div style={{ marginTop: 32, display: 'flex', flexWrap: 'wrap', gap: 20 }}>
+                           <div style={{ 
+                              background: 'rgba(16,185,129,0.05)', 
+                              border: '1px solid rgba(16,185,129,0.2)', 
+                              padding: '24px 30px', 
+                              borderRadius: 20,
+                              position: 'relative',
+                              overflow: 'hidden',
+                              minWidth: 280
+                           }}>
+                              <div style={{ position: 'absolute', top: -10, right: -10, opacity: 0.1 }}>
+                                 <TrophyOutlined style={{ fontSize: 80, color: '#10b981' }} />
+                              </div>
+                              <Text style={{ color: 'rgba(16,185,129,0.6)', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', display: 'block', marginBottom: 8, letterSpacing: '2px' }}>Resultado Oficial</Text>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                 <TrophyOutlined style={{ color: '#10b981', fontSize: 24 }} />
+                                 <Text style={{ color: '#fff', fontWeight: 900, fontSize: 22, letterSpacing: '0.5px', fontFamily: 'Outfit' }}>
+                                    {((selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : (selectedReplay.winner_side === 'B' ? selectedReplay.gallo_b_name : 'TABLAS')) || '').replace('[ARCHIVED] ', '').toUpperCase()}
+                                 </Text>
+                              </div>
+                           </div>
+                           
+                           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                              <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px' }}>Fecha de Pelea</Text>
+                              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 600 }}>{selectedReplay.created_at ? new Date(selectedReplay.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</Text>
+                           </div>
+                        </div>
+                     </Col>
+                     
+                     <Col xs={24} lg={8}>
+                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'flex-end' }}>
+                           <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', textAlign: 'right', marginBottom: 4 }}>Opciones Rápidas</Text>
+                           <Button block icon={<WhatsAppOutlined />} onClick={() => handleShare(selectedReplay)} className="premium-btn whatsapp" style={{ height: 54, borderRadius: 16, border: 'none', background: '#25D366', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Compartir</Button>
+                           <Button block icon={<CopyOutlined />} onClick={() => copyToClipboard(window.location.href)} className="premium-btn copy" style={{ height: 54, borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Copiar Enlace</Button>
+                           <Button block onClick={closeReplay} className="premium-btn close" style={{ height: 54, borderRadius: 16, border: '1px solid rgba(255,77,79,0.2)', background: 'rgba(255,77,79,0.05)', color: '#ff4d4f', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Finalizar Vista</Button>
+                        </div>
+                     </Col>
+                  </Row>
+              </div>
           </div>
         )}
       </Modal>
 
       <style>{`
-        .glass-panel {
-            background: linear-gradient(135deg, rgba(20, 20, 20, 0.7) 0%, rgba(5, 5, 5, 0.8) 100%) !important;
-            backdrop-filter: blur(20px);
-            box-shadow: 
-               0 10px 30px rgba(0,0,0,0.5),
-               inset 0 0 0 1px rgba(255,255,255,0.05);
-            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        @keyframes pulse-green {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0.7); }
+          70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0); }
         }
-        .replay-card {
-            border: 1px solid rgba(212, 175, 55, 0.1) !important;
+        .pulse-dot { animation: pulse-green 2s infinite; }
+        .premium-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; }
+        .premium-btn:hover { transform: translateY(-3px); filter: brightness(1.1); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+        .premium-btn:active { transform: translateY(-1px); }
+        .close-float-btn:hover {
+           background: rgba(16,185,129,0.2) !important;
+           border-color: #10b981 !important;
+           transform: scale(1.1);
+           box-shadow: 0 0 20px rgba(16,185,129,0.4);
         }
-        .replay-card:hover {
-            transform: translateY(-8px) scale(1.01);
-            border-color: rgba(16, 185, 129, 0.4) !important;
-            box-shadow: 
-               0 30px 60px rgba(0,0,0,0.8),
-               0 0 30px rgba(16, 185, 129, 0.1);
+        .premium-replay-card:hover { 
+           transform: translateY(-5px); 
+           background: rgba(255,255,255,0.04) !important; 
+           border-color: rgba(16,185,129,0.4) !important;
+           box-shadow: 0 15px 35px rgba(0,0,0,0.4), 0 0 15px rgba(16,185,129,0.1); 
         }
-        .play-container {
-            cursor: pointer;
-            transition: all 0.4s ease;
-            padding: 10px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+        .premium-replay-card:hover .card-play-icon {
+           background: #10b981 !important;
+           border-color: #10b981 !important;
         }
-        .play-icon-glow {
-            transition: all 0.4s ease;
-            filter: drop-shadow(0 0 0px rgba(16, 185, 129, 0));
+        .premium-replay-card:hover .card-play-icon * {
+           color: #fff !important;
         }
-        .replay-card:hover .play-icon-glow {
-            transform: scale(1.1);
-            color: #fff !important;
-            filter: drop-shadow(0 0 20px rgba(16, 185, 129, 1));
-            animation: pulsePlay 1.5s infinite;
+        .replay-box:hover { transform: translateY(-8px); border-color: rgba(16,185,129,0.3) !important; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .replay-box:hover .thumb-img { transform: scale(1.1); opacity: 0.8 !important; }
+        .replay-box:hover .play-btn-center { transform: scale(1.2); }
+        .replay-box .play-btn-center { transition: 0.3s; }
+        .loader-ring { width: 40px; height: 40px; border: 3px solid rgba(16,185,129,0.1); border-radius: 50%; border-top-color: #10b981; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .fade-up { animation: fadeUp 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .premium-select .ant-select-selector {
+           background: rgba(0,0,0,0.3) !important;
+           border: 1px solid rgba(255,255,255,0.1) !important;
+           color: #fff !important;
+           border-radius: 12px !important;
+           height: 50px !important;
+           padding: 0 15px !important;
+           display: flex !important;
+           align-items: center !important;
         }
-        .replay-card:hover img {
-            transform: scale(1.15);
-            opacity: 0.8 !important;
-        }
-        @keyframes pulsePlay {
-            0% { filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.5)); }
-            50% { filter: drop-shadow(0 0 25px rgba(16, 185, 129, 1)); }
-            100% { filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.5)); }
-        }
-        .replay-card img { transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1); }
-        .fade-up { animation: fadeUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
-        @keyframes fadeUp { 
-           from { opacity: 0; transform: translateY(30px); } 
-           to { opacity: 1; transform: translateY(0); } 
-        }
+        .premium-select .ant-select-selection-item { color: #fff !important; font-weight: 600 !important; }
+        .premium-select .ant-select-arrow { color: rgba(255,255,255,0.2) !important; }
       `}</style>
-       {/* Admin Edit Modal */}
+       
        <Modal
-          title={<span style={{ color: 'var(--gold)', fontWeight: 900, letterSpacing: '2px' }}>🛠️ PANEL DE EDICIÓN ADMIN</span>}
+          title={<Text style={{ color: '#10b981', fontWeight: 900, letterSpacing: '2px', fontSize: 12 }}>🛠️ EDITAR REPETICIÓN</Text>}
           open={isAdminOpen}
           onCancel={() => { setIsAdminOpen(false); setEditingReplay(null); }}
           footer={null}
           centered
-          width={500}
-          styles={{ 
-             body: { background: 'var(--obsidian)', padding: '24px 32px' },
-             header: { background: 'var(--obsidian)', borderBottom: '1px solid rgba(212,175,55,0.2)' }
-          }}
+          width={400}
+          styles={{ body: { background: '#040806', padding: '24px' } }}
        >
           <Form form={form} layout="vertical" onFinish={handleUpdateReplay}>
-              <Form.Item name="stream_url" label={<Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 900 }}>ENLACE DE REPETICIÓN (YouTube / Dacast / HLS)</Text>} extra={<Text type="secondary" style={{ fontSize: 9 }}>Pega aquí el enlace directo al video o el enlace de YouTube.</Text>}>
-                  <Input 
-                    style={{ background: '#0a0a0a', border: '1px solid rgba(212,175,55,0.4)', color: '#fff', borderRadius: 10, height: 44 }} 
-                    placeholder="https://..."
-                  />
+              <Form.Item name="stream_url" label={<Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 900 }}>URL DEL VIDEO</Text>}>
+                  <Input style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 10, height: 44 }} placeholder="https://..." />
               </Form.Item>
-
-              <Button 
-                type="primary" 
-                htmlType="submit" 
-                loading={loading}
-                block 
-                style={{ 
-                   height: 50, 
-                   background: 'linear-gradient(90deg, #d4af37 0%, #b8860b 100%)', 
-                   borderColor: 'transparent', 
-                   color: '#000', 
-                   fontWeight: 900, 
-                   borderRadius: 12,
-                   marginTop: 10 
-                }}
-              >
-                 GUARDAR CAMBIOS
-              </Button>
+              <Button type="primary" htmlType="submit" loading={loading} block style={{ height: 48, background: '#10b981', border: 'none', fontWeight: 900, borderRadius: 12 }}>ACTUALIZAR</Button>
           </Form>
        </Modal>
     </div>
