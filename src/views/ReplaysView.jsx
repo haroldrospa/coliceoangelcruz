@@ -520,8 +520,9 @@ const ReplaysView = ({ currentUser }) => {
                      </Col>
                   </Row>
                </div>
-            )}
-         </Modal>
+            </div>
+         )}
+      </Modal>
 
       <style>{`
         @keyframes pulse-green {
