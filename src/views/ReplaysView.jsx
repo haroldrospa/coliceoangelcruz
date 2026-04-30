@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, Select, message, Popconfirm, Form, Divider } from 'antd';
 import { PlayCircleOutlined, PlayCircleFilled, HistoryOutlined, ThunderboltFilled, TrophyOutlined, TrophyFilled, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined, DeleteOutlined, EditOutlined, InboxOutlined } from '@ant-design/icons';
 import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
@@ -142,24 +142,46 @@ const ReplaysView = ({ currentUser }) => {
   };
 
   const handleDownload = async (url, postNumber) => {
-    const hide = message.loading('Preparando descarga...', 0);
+    if (!url) return message.error('URL de video no válida');
+    
+    const hide = message.loading('Iniciando descarga de combate...', 0);
     try {
-      const response = await fetch(url);
+      // Force download for direct links
+      const response = await fetch(url, { method: 'GET', mode: 'cors' });
+      if (!response.ok) throw new Error('Network response was not ok');
+      
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = `Pelea_${postNumber}.mp4`;
+      link.setAttribute('download', `Combate_#${postNumber || 'Gallos'}.mp4`);
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-      message.success('Descarga iniciada');
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      }, 100);
+      
+      message.success('Descarga procesada correctamente');
     } catch (err) {
       console.error('Download Error:', err);
-      // Fallback: open in new tab if blob fetch fails
-      window.open(url, '_blank');
-      message.warning('Iniciando descarga en nueva pestaÃ±a');
+      // Fallback for YouTube or CORS-restricted links
+      const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+      if (isYouTube) {
+        window.open(url, '_blank');
+        message.info('Los videos de YouTube se abren en una pestaña nueva');
+      } else {
+        // Create a direct download link fallback
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.setAttribute('download', '');
+        link.click();
+        message.info('Iniciando descarga directa');
+      }
     } finally {
       hide();
     }
@@ -497,7 +519,9 @@ const ReplaysView = ({ currentUser }) => {
                         </div>
                      </Col>
                   </Row>
-              </div>
+               </div>
+            )}
+         </Modal>
 
       <style>{`
         @keyframes pulse-green {
