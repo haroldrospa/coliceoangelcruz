@@ -252,6 +252,12 @@ function App() {
     };
 
     const initApp = async () => {
+      // Check for deep links first
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('replay')) {
+        setCurrentView('replays');
+      }
+
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {

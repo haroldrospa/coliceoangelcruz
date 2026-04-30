@@ -22,7 +22,20 @@ const ReplaysView = ({ currentUser }) => {
     try {
       // Fetch finished events 
       const data = await rawFetch(`events?select=*&status=eq.FINISHED&order=created_at.desc&limit=50`);
-      if (data) setReplays(data);
+      if (data) {
+        setReplays(data);
+        
+        // Auto-open replay if ID in URL
+        const params = new URLSearchParams(window.location.search);
+        const replayId = params.get('replay');
+        if (replayId) {
+          const replay = data.find(r => r.id === replayId);
+          if (replay) {
+            setSelectedReplay(replay);
+            setIsVideoLoading(true);
+          }
+        }
+      }
     } catch (err) {
       console.error('Replays Fetch Err:', err);
     } finally {
@@ -113,11 +126,19 @@ const ReplaysView = ({ currentUser }) => {
   const openReplay = (event) => {
     setSelectedReplay(event);
     setIsVideoLoading(true);
+    
+    // Update URL
+    const newUrl = `${window.location.origin}${window.location.pathname}?replay=${event.id}`;
+    window.history.replaceState({ path: newUrl }, '', newUrl);
   };
 
   const closeReplay = () => {
     setSelectedReplay(null);
     setIsVideoLoading(false);
+    
+    // Clear URL
+    const newUrl = `${window.location.origin}${window.location.pathname}`;
+    window.history.replaceState({ path: newUrl }, '', newUrl);
   };
 
   const handleDownload = async (url, postNumber) => {
@@ -150,10 +171,12 @@ const ReplaysView = ({ currentUser }) => {
     const nameB = (event.gallo_b_name || '');
     const winnerName = (event.winner_side === 'A' ? nameA : nameB).replace('[ARCHIVED] ', '');
     
+    const shareUrl = `${window.location.origin}${window.location.pathname}?replay=${event.id}`;
+    
     const shareData = {
       title: `Coliseo Ángel Cruz - Pelea #${event.post_number || ''}`,
       text: `¡Mira esta pelea! Pelea #${event.post_number || ''}: ${nameA} vs ${nameB}. Ganador: ${winnerName}`,
-      url: window.location.href,
+      url: shareUrl,
     };
 
     if (navigator.share) {
@@ -172,7 +195,14 @@ const ReplaysView = ({ currentUser }) => {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     message.success('Enlace copiado al portapapeles');
-  };  return (
+  };
+
+  const getShareUrl = (event) => {
+    if (!event) return window.location.href;
+    return `${window.location.origin}${window.location.pathname}?replay=${event.id}`;
+  };
+
+  return (
     <div style={{ padding: '30px 20px', maxWidth: 1200, margin: '0 auto', background: 'var(--obsidian)', minHeight: '100vh', paddingBottom: 100 }}>
       {/* Dynamic Header */}
       <div style={{ marginBottom: 40, textAlign: 'center' }}>
@@ -433,7 +463,18 @@ const ReplaysView = ({ currentUser }) => {
                         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'flex-end' }}>
                            <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', textAlign: 'right', marginBottom: 4 }}>Opciones Rápidas</Text>
                            <Button block icon={<WhatsAppOutlined />} onClick={() => handleShare(selectedReplay)} className="premium-btn whatsapp" style={{ height: 54, borderRadius: 16, border: 'none', background: '#25D366', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Compartir</Button>
-                           <Button block icon={<CopyOutlined />} onClick={() => copyToClipboard(window.location.href)} className="premium-btn copy" style={{ height: 54, borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Copiar Enlace</Button>
+                           {selectedReplay.stream_url && (selectedReplay.stream_url.match(/\.(mp4|webm|ogg|mov)$/i) || selectedReplay.stream_url.includes('/storage/v1/object/public/')) && (
+                              <Button 
+                                 block 
+                                 icon={<DownloadOutlined />} 
+                                 onClick={() => handleDownload(selectedReplay.stream_url, selectedReplay.post_number)} 
+                                 className="premium-btn download" 
+                                 style={{ height: 54, borderRadius: 16, border: 'none', background: '#10b981', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}
+                              >
+                                 Descargar Video
+                              </Button>
+                           )}
+                           <Button block icon={<CopyOutlined />} onClick={() => copyToClipboard(getShareUrl(selectedReplay))} className="premium-btn copy" style={{ height: 54, borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Copiar Enlace</Button>
                            <Button block onClick={closeReplay} className="premium-btn close" style={{ height: 54, borderRadius: 16, border: '1px solid rgba(255,77,79,0.2)', background: 'rgba(255,77,79,0.05)', color: '#ff4d4f', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Finalizar Vista</Button>
                         </div>
                      </Col>
