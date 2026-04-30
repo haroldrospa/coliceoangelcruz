@@ -463,7 +463,7 @@ const ReplaysView = ({ currentUser }) => {
                         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'flex-end' }}>
                            <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', textAlign: 'right', marginBottom: 4 }}>Opciones Rápidas</Text>
                            <Button block icon={<WhatsAppOutlined />} onClick={() => handleShare(selectedReplay)} className="premium-btn whatsapp" style={{ height: 54, borderRadius: 16, border: 'none', background: '#25D366', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Compartir</Button>
-                           {selectedReplay.stream_url && (selectedReplay.stream_url.match(/\.(mp4|webm|ogg|mov)$/i) || selectedReplay.stream_url.includes('/storage/v1/object/public/')) && (
+                           {selectedReplay.stream_url && (
                               <Button 
                                  block 
                                  icon={<DownloadOutlined />} 
