@@ -79,7 +79,7 @@ const ReplaysView = ({ currentUser }) => {
         body: { stream_url: values.stream_url } 
       });
       
-      message.success('REPETICIÃ“N ACTUALIZADA');
+      message.success('REPETICIÓN ACTUALIZADA');
       setIsAdminOpen(false);
       setEditingReplay(null);
       form.resetFields();
@@ -197,7 +197,7 @@ const ReplaysView = ({ currentUser }) => {
     
     const shareData = {
       title: `Coliseo Ãngel Cruz - Pelea #${event.post_number || ''}`,
-      text: `Â¡Mira esta pelea! Pelea #${event.post_number || ''}: ${nameA} vs ${nameB}. Ganador: ${winnerName}`,
+      text: `¡Mira esta pelea! Pelea #${event.post_number || ''}: ${nameA} vs ${nameB}. Ganador: ${winnerName}`,
       url: shareUrl,
     };
 
@@ -270,8 +270,8 @@ const ReplaysView = ({ currentUser }) => {
                     style={{ width: '100%', height: 50 }}
                     className="premium-select"
                     options={[
-                        { label: 'MÃ¡s Recientes', value: 'newest' },
-                        { label: 'MÃ¡s Antiguos', value: 'oldest' },
+                        { label: 'Más Recientes', value: 'newest' },
+                        { label: 'Más Antiguos', value: 'oldest' },
                         { label: 'Pelea (Menor a Mayor)', value: 'number-asc' },
                         { label: 'Pelea (Mayor a Menor)', value: 'number-desc' }
                     ]}
@@ -377,7 +377,7 @@ const ReplaysView = ({ currentUser }) => {
       >
         {selectedReplay && (
           <div style={{ position: 'relative' }}>
-              {/* BotÃ³n Cerrar Flotante Premium */}
+              {/* Botón Cerrar Flotante Premium */}
               <div 
                 onClick={closeReplay}
                 style={{ 
@@ -390,7 +390,7 @@ const ReplaysView = ({ currentUser }) => {
                 }}
                 className="close-float-btn"
               >
-                âœ•
+                ✕
               </div>
 
               <div style={{ position: 'relative', width: '100%', background: '#000', minHeight: 400, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
@@ -514,7 +514,7 @@ const ReplaysView = ({ currentUser }) => {
                                  )}
                               </Row>
 
-                              <Button block onClick={closeReplay} className="premium-btn close" style={{ height: 50, borderRadius: 12, border: '1px solid rgba(255,77,79,0.2)', background: 'rgba(255,77,79,0.05)', color: '#ff4d4f', fontWeight: 800, fontSize: 11, textTransform: 'uppercase', letterSpacing: '1px', marginTop: 8 }}>Cerrar GalerÃ­a</Button>
+                              <Button block icon={<CloseOutlined />} onClick={closeReplay} className="premium-btn close" style={{ height: 50, borderRadius: 12, border: "1px solid rgba(255,77,79,0.2)", background: "rgba(255,77,79,0.05)", color: "#ff4d4f", fontWeight: 800, fontSize: 11, textTransform: "uppercase", letterSpacing: "1px", marginTop: 8 }}>Cerrar Galería</Button>
                            </Space>
                         </div>
                      </Col>
@@ -575,7 +575,7 @@ const ReplaysView = ({ currentUser }) => {
       `}</style>
        
        <Modal
-          title={<Text style={{ color: '#10b981', fontWeight: 900, letterSpacing: '2px', fontSize: 12 }}>ðŸ› ï¸ EDITAR REPETICIÃ“N</Text>}
+          title={<Text style={{ color: "#10b981", fontWeight: 900, letterSpacing: "2px", fontSize: 12 }}>🛠️ EDITAR REPETICIÓN</Text>}
           open={isAdminOpen}
           onCancel={() => { setIsAdminOpen(false); setEditingReplay(null); }}
           footer={null}
