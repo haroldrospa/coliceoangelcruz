@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, Select, message, Popconfirm, Form, Divider } from 'antd';
 import { PlayCircleOutlined, PlayCircleFilled, HistoryOutlined, ThunderboltFilled, TrophyOutlined, TrophyFilled, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined, DeleteOutlined, EditOutlined, InboxOutlined } from '@ant-design/icons';
 import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
@@ -79,7 +79,7 @@ const ReplaysView = ({ currentUser }) => {
         body: { stream_url: values.stream_url } 
       });
       
-      message.success('REPETICIÓN ACTUALIZADA');
+      message.success('REPETICIÃ“N ACTUALIZADA');
       setIsAdminOpen(false);
       setEditingReplay(null);
       form.resetFields();
@@ -159,7 +159,7 @@ const ReplaysView = ({ currentUser }) => {
       console.error('Download Error:', err);
       // Fallback: open in new tab if blob fetch fails
       window.open(url, '_blank');
-      message.warning('Iniciando descarga en nueva pestaña');
+      message.warning('Iniciando descarga en nueva pestaÃ±a');
     } finally {
       hide();
     }
@@ -174,8 +174,8 @@ const ReplaysView = ({ currentUser }) => {
     const shareUrl = `${window.location.origin}${window.location.pathname}?replay=${event.id}`;
     
     const shareData = {
-      title: `Coliseo Ángel Cruz - Pelea #${event.post_number || ''}`,
-      text: `¡Mira esta pelea! Pelea #${event.post_number || ''}: ${nameA} vs ${nameB}. Ganador: ${winnerName}`,
+      title: `Coliseo Ãngel Cruz - Pelea #${event.post_number || ''}`,
+      text: `Â¡Mira esta pelea! Pelea #${event.post_number || ''}: ${nameA} vs ${nameB}. Ganador: ${winnerName}`,
       url: shareUrl,
     };
 
@@ -211,7 +211,7 @@ const ReplaysView = ({ currentUser }) => {
           <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px' }}>Historial de Combates</Text>
         </div>
         <Title level={1} style={{ color: '#fff', fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, margin: 0, fontFamily: 'Outfit', letterSpacing: '-1px' }}>
-          CÁMARA DE <span style={{ color: '#10b981' }}>REPETICIONES</span>
+          CÃMARA DE <span style={{ color: '#10b981' }}>REPETICIONES</span>
         </Title>
       </div>
 
@@ -248,8 +248,8 @@ const ReplaysView = ({ currentUser }) => {
                     style={{ width: '100%', height: 50 }}
                     className="premium-select"
                     options={[
-                        { label: 'Más Recientes', value: 'newest' },
-                        { label: 'Más Antiguos', value: 'oldest' },
+                        { label: 'MÃ¡s Recientes', value: 'newest' },
+                        { label: 'MÃ¡s Antiguos', value: 'oldest' },
                         { label: 'Pelea (Menor a Mayor)', value: 'number-asc' },
                         { label: 'Pelea (Mayor a Menor)', value: 'number-desc' }
                     ]}
@@ -320,7 +320,7 @@ const ReplaysView = ({ currentUser }) => {
                           {currentUser?.role === 'admin' && (
                             <Space size={4} onClick={e => e.stopPropagation()}>
                                <Button size="small" type="text" icon={<EditOutlined style={{ fontSize: 12 }} />} onClick={(e) => { e.stopPropagation(); openEditor(event); }} style={{ color: 'rgba(255,255,255,0.1)', padding: 0, width: 22 }} />
-                               <Popconfirm title="ELIMINAR?" onConfirm={() => handleDeleteReplay(event.id)} okText="SÍ" cancelText="NO"><Button size="small" type="text" danger icon={<DeleteOutlined style={{ fontSize: 12 }} />} onClick={e => e.stopPropagation()} style={{ opacity: 0.2, padding: 0, width: 22 }} /></Popconfirm>
+                               <Popconfirm title="ELIMINAR?" onConfirm={() => handleDeleteReplay(event.id)} okText="SÃ" cancelText="NO"><Button size="small" type="text" danger icon={<DeleteOutlined style={{ fontSize: 12 }} />} onClick={e => e.stopPropagation()} style={{ opacity: 0.2, padding: 0, width: 22 }} /></Popconfirm>
                             </Space>
                           )}
                       </div>
@@ -355,7 +355,7 @@ const ReplaysView = ({ currentUser }) => {
       >
         {selectedReplay && (
           <div style={{ position: 'relative' }}>
-              {/* Botón Cerrar Flotante Premium */}
+              {/* BotÃ³n Cerrar Flotante Premium */}
               <div 
                 onClick={closeReplay}
                 style={{ 
@@ -368,7 +368,7 @@ const ReplaysView = ({ currentUser }) => {
                 }}
                 className="close-float-btn"
               >
-                ✕
+                âœ•
               </div>
 
               <div style={{ position: 'relative', width: '100%', background: '#000', minHeight: 400, display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
@@ -416,73 +416,88 @@ const ReplaysView = ({ currentUser }) => {
                   );
                })()}
               </div>
-              <div style={{ padding: '40px', background: 'linear-gradient(180deg, #0a1410 0%, #040806 100%)', borderTop: '2px solid rgba(16,185,129,0.15)' }}>
-                  <Row gutter={[32, 32]}>
-                     <Col xs={24} lg={16}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                           <div className="pulse-dot" style={{ width: 8, height: 8, background: '#10b981', borderRadius: '50%' }} />
-                           <Text style={{ color: 'rgba(16,185,129,0.8)', fontSize: 11, fontWeight: 900, letterSpacing: '4px', textTransform: 'uppercase' }}>Análisis Finalizado</Text>
+              <div style={{ padding: '40px', background: 'linear-gradient(180deg, #060c09 0%, #040806 100%)', borderTop: '1px solid rgba(16,185,129,0.2)' }}>
+                  <Row gutter={[40, 40]} align="middle">
+                     <Col xs={24} lg={15}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                           <div style={{ width: 32, height: 1, background: 'linear-gradient(90deg, #10b981, transparent)' }} />
+                           <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 900, letterSpacing: '3px', textTransform: 'uppercase' }}>Veredicto de Arena</Text>
                         </div>
                         
-                        <Title level={2} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit', letterSpacing: '-0.5px', fontSize: 'clamp(24px, 5vw, 36px)', textTransform: 'uppercase', lineHeight: 1.1 }}>
-                           {(selectedReplay.gallo_a_name || '').replace('[ARCHIVED] ', '')} 
-                           <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 300, margin: '0 15px', fontSize: '0.6em' }}>VS</span> 
-                           {selectedReplay.gallo_b_name || ''}
-                        </Title>
+                        <div style={{ marginBottom: 32 }}>
+                           <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+                              <Title level={2} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit', fontSize: 'clamp(28px, 4vw, 42px)', letterSpacing: '-1px' }}>
+                                 {(selectedReplay.gallo_a_name || '').replace('[ARCHIVED] ', '')}
+                              </Title>
+                              <div style={{ 
+                                 width: 40, height: 40, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)', 
+                                 display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                 background: 'rgba(255,255,255,0.03)', fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.2)'
+                              }}>VS</div>
+                              <Title level={2} style={{ color: '#fff', margin: 0, fontWeight: 900, fontFamily: 'Outfit', fontSize: 'clamp(28px, 4vw, 42px)', letterSpacing: '-1px' }}>
+                                 {selectedReplay.gallo_b_name || ''}
+                              </Title>
+                           </div>
+                        </div>
 
-                        <div style={{ marginTop: 32, display: 'flex', flexWrap: 'wrap', gap: 20 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20 }}>
                            <div style={{ 
-                              background: 'rgba(16,185,129,0.05)', 
-                              border: '1px solid rgba(16,185,129,0.2)', 
-                              padding: '24px 30px', 
-                              borderRadius: 20,
-                              position: 'relative',
-                              overflow: 'hidden',
-                              minWidth: 280
+                              background: 'rgba(16,185,129,0.03)', 
+                              border: '1px solid rgba(16,185,129,0.15)', 
+                              padding: '20px', 
+                              borderRadius: 16,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 16
                            }}>
-                              <div style={{ position: 'absolute', top: -10, right: -10, opacity: 0.1 }}>
-                                 <TrophyOutlined style={{ fontSize: 80, color: '#10b981' }} />
+                              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                 <TrophyFilled style={{ color: '#10b981', fontSize: 20 }} />
                               </div>
-                              <Text style={{ color: 'rgba(16,185,129,0.6)', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', display: 'block', marginBottom: 8, letterSpacing: '2px' }}>Resultado Oficial</Text>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                 <TrophyOutlined style={{ color: '#10b981', fontSize: 24 }} />
-                                 <Text style={{ color: '#fff', fontWeight: 900, fontSize: 22, letterSpacing: '0.5px', fontFamily: 'Outfit' }}>
+                              <div>
+                                 <Text style={{ color: 'rgba(16,185,129,0.5)', fontSize: 9, fontWeight: 900, textTransform: 'uppercase', display: 'block', letterSpacing: '1.5px' }}>Ganador</Text>
+                                 <Text style={{ color: '#fff', fontWeight: 800, fontSize: 18, fontFamily: 'Outfit' }}>
                                     {((selectedReplay.winner_side === 'A' ? selectedReplay.gallo_a_name : (selectedReplay.winner_side === 'B' ? selectedReplay.gallo_b_name : 'TABLAS')) || '').replace('[ARCHIVED] ', '').toUpperCase()}
                                  </Text>
                               </div>
                            </div>
                            
-                           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                              <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px' }}>Fecha de Pelea</Text>
-                              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: 600 }}>{selectedReplay.created_at ? new Date(selectedReplay.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</Text>
+                           <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+                              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                 <ThunderboltFilled style={{ color: 'rgba(255,255,255,0.2)', fontSize: 20 }} />
+                              </div>
+                              <div>
+                                 <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, fontWeight: 900, textTransform: 'uppercase', display: 'block', letterSpacing: '1.5px' }}>Fecha</Text>
+                                 <Text style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600, fontSize: 15 }}>
+                                    {selectedReplay.created_at ? new Date(selectedReplay.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                 </Text>
+                              </div>
                            </div>
                         </div>
                      </Col>
                      
-                     <Col xs={24} lg={8}>
-                        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'flex-end' }}>
-                           <Text style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', textAlign: 'right', marginBottom: 4 }}>Opciones Rápidas</Text>
-                           <Button block icon={<WhatsAppOutlined />} onClick={() => handleShare(selectedReplay)} className="premium-btn whatsapp" style={{ height: 54, borderRadius: 16, border: 'none', background: '#25D366', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Compartir</Button>
-                           {selectedReplay.stream_url && (
-                              <Button 
-                                 block 
-                                 icon={<DownloadOutlined />} 
-                                 onClick={() => handleDownload(selectedReplay.stream_url, selectedReplay.post_number)} 
-                                 className="premium-btn download" 
-                                 style={{ height: 54, borderRadius: 16, border: 'none', background: '#10b981', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}
-                              >
-                                 Descargar Video
-                              </Button>
-                           )}
-                           <Button block icon={<CopyOutlined />} onClick={() => copyToClipboard(getShareUrl(selectedReplay))} className="premium-btn copy" style={{ height: 54, borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Copiar Enlace</Button>
-                           <Button block onClick={closeReplay} className="premium-btn close" style={{ height: 54, borderRadius: 16, border: '1px solid rgba(255,77,79,0.2)', background: 'rgba(255,77,79,0.05)', color: '#ff4d4f', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px' }}>Finalizar Vista</Button>
+                     <Col xs={24} lg={9}>
+                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+                           <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '2px', display: 'block', marginBottom: 16, textAlign: 'center' }}>Acciones de Combate</Text>
+                           <Space direction="vertical" style={{ width: '100%' }} size={12}>
+                              <Button block icon={<WhatsAppOutlined />} onClick={() => handleShare(selectedReplay)} className="premium-btn whatsapp" style={{ height: 50, borderRadius: 12, border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, fontSize: 11, textTransform: 'uppercase', letterSpacing: '1px' }}>Compartir</Button>
+                              
+                              <Row gutter={12}>
+                                 <Col span={selectedReplay.stream_url ? 12 : 24}>
+                                    <Button block icon={<CopyOutlined />} onClick={() => copyToClipboard(getShareUrl(selectedReplay))} className="premium-btn copy" style={{ height: 50, borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', color: '#fff', fontWeight: 800, fontSize: 10, textTransform: 'uppercase' }}>Enlace</Button>
+                                 </Col>
+                                 {selectedReplay.stream_url && (
+                                    <Col span={12}>
+                                       <Button block icon={<DownloadOutlined />} onClick={() => handleDownload(selectedReplay.stream_url, selectedReplay.post_number)} className="premium-btn download" style={{ height: 50, borderRadius: 12, border: 'none', background: '#10b981', color: '#fff', fontWeight: 800, fontSize: 10, textTransform: 'uppercase' }}>Descargar</Button>
+                                    </Col>
+                                 )}
+                              </Row>
+
+                              <Button block onClick={closeReplay} className="premium-btn close" style={{ height: 50, borderRadius: 12, border: '1px solid rgba(255,77,79,0.2)', background: 'rgba(255,77,79,0.05)', color: '#ff4d4f', fontWeight: 800, fontSize: 11, textTransform: 'uppercase', letterSpacing: '1px', marginTop: 8 }}>Cerrar GalerÃ­a</Button>
+                           </Space>
                         </div>
                      </Col>
                   </Row>
               </div>
-          </div>
-        )}
-      </Modal>
 
       <style>{`
         @keyframes pulse-green {
@@ -490,7 +505,6 @@ const ReplaysView = ({ currentUser }) => {
           70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16,185,129,0); }
           100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16,185,129,0); }
         }
-        .pulse-dot { animation: pulse-green 2s infinite; }
         .premium-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; }
         .premium-btn:hover { transform: translateY(-3px); filter: brightness(1.1); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
         .premium-btn:active { transform: translateY(-1px); }
@@ -536,7 +550,7 @@ const ReplaysView = ({ currentUser }) => {
       `}</style>
        
        <Modal
-          title={<Text style={{ color: '#10b981', fontWeight: 900, letterSpacing: '2px', fontSize: 12 }}>🛠️ EDITAR REPETICIÓN</Text>}
+          title={<Text style={{ color: '#10b981', fontWeight: 900, letterSpacing: '2px', fontSize: 12 }}>ðŸ› ï¸ EDITAR REPETICIÃ“N</Text>}
           open={isAdminOpen}
           onCancel={() => { setIsAdminOpen(false); setEditingReplay(null); }}
           footer={null}
