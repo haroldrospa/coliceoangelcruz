@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Typography, Space, Card, Row, Col, Modal, Button, Skeleton, Badge, Input, DatePicker, Select, message, Popconfirm, Form, Divider } from 'antd';
-import { PlayCircleOutlined, PlayCircleFilled, HistoryOutlined, ThunderboltFilled, TrophyOutlined, TrophyFilled, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined, DeleteOutlined, EditOutlined, InboxOutlined } from '@ant-design/icons';
+import { PlayCircleOutlined, PlayCircleFilled, HistoryOutlined, ThunderboltFilled, TrophyOutlined, TrophyFilled, VideoCameraOutlined, DownloadOutlined, ShareAltOutlined, WhatsAppOutlined, CopyOutlined, DeleteOutlined, EditOutlined, InboxOutlined, CloseOutlined } from '@ant-design/icons';
 import { supabase, rawFetch, supabaseAnonKey, supabaseUrl } from '../lib/supabase';
 
 const { Title, Text } = Typography;
