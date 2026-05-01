@@ -143,49 +143,63 @@ const ReplaysView = ({ currentUser }) => {
 
   const handleDownload = async (url, postNumber) => {
     if (!url) return message.error('URL de video no válida');
-    
-    const hide = message.loading('Iniciando descarga de combate...', 0);
+
+    const filename = `Combate_${postNumber || 'Gallos'}.mp4`;
+
+    // Route through local Vite dev proxy to bypass CORS
+    const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(filename)}`;
+
+    const hide = message.loading('Descargando video al dispositivo...', 0);
     try {
-      // Force download for direct links
-      const response = await fetch(url, { method: 'GET', mode: 'cors' });
-      if (!response.ok) throw new Error('Network response was not ok');
-      
+      const response = await fetch(proxyUrl);
+
+      if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
+
       const blob = await response.blob();
+
+      if (blob.size === 0) throw new Error('El archivo recibido está vacío');
+
       const blobUrl = window.URL.createObjectURL(blob);
-      
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.setAttribute('download', `Combate_#${postNumber || 'Gallos'}.mp4`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
-      
-      // Cleanup
       setTimeout(() => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(blobUrl);
-      }, 100);
-      
-      message.success('Descarga procesada correctamente');
+      }, 200);
+
+      hide();
+      message.success(`✅ "${filename}" descargado correctamente`);
+
     } catch (err) {
-      console.error('Download Error:', err);
-      // Fallback for YouTube or CORS-restricted links
+      hide();
+      console.error('[Download] Error:', err.message);
+
+      // Fallback: detect URL type and give clear guidance
       const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+      const isBunnyPlayer = url.includes('player.mediadelivery.net');
+
       if (isYouTube) {
+        message.warning('YouTube no permite descarga directa. Abre el video en YouTube.');
         window.open(url, '_blank');
-        message.info('Los videos de YouTube se abren en una pestaña nueva');
+      } else if (isBunnyPlayer) {
+        message.error('Este es un enlace de reproductor. En Bunny.net, ve al video → Downloads → copia el enlace .mp4 directo y actualízalo aquí.');
       } else {
-        // Create a direct download link fallback
+        // Last resort: direct link
         const link = document.createElement('a');
         link.href = url;
+        link.setAttribute('download', filename);
         link.target = '_blank';
-        link.setAttribute('download', '');
+        document.body.appendChild(link);
         link.click();
-        message.info('Iniciando descarga directa');
+        document.body.removeChild(link);
+        message.info('Iniciando descarga directa...');
       }
-    } finally {
-      hide();
     }
   };
+
 
   const handleShare = async (event) => {
     if (!event) return;
