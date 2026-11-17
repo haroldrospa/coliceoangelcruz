@@ -84,13 +84,41 @@ const HLSVideoPlayer = ({ url, onError }) => {
 // Premium Dacast Iframe Player Wrapper & Standby Mode
 const DacastPlayer = ({ status, stream_url, streamMode, viewerCount, hideBadge = false }) => {
     const [playerError, setPlayerError] = React.useState(false);
-    const isHLS = stream_url?.toLowerCase().includes('.m3u8');
-    const hasSignal = !!stream_url;
+
+    // Auto-format common streaming providers (Kick, YouTube, Twitch)
+    const formattedStreamUrl = React.useMemo(() => {
+        if (!stream_url) return '';
+        const trimmed = stream_url.trim();
+
+        // Kick: https://kick.com/usuario -> https://player.kick.com/usuario
+        const kickMatch = trimmed.match(/^https?:\/\/(?:www\.)?kick\.com\/([a-zA-Z0-9_-]+)/i);
+        if (kickMatch && !trimmed.includes('player.kick.com')) {
+            return `https://player.kick.com/${kickMatch[1]}?autoplay=true&muted=false`;
+        }
+
+        // YouTube: https://www.youtube.com/watch?v=ID, /live/ID, youtu.be/ID -> embed
+        const ytMatch = trimmed.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|live\/))([a-zA-Z0-9_-]{11})/i);
+        if (ytMatch && !trimmed.includes('youtube.com/embed/')) {
+            return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`;
+        }
+
+        // Twitch: https://www.twitch.tv/usuario -> player.twitch.tv
+        const twitchMatch = trimmed.match(/^https?:\/\/(?:www\.)?twitch\.tv\/([a-zA-Z0-9_-]+)/i);
+        if (twitchMatch && !trimmed.includes('player.twitch.tv')) {
+            const host = window.location.hostname || 'localhost';
+            return `https://player.twitch.tv/?channel=${twitchMatch[1]}&parent=${host}&autoplay=true`;
+        }
+
+        return trimmed;
+    }, [stream_url]);
+
+    const isHLS = formattedStreamUrl?.toLowerCase().includes('.m3u8');
+    const hasSignal = !!formattedStreamUrl;
 
     // Reset error when URL changes
     React.useEffect(() => {
         setPlayerError(false);
-    }, [stream_url]);
+    }, [formattedStreamUrl]);
 
     // Auto-retry connection every 6s when stream drops or fails (504 timeout / CORS glitch)
     React.useEffect(() => {
@@ -134,7 +162,7 @@ const DacastPlayer = ({ status, stream_url, streamMode, viewerCount, hideBadge =
         );
     }
 
-    const isDirectVideo = stream_url?.match(/\.(mp4|webm|mov|ogg)$/i) || stream_url?.includes('/storage/v1/object/public/');
+    const isDirectVideo = formattedStreamUrl?.match(/\.(mp4|webm|mov|ogg)$/i) || formattedStreamUrl?.includes('/storage/v1/object/public/');
 
     if (isHLS) {
         return (
@@ -147,7 +175,7 @@ const DacastPlayer = ({ status, stream_url, streamMode, viewerCount, hideBadge =
                         </div>
                     </div>
                 )}
-                <HLSVideoPlayer url={stream_url} onError={() => setPlayerError(true)} />
+                <HLSVideoPlayer url={formattedStreamUrl} onError={() => setPlayerError(true)} />
             </div>
         );
     }
@@ -166,7 +194,7 @@ const DacastPlayer = ({ status, stream_url, streamMode, viewerCount, hideBadge =
             {isDirectVideo ? (
                 <video 
                     key="dacast-video"
-                    src={stream_url} 
+                    src={formattedStreamUrl} 
                     controls 
                     autoPlay 
                     muted 
@@ -178,7 +206,7 @@ const DacastPlayer = ({ status, stream_url, streamMode, viewerCount, hideBadge =
             ) : (
                 <iframe 
                     key="dacast-iframe"
-                    src={stream_url || "https://iframe.dacast.com/live/55197822-2232-7fde-fcf0-9369fe4022fb/013bad74-e5d5-4478-824f-893cedb06b66"} 
+                    src={formattedStreamUrl || "https://iframe.dacast.com/live/55197822-2232-7fde-fcf0-9369fe4022fb/013bad74-e5d5-4478-824f-893cedb06b66"} 
                     width="100%" height="100%" frameBorder="0" scrolling="no" allow="autoplay; encrypted-media" allowFullScreen 
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
                 />

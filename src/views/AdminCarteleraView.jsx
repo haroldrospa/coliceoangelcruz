@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Table, Card, Form, Input, InputNumber, Select, Row, Col, 
-  Button, Typography, Space, App as AntApp, Tag, Divider, Alert, Tooltip, Modal, Tabs 
+  Button, Typography, Space, App as AntApp, Tag, Divider, Alert, Tooltip, Modal, Tabs, Popconfirm 
 } from 'antd';
 import { 
   PlusOutlined, FilePdfOutlined, LockOutlined, UnlockOutlined, 
-  ThunderboltFilled, SaveOutlined, DeleteOutlined, EditOutlined, CloseOutlined
+  ThunderboltFilled, SaveOutlined, DeleteOutlined, EditOutlined, CloseOutlined,
+  ExclamationCircleOutlined, WarningOutlined, UndoOutlined
 } from '@ant-design/icons';
 import { supabase, rawFetch } from '../lib/supabase';
 import jsPDF from 'jspdf';
@@ -30,6 +31,7 @@ const AdminCarteleraView = () => {
   const [unmatchedRoosters, setUnmatchedRoosters] = useState([]);
   const [editingRoosterId, setEditingRoosterId] = useState(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
   const [nextTurn, setNextTurn] = useState(1);
   const [weightDiff, setWeightDiff] = useState(0);
 
@@ -191,16 +193,87 @@ const AdminCarteleraView = () => {
     }
   };
 
-  const deleteFight = async (id) => {
+  const deleteFight = async (fightOrId) => {
     try {
+      const fightId = typeof fightOrId === 'object' ? fightOrId.id : fightOrId;
+      const targetFight = typeof fightOrId === 'object' ? fightOrId : fights.find(f => f.id === fightId);
+
       await rawFetch('cartelera_fights', {
         method: 'DELETE',
-        query: `id=eq.${id}`
+        query: `id=eq.${fightId}`
       });
+
+      // Liberar los gallos enlazados en el depósito para que puedan emparejarse nuevamente
+      if (targetFight) {
+        try {
+          if (targetFight.traba_a) {
+            await rawFetch('cartelera_roosters', {
+              method: 'PATCH',
+              body: { status: 'PENDING' },
+              query: `traba=eq.${encodeURIComponent(targetFight.traba_a)}&status=eq.MATCHED`
+            });
+          }
+          if (targetFight.traba_b) {
+            await rawFetch('cartelera_roosters', {
+              method: 'PATCH',
+              body: { status: 'PENDING' },
+              query: `traba=eq.${encodeURIComponent(targetFight.traba_b)}&status=eq.MATCHED`
+            });
+          }
+        } catch (poolErr) {
+          console.warn('Could not reset rooster status:', poolErr);
+        }
+      }
+
       message.success('Pelea eliminada');
       fetchFights();
     } catch (e) {
       message.error('Error al eliminar');
+    }
+  };
+
+  const handleClearCartelera = async (deleteAllRoosters = false) => {
+    setLoading(true);
+    try {
+      // 1. Eliminar todas las peleas de cartelera_fights
+      if (fights.length > 0) {
+        const ids = fights.map(f => f.id).join(',');
+        await rawFetch('cartelera_fights', {
+          method: 'DELETE',
+          query: `id=in.(${ids})`
+        });
+      } else {
+        await rawFetch('cartelera_fights', {
+          method: 'DELETE',
+          query: 'id=not.is.null'
+        });
+      }
+
+      // 2. Gestionar los gallos del depósito
+      if (deleteAllRoosters) {
+        await rawFetch('cartelera_roosters', {
+          method: 'DELETE',
+          query: 'id=not.is.null'
+        });
+        message.success('Cartelera y depósito eliminados completamente');
+      } else {
+        // Regresar gallos a PENDING para no perder registros
+        await rawFetch('cartelera_roosters', {
+          method: 'PATCH',
+          body: { status: 'PENDING' },
+          query: 'status=eq.MATCHED'
+        });
+        message.success('Cartelera eliminada. Los gallos volvieron al depósito');
+      }
+
+      setIsLocked(false);
+      setIsClearModalOpen(false);
+      fetchFights();
+    } catch (e) {
+      console.error(e);
+      message.error('Error al eliminar la cartelera');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -465,14 +538,24 @@ const AdminCarteleraView = () => {
     },
     {
       title: 'Acción',
+      width: 70,
+      align: 'center',
       render: (_, r) => (
-        <Button 
-          danger 
-          type="text" 
-          icon={<DeleteOutlined />} 
-          disabled={isLocked} 
-          onClick={() => deleteFight(r.id)}
-        />
+        <Popconfirm
+          title="¿Eliminar esta pelea?"
+          description={isLocked ? "La cartelera está cerrada. ¿Deseas eliminar este combate de todas formas?" : "¿Estás seguro de que deseas eliminar este combate?"}
+          onConfirm={() => deleteFight(r)}
+          okText="Eliminar"
+          cancelText="Cancelar"
+          okButtonProps={{ danger: true }}
+        >
+          <Button 
+            danger 
+            type="text" 
+            icon={<DeleteOutlined />} 
+            title="Eliminar Pelea"
+          />
+        </Popconfirm>
       )
     }
   ];
@@ -506,6 +589,15 @@ const AdminCarteleraView = () => {
             {isLocked ? 'Abrir Edición' : 'Cerrar Cartelera'}
           </Button>
           <Button icon={<FilePdfOutlined />} onClick={exportPDF}>Exportar PDF</Button>
+          <Button 
+            danger 
+            icon={<DeleteOutlined />} 
+            onClick={() => setIsClearModalOpen(true)}
+            disabled={fights.length === 0}
+            style={{ fontWeight: 600 }}
+          >
+            Eliminar Cartelera
+          </Button>
         </Space>
       </div>
 
@@ -923,6 +1015,106 @@ const AdminCarteleraView = () => {
             </div>
           )}
           
+        </div>
+      </Modal>
+
+      {/* MODAL ELIMINAR CARTELERA */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: '50%',
+              background: 'rgba(255, 77, 79, 0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <WarningOutlined style={{ color: '#ff4d4f', fontSize: 20 }} />
+            </div>
+            <div>
+              <Title level={4} style={{ color: '#fff', margin: 0, fontSize: 16 }}>Eliminar Cartelera Actual</Title>
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>Acción sobre combates y depósito</Text>
+            </div>
+          </div>
+        }
+        open={isClearModalOpen}
+        onCancel={() => setIsClearModalOpen(false)}
+        footer={null}
+        width={560}
+        styles={{
+          content: { background: '#0a0a0a', border: '1px solid rgba(255, 77, 79, 0.3)', borderRadius: 16, overflow: 'hidden' },
+          header: { background: 'rgba(255, 77, 79, 0.05)', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' },
+          body: { padding: '24px' }
+        }}
+      >
+        <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, marginBottom: 20 }}>
+          Se eliminarán los <strong>{fights.length} combates</strong> de la cartelera actual. Selecciona la opción que deseas:
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Opción 1: Devolver gallos al depósito */}
+          <div 
+            onClick={() => !loading && handleClearCartelera(false)}
+            style={{
+              padding: '16px 20px',
+              borderRadius: 12,
+              background: 'rgba(16, 185, 129, 0.05)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16
+            }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.borderColor = '#10b981'; }}
+            onMouseLeave={e => { if (!loading) e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.3)'; }}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <UndoOutlined style={{ color: '#10b981', fontSize: 22 }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+                Vaciar Cartelera y devolver gallos al Depósito <Tag color="success" style={{ marginLeft: 6 }}>Recomendado</Tag>
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>
+                Elimina las peleas asignadas, pero conserva los gallos en el depósito para que puedas volver a emparejarlos (botón VS).
+              </div>
+            </div>
+          </div>
+
+          {/* Opción 2: Borrar absolutamente todo */}
+          <div 
+            onClick={() => !loading && handleClearCartelera(true)}
+            style={{
+              padding: '16px 20px',
+              borderRadius: 12,
+              background: 'rgba(255, 77, 79, 0.05)',
+              border: '1px solid rgba(255, 77, 79, 0.3)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16
+            }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.borderColor = '#ff4d4f'; }}
+            onMouseLeave={e => { if (!loading) e.currentTarget.style.borderColor = 'rgba(255, 77, 79, 0.3)'; }}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(255, 77, 79, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <DeleteOutlined style={{ color: '#ff4d4f', fontSize: 22 }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: '#ff4d4f', fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+                Eliminar Todo (Cartelera + Depósito de Gallos)
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>
+                Elimina todas las peleas y vacía totalmente el depósito de gallos para empezar un evento desde cero.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 24, textAlign: 'right' }}>
+          <Button onClick={() => setIsClearModalOpen(false)} disabled={loading}>
+            Cancelar
+          </Button>
         </div>
       </Modal>
 
