@@ -8,6 +8,40 @@ const SOUNDS = {
   STRIKE: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3' // Impact/Gong
 };
 
+export const playArenaBell = () => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    const ringAt = (delay) => {
+      const now = ctx.currentTime + delay;
+      const frequencies = [587.33, 739.99, 880, 1174.66]; // D5, F#5, A5, D6 arena bell harmonics
+      const gains = [0.45, 0.35, 0.25, 0.15];
+      frequencies.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+        gainNode.gain.setValueAtTime(gains[idx], now);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 1.9);
+      });
+    };
+    // Triple arena bell strike: ding! ding! ding!
+    ringAt(0);
+    ringAt(0.3);
+    ringAt(0.6);
+  } catch (err) {
+    console.warn('Bell synthesis error:', err);
+  }
+};
+
 export const useSound = () => {
   const audioRefs = useRef({});
 
@@ -22,6 +56,11 @@ export const useSound = () => {
   };
 
   const play = (soundKey) => {
+    if (soundKey === 'BELL') {
+      playArenaBell();
+      return;
+    }
+
     const url = SOUNDS[soundKey];
     if (!url) return;
 
@@ -45,5 +84,5 @@ export const useSound = () => {
     }
   };
 
-  return { play, preload };
+  return { play, preload, playBell: playArenaBell };
 };

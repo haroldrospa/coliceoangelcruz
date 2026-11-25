@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Button, Space, Typography, Card, Modal, InputNumber, Row, Col, Divider, Badge, App as AntApp, Tag } from 'antd';
 import { SendOutlined, MessageFilled, SignalFilled, ThunderboltFilled, PlayCircleFilled, EyeOutlined, TrophyOutlined, DownloadOutlined, WhatsAppOutlined, CopyOutlined, ShareAltOutlined, UpOutlined, DownOutlined, SmileOutlined } from '@ant-design/icons';
 import { supabase, rawFetch } from '../lib/supabase';
-import { useSound } from '../hooks/useSound';
+import { useSound, playArenaBell } from '../hooks/useSound';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 
@@ -343,13 +343,13 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const [bettingCountdown, setBettingCountdown] = useState(120);
   const [winnerFlash, setWinnerFlash] = useState(null);
 
-  // Auto-dismiss winner flash banner after 12 seconds so it never gets stuck
+  // Auto-dismiss winner flash banner after 90 seconds so it never gets stuck
   useEffect(() => {
     if (!winnerFlash) return;
     const t = setTimeout(() => {
       setWinnerFlash(null);
       localStorage.removeItem('winner_flash');
-    }, 12000);
+    }, 90000);
     return () => clearTimeout(t);
   }, [winnerFlash]);
 
@@ -536,7 +536,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     const initData = async () => {
       try {
 
-        // Fetch only active (LIVE or CLOSED) fight; if none, ensure clean empty state
+        // Fetch only active (LIVE or CLOSED) fight; if none, check for recently finished fight
         const activeEvents = await rawFetch(`events?select=*&status=in.(LIVE,CLOSED)&order=updated_at.desc&limit=1`);
         if (activeEvents && activeEvents[0]) {
             const active = activeEvents[0];
@@ -545,8 +545,39 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
             localStorage.removeItem('winner_flash');
         } else {
             setFightInfo(EMPTY_FIGHT);
-            setWinnerFlash(null);
-            localStorage.removeItem('winner_flash');
+            // Check if there was a fight finished recently (within the last 4 minutes) so mobile/reconnected viewers see the result
+            try {
+              const finishedEvents = await rawFetch(`events?select=*&status=eq.FINISHED&order=updated_at.desc&limit=1`);
+              if (finishedEvents && finishedEvents[0]) {
+                const fin = finishedEvents[0];
+                const finTime = new Date(fin.updated_at || fin.created_at).getTime();
+                if (Date.now() - finTime < 240000) { // Within 4 minutes
+                  const winnerSide = fin.winner_side;
+                  let winnerWeight = '';
+                  try {
+                    const wObj = winnerSide === 'A' ? JSON.parse(fin.gallo_a_weight || '{}') : JSON.parse(fin.gallo_b_weight || '{}');
+                    winnerWeight = wObj.weight || '';
+                  } catch (_) {}
+                  const winnerDisplayName = winnerSide === 'A' ? (fin.gallo_a_name || 'LADO AZUL') : winnerSide === 'B' ? (fin.gallo_b_name || 'LADO BLANCO') : 'TABLAS';
+                  const flashData = {
+                    side: winnerSide === 'A' ? 'Azul' : winnerSide === 'B' ? 'Blanco' : 'Tablas',
+                    name: winnerDisplayName,
+                    fightNum: fin.post_number,
+                    weight: winnerWeight
+                  };
+                  setWinnerFlash(flashData);
+                } else {
+                  setWinnerFlash(null);
+                  localStorage.removeItem('winner_flash');
+                }
+              } else {
+                setWinnerFlash(null);
+                localStorage.removeItem('winner_flash');
+              }
+            } catch (_) {
+              setWinnerFlash(null);
+              localStorage.removeItem('winner_flash');
+            }
         }
 
         // Fetch matched cartelera fights and events, then merge them
@@ -769,6 +800,24 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     // This event just became active — show it
                     return payload.new;
                 } else if (payload.new.status === 'FINISHED' || payload.new.status === 'PENDING') {
+                    if (payload.new.status === 'FINISHED') {
+                        const winnerSide = payload.new.winner_side;
+                        let winnerWeight = '';
+                        try {
+                            const wObj = winnerSide === 'A' ? JSON.parse(payload.new.gallo_a_weight || '{}') : JSON.parse(payload.new.gallo_b_weight || '{}');
+                            winnerWeight = wObj.weight || '';
+                        } catch (_) {}
+                        const winnerDisplayName = winnerSide === 'A' ? (payload.new.gallo_a_name || 'LADO AZUL') : winnerSide === 'B' ? (payload.new.gallo_b_name || 'LADO BLANCO') : 'TABLAS';
+                        const flashData = {
+                            side: winnerSide === 'A' ? 'Azul' : winnerSide === 'B' ? 'Blanco' : 'Tablas',
+                            name: winnerDisplayName,
+                            fightNum: payload.new.post_number,
+                            weight: winnerWeight
+                        };
+                        setWinnerFlash(flashData);
+                        localStorage.setItem('winner_flash', JSON.stringify(flashData));
+                        playArenaBell();
+                    }
                     // If it was the active fight and just finished or reset to pending, clear it
                     if (prev.id === payload.new.id || (prev.post_number && parseInt(prev.post_number) === parseInt(payload.new.post_number))) {
                         return EMPTY_FIGHT;
@@ -886,6 +935,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
           };
           setWinnerFlash(flashData);
           localStorage.setItem('winner_flash', JSON.stringify(flashData));
+          playArenaBell();
           setFightInfo(EMPTY_FIGHT);
         } else if (status === 'LIVE' || status === 'CLOSED') {
           setFightInfo(prev => {
@@ -1335,6 +1385,118 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const weightA = rawWeightA ? formatWeight(rawWeightA) : '';
   const weightB = rawWeightB ? formatWeight(rawWeightB) : '';
 
+  const renderWinnerOverlay = (compact = false) => {
+    if (!winnerFlash) return null;
+    const isBlanco = winnerFlash.side === 'Blanco' || winnerFlash.side === 'B';
+    const isAzul = winnerFlash.side === 'Azul' || winnerFlash.side === 'A';
+    const isTablas = !isBlanco && !isAzul;
+
+    return (
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: compact ? 8 : 12,
+        padding: compact ? '6px 12px' : '10px 18px',
+        boxShadow: '0 0 50px rgba(0,0,0,0.85)',
+        animation: 'winnerFlashIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        backdropFilter: 'blur(10px)',
+        ...(isAzul
+          ? { background: 'linear-gradient(135deg, rgba(15,61,209,0.98) 0%, rgba(30,58,138,0.99) 100%)', border: '2px solid #3b82f6' }
+          : isBlanco
+          ? { background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(241,245,249,0.99) 100%)', border: '2px solid #ffffff' }
+          : { background: 'linear-gradient(135deg, rgba(217,119,6,0.98) 0%, rgba(180,83,9,0.99) 100%)', border: '2px solid #f59e0b' }
+        )
+      }}>
+        {/* Close Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setWinnerFlash(null);
+            localStorage.removeItem('winner_flash');
+          }}
+          style={{
+            position: 'absolute',
+            top: 4,
+            right: 6,
+            background: isBlanco ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.3)',
+            border: 'none',
+            color: isBlanco ? '#0f172a' : '#ffffff',
+            borderRadius: '50%',
+            width: 22,
+            height: 22,
+            cursor: 'pointer',
+            fontSize: 11,
+            fontWeight: 900,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10
+          }}
+          title="Cerrar"
+        >
+          ✕
+        </button>
+
+        {/* Bell + Fight Header */}
+        <div style={{
+          fontSize: compact ? 'clamp(9px, 2.5vw, 11px)' : 'clamp(10px, 2.5vw, 13px)',
+          fontWeight: 900,
+          letterSpacing: '1.5px',
+          textTransform: 'uppercase',
+          color: isBlanco ? '#475569' : 'rgba(255,255,255,0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          lineHeight: 1,
+          marginBottom: 3
+        }}>
+          <span className="bell-ringing" style={{ display: 'inline-block', fontSize: '1.25em' }}>🔔</span>
+          <span>PELEA #{winnerFlash.fightNum || fightInfo.post_number} — {isTablas ? 'COMBATE FINALIZADO' : `LADO ${winnerFlash.side.toUpperCase()}`}</span>
+          <span className="bell-ringing" style={{ display: 'inline-block', fontSize: '1.25em' }}>🔔</span>
+        </div>
+
+        {/* Big Winner Name */}
+        <div style={{
+          fontSize: compact ? 'clamp(14px, 4vw, 20px)' : 'clamp(18px, 4.5vw, 30px)',
+          fontWeight: 900,
+          fontFamily: 'Outfit, sans-serif',
+          color: isBlanco ? '#0f172a' : '#ffffff',
+          textTransform: 'uppercase',
+          textAlign: 'center',
+          lineHeight: 1.1,
+          letterSpacing: '0.5px'
+        }}>
+          {isTablas ? '🤝 ¡PELEA EN TABLAS / NULA!' : `🏆 GANADOR: ${winnerFlash.name}`}
+        </div>
+
+        {/* Weight Pill if present */}
+        {winnerFlash.weight && (
+          <div style={{
+            marginTop: 3,
+            background: isBlanco ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.15)',
+            border: isBlanco ? '1px solid rgba(15,23,42,0.18)' : '1px solid rgba(255,255,255,0.25)',
+            borderRadius: 6,
+            padding: '1px 8px',
+            fontSize: compact ? 'clamp(9px, 2.2vw, 11px)' : 'clamp(10px, 2.5vw, 12px)',
+            fontWeight: 900,
+            color: isBlanco ? '#0f172a' : '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4
+          }}>
+            <span>⚖️ PESO DEL GALLO:</span>
+            <strong style={{ fontSize: '1.05em' }}>{winnerFlash.weight}</strong>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{ background: 'var(--obsidian)', minHeight: '100vh', padding: '16px', maxWidth: 1200, margin: '0 auto', paddingBottom: 100 }}>
       {/* PRIMARY BATTLE ZONE: Centered Stream Player & Reloj Scoreboard */}
@@ -1473,69 +1635,8 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               position: 'relative',
               overflow: 'hidden'
             }}>
-              {/* Full Scoreboard Winner Flash Overlay (10s duration) */}
-              {winnerFlash && (
-                <div style={{
-                  position: 'absolute',
-                  inset: 0,
-                  zIndex: 100,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 12,
-                  padding: '12px 20px',
-                  boxShadow: '0 0 50px rgba(0,0,0,0.8)',
-                  animation: 'winnerFlashIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                  backdropFilter: 'blur(8px)',
-                  ...(winnerFlash.side === 'Azul' || winnerFlash.side === 'A'
-                    ? { background: 'linear-gradient(135deg, rgba(29,78,216,0.97) 0%, rgba(30,58,138,0.99) 100%)', border: '2px solid #3b82f6' }
-                    : winnerFlash.side === 'Blanco' || winnerFlash.side === 'B'
-                    ? { background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(226,232,240,0.99) 100%)', border: '2px solid #ffffff' }
-                    : { background: 'linear-gradient(135deg, rgba(180,83,9,0.97) 0%, rgba(120,53,15,0.99) 100%)', border: '2px solid #f59e0b' }
-                  )
-                }}>
-                  <div style={{
-                    fontSize: 'clamp(10px, 2.5vw, 13px)',
-                    fontWeight: 900,
-                    letterSpacing: '2px',
-                    textTransform: 'uppercase',
-                    color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#475569' : 'rgba(255,255,255,0.8)',
-                    marginBottom: 2
-                  }}>
-                    PELEA #{winnerFlash.fightNum || fightInfo.post_number} — {winnerFlash.side === 'Tablas' || winnerFlash.side === 'D' ? 'RESULTADO' : `LADO ${winnerFlash.side.toUpperCase()}`}
-                  </div>
-                  <div style={{
-                    fontSize: 'clamp(18px, 4.5vw, 32px)',
-                    fontWeight: 900,
-                    fontFamily: 'Outfit, sans-serif',
-                    color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff',
-                    textTransform: 'uppercase',
-                    textAlign: 'center',
-                    lineHeight: 1.1
-                  }}>
-                    🏆 {winnerFlash.side === 'Tablas' || winnerFlash.side === 'D' ? '¡PELEA EN TABLAS / NULA!' : `GANADOR: ${winnerFlash.name}`}
-                  </div>
-                  {winnerFlash.weight && (
-                    <div style={{
-                      marginTop: 6,
-                      background: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? 'rgba(15,23,42,0.1)' : 'rgba(255,255,255,0.15)',
-                      border: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '1px solid rgba(15,23,42,0.2)' : '1px solid rgba(255,255,255,0.3)',
-                      borderRadius: 8,
-                      padding: '3px 12px',
-                      fontSize: 'clamp(11px, 2.8vw, 15px)',
-                      fontWeight: 900,
-                      color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6
-                    }}>
-                      <span>⚖️ PESO DEL GALLO:</span>
-                      <strong style={{ fontSize: '1.1em' }}>{winnerFlash.weight}</strong>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Full Scoreboard Winner Flash Overlay */}
+              {renderWinnerOverlay(false)}
               {/* Row 1: Combate # + Clocks Panel */}
               <div style={{ 
                 display: 'flex', 
@@ -1666,8 +1767,11 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               borderRadius: 12, 
               padding: 14, 
               boxShadow: '0 20px 45px rgba(0,0,0,0.6)',
-              fontFamily: 'Outfit, sans-serif'
+              fontFamily: 'Outfit, sans-serif',
+              position: 'relative',
+              overflow: 'hidden'
             }}>
+              {renderWinnerOverlay(false)}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 10, alignItems: 'center' }}>
                 {/* Left Azul */}
                 <div 
@@ -1726,8 +1830,11 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               borderRadius: 14,
               padding: '12px 14px',
               boxShadow: '0 12px 36px rgba(0,0,0,0.85)',
-              fontFamily: 'Outfit, sans-serif'
+              fontFamily: 'Outfit, sans-serif',
+              position: 'relative',
+              overflow: 'hidden'
             }}>
+              {renderWinnerOverlay(false)}
               {/* Header Title & Logos */}
               <div style={{ 
                 display: 'flex', 
@@ -2372,8 +2479,14 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               background: '#090d14',
               borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
               flexShrink: 0,
-              fontFamily: 'Outfit, sans-serif'
+              fontFamily: 'Outfit, sans-serif',
+              position: 'relative',
+              overflow: 'hidden',
+              minHeight: winnerFlash ? 82 : 'auto'
             }}>
+              {/* WINNER FLASH OVERLAY FOR MOBILE SCOREBOARD */}
+              {renderWinnerOverlay(true)}
+
               {/* Row 1: Combate # + Clocks Panel */}
               <div style={{ 
                 display: 'flex', 

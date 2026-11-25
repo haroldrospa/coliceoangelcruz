@@ -19,6 +19,7 @@ import {
   ClearOutlined
 } from '@ant-design/icons';
 import { supabase, rawFetch, broadcastEventStatus, resolveBetsForEvent, upsertSetting } from '../lib/supabase';
+import { playArenaBell } from '../hooks/useSound';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -929,6 +930,9 @@ export default function RelojView() {
       playCelebrationSound('draw');
     }
 
+    // Play arena bell sound on fight finish (triple chime)
+    playArenaBell();
+
     // Show winner flash overlay on full scoreboard until a new fight is loaded
     const winWeight = resultType === 'Azul' ? (pesoAzul || '') : resultType === 'Blanco' ? (pesoBlanco || '') : '';
     const winnerDisplayName = resultType === 'Azul'
@@ -1194,6 +1198,117 @@ export default function RelojView() {
     }
   ];
 
+  const renderWinnerOverlay = (compact = false) => {
+    if (!winnerFlash) return null;
+    const isBlanco = winnerFlash.side === 'Blanco' || winnerFlash.side === 'B';
+    const isAzul = winnerFlash.side === 'Azul' || winnerFlash.side === 'A';
+    const isTablas = !isBlanco && !isAzul;
+
+    return (
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 100,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: compact ? 8 : 14,
+        padding: compact ? '8px 12px' : '10px 18px',
+        boxShadow: '0 0 50px rgba(0,0,0,0.85)',
+        animation: 'winnerFlashIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        backdropFilter: 'blur(8px)',
+        ...(isAzul
+          ? { background: 'linear-gradient(135deg, rgba(15,61,209,0.98) 0%, rgba(30,58,138,0.99) 100%)', border: '2px solid #3b82f6' }
+          : isBlanco
+          ? { background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(241,245,249,0.99) 100%)', border: '2px solid #ffffff' }
+          : { background: 'linear-gradient(135deg, rgba(217,119,6,0.98) 0%, rgba(180,83,9,0.99) 100%)', border: '2px solid #f59e0b' }
+        )
+      }}>
+        {/* Dismiss Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setWinnerFlash(null);
+            localStorage.removeItem('winner_flash');
+          }}
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 8,
+            background: isBlanco ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.3)',
+            border: 'none',
+            color: isBlanco ? '#0f172a' : '#ffffff',
+            borderRadius: '50%',
+            width: 24,
+            height: 24,
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 900,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10
+          }}
+          title="Cerrar aviso"
+        >
+          ✕
+        </button>
+
+        {/* Bell + Fight Header */}
+        <div style={{
+          fontSize: 'clamp(10px, 2.8vw, 15px)',
+          fontWeight: 900,
+          letterSpacing: '1.5px',
+          textTransform: 'uppercase',
+          color: isBlanco ? '#475569' : 'rgba(255,255,255,0.85)',
+          marginBottom: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6
+        }}>
+          <span className="bell-ringing" style={{ display: 'inline-block', fontSize: '1.3em' }}>🔔</span>
+          <span>PELEA #{winnerFlash.fightNum} — {isTablas ? 'COMBATE FINALIZADO' : `LADO ${winnerFlash.side.toUpperCase()}`}</span>
+          <span className="bell-ringing" style={{ display: 'inline-block', fontSize: '1.3em' }}>🔔</span>
+        </div>
+
+        {/* Winner Name Banner */}
+        <div style={{
+          fontSize: 'clamp(18px, 4.8vw, 36px)',
+          fontWeight: 900,
+          fontFamily: 'Outfit, sans-serif',
+          color: isBlanco ? '#0f172a' : '#ffffff',
+          textTransform: 'uppercase',
+          textAlign: 'center',
+          lineHeight: 1.1,
+          letterSpacing: '0.5px'
+        }}>
+          {isTablas ? '🤝 ¡PELEA EN TABLAS / NULA!' : `🏆 GANADOR: ${winnerFlash.name}`}
+        </div>
+
+        {/* Weight Tag */}
+        {winnerFlash.weight && (
+          <div style={{
+            marginTop: 6,
+            background: isBlanco ? 'rgba(15,23,42,0.1)' : 'rgba(255,255,255,0.15)',
+            border: isBlanco ? '1px solid rgba(15,23,42,0.2)' : '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 8,
+            padding: '4px 12px',
+            fontSize: 'clamp(11px, 3vw, 16px)',
+            fontWeight: 900,
+            color: isBlanco ? '#0f172a' : '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}>
+            <span>⚖️ PESO DEL GALLO:</span>
+            <strong style={{ fontSize: '1.1em' }}>{winnerFlash.weight}</strong>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div 
       ref={containerRef} 
@@ -1309,8 +1424,10 @@ export default function RelojView() {
             padding: 12, 
             boxShadow: '0 20px 45px rgba(0,0,0,0.6)',
             position: 'relative',
+            overflow: 'hidden',
             marginBottom: 20
           }}>
+            {renderWinnerOverlay()}
             {/* Header Title Banner (Modern Flat Slate with Gamecock Logos) */}
             <div style={{ 
               background: '#1f1f1f', 
@@ -1476,8 +1593,10 @@ export default function RelojView() {
             padding: 12, 
             boxShadow: '0 20px 45px rgba(0,0,0,0.6)',
             position: 'relative',
+            overflow: 'hidden',
             marginBottom: 20
           }}>
+            {renderWinnerOverlay()}
             {/* Header */}
             <div style={{ 
               background: '#1f1f1f', 
@@ -1667,68 +1786,7 @@ export default function RelojView() {
             position: 'relative'
           }}>
             {/* Full Scoreboard Winner Flash Overlay */}
-            {winnerFlash && (
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: 100,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 14,
-                padding: '10px 14px',
-                boxShadow: '0 0 50px rgba(0,0,0,0.8)',
-                animation: 'winnerFlashIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                backdropFilter: 'blur(8px)',
-                ...(winnerFlash.side === 'Azul' || winnerFlash.side === 'A'
-                  ? { background: 'linear-gradient(135deg, rgba(29,78,216,0.97) 0%, rgba(30,58,138,0.99) 100%)', border: '2px solid #3b82f6' }
-                  : winnerFlash.side === 'Blanco' || winnerFlash.side === 'B'
-                  ? { background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(226,232,240,0.99) 100%)', border: '2px solid #ffffff' }
-                  : { background: 'linear-gradient(135deg, rgba(180,83,9,0.97) 0%, rgba(120,53,15,0.99) 100%)', border: '2px solid #f59e0b' }
-                )
-              }}>
-                <div style={{
-                  fontSize: 'clamp(10px, 2.8vw, 15px)',
-                  fontWeight: 900,
-                  letterSpacing: '1px',
-                  textTransform: 'uppercase',
-                  color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#475569' : 'rgba(255,255,255,0.85)',
-                  marginBottom: 2
-                }}>
-                  PELEA #{winnerFlash.fightNum} — {winnerFlash.side === 'Tablas' || winnerFlash.side === 'D' ? 'RESULTADO' : `LADO ${winnerFlash.side.toUpperCase()}`}
-                </div>
-                <div style={{
-                  fontSize: 'clamp(18px, 4.8vw, 36px)',
-                  fontWeight: 900,
-                  fontFamily: 'Outfit, sans-serif',
-                  color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff',
-                  textTransform: 'uppercase',
-                  textAlign: 'center',
-                  lineHeight: 1.1
-                }}>
-                  🏆 {winnerFlash.side === 'Tablas' || winnerFlash.side === 'D' ? '¡PELEA EN TABLAS / NULA!' : `GANADOR: ${winnerFlash.name}`}
-                </div>
-                {winnerFlash.weight && (
-                  <div style={{
-                    marginTop: 6,
-                    background: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? 'rgba(15,23,42,0.1)' : 'rgba(255,255,255,0.15)',
-                    border: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '1px solid rgba(15,23,42,0.2)' : '1px solid rgba(255,255,255,0.3)',
-                    borderRadius: 8,
-                    padding: '4px 12px',
-                    fontSize: 'clamp(11px, 3vw, 16px)',
-                    fontWeight: 900,
-                    color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6
-                  }}>
-                    <span>⚖️ PESO DEL GALLO:</span>
-                    <strong style={{ fontSize: '1.1em' }}>{winnerFlash.weight}</strong>
-                  </div>
-                )}
-              </div>
-            )}
+            {renderWinnerOverlay()}
             {/* Responsive Cyberpunk row */}
             <Row align="middle" gutter={[8, 8]}>
               {/* Pelea indicator */}
