@@ -156,6 +156,12 @@ export default function RelojView() {
   const [fotoAzul, setFotoAzul] = useState(null);
   const [fotoBlanco, setFotoBlanco] = useState(null);
   
+  // Completed fights minimization state
+  const [completedMinimized, setCompletedMinimized] = useState(() => {
+    const saved = localStorage.getItem('reloj_completed_minimized');
+    return saved !== null ? saved === 'true' : true;
+  });
+  
   // Active fight details
   const [fightNumber, setFightNumber] = useState(() => parseInt(localStorage.getItem('reloj_fight_number') || '1', 10));
 
@@ -2011,21 +2017,37 @@ export default function RelojView() {
                     <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 700, display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       CARGAR PELEA DE CARTELERA
                     </Text>
-                    <Select 
-                      placeholder="Seleccionar pelea programada..."
-                      onChange={(val) => {
-                        const fight = carteleraFights.find(f => f.numero_pelea === val);
-                        if (fight) handleLoadFight(fight);
-                      }}
-                      style={{ width: '100%' }}
-                      size="middle"
-                    >
-                      {carteleraFights.map(f => (
-                        <Option key={f.numero_pelea} value={f.numero_pelea}>
-                          Pelea #{f.numero_pelea} • {f.traba_a} vs {f.traba_b}
-                        </Option>
-                      ))}
-                    </Select>
+                    {carteleraFights.filter(f => !fightResults[f.numero_pelea]).length > 0 ? (
+                      <Select 
+                        placeholder="Seleccionar pelea programada..."
+                        onChange={(val) => {
+                          const fight = carteleraFights.find(f => f.numero_pelea === val);
+                          if (fight) handleLoadFight(fight);
+                        }}
+                        style={{ width: '100%' }}
+                        size="middle"
+                      >
+                        {carteleraFights
+                          .filter(f => !fightResults[f.numero_pelea])
+                          .map(f => (
+                            <Option key={f.numero_pelea} value={f.numero_pelea}>
+                              Pelea #{f.numero_pelea} • {f.traba_a} vs {f.traba_b}
+                            </Option>
+                          ))}
+                      </Select>
+                    ) : (
+                      <div style={{ 
+                        background: 'rgba(255,255,255,0.03)', 
+                        border: '1px solid rgba(255,255,255,0.08)', 
+                        borderRadius: 6, 
+                        padding: '7px 12px', 
+                        color: 'rgba(255,255,255,0.45)', 
+                        fontSize: 11,
+                        textAlign: 'center'
+                      }}>
+                        ✅ Todas las peleas programadas han sido realizadas
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2533,64 +2555,107 @@ export default function RelojView() {
           </Row>
         )}
 
-        {/* Split Cartelera: Programadas Left, Realizadas Right */}
+        {/* Cartelera: Programadas & Realizadas (Minimizable) */}
         {!isFullscreen && (
-          <Row gutter={[16, 16]}>
-            {/* Left Column: pending fights */}
-            <Col xs={24} lg={13}>
-              <Card 
-                title={
-                  <span style={{ color: '#f1f5f9', fontSize: 12, fontWeight: 800, letterSpacing: '0.6px' }}>
-                    PELEAS PROGRAMADAS (PENDIENTES)
-                  </span>
-                }
-                style={{ 
-                  background: '#0d131f', 
-                  borderColor: 'rgba(255, 255, 255, 0.08)', 
-                  borderRadius: 14,
-                  overflow: 'hidden'
-                }}
-                styles={{ body: { padding: 0 } }}
-              >
-                <Table 
-                  dataSource={pendingTableData} 
-                  columns={pendingColumns} 
-                  loading={loadingCartelera}
-                  pagination={{ pageSize: 8 }}
-                  locale={{ emptyText: <Text style={{ color: 'rgba(255,255,255,0.35)' }}>No hay peleas programadas pendientes</Text> }}
-                  className="custom-table"
-                  style={{ background: 'transparent' }}
-                />
-              </Card>
-            </Col>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Table: Pending Fights */}
+            <Card 
+              title={
+                <Row justify="space-between" align="middle" style={{ width: '100%' }}>
+                  <Col>
+                    <span style={{ color: '#f1f5f9', fontSize: 12, fontWeight: 800, letterSpacing: '0.6px' }}>
+                      PELEAS PROGRAMADAS (PENDIENTES) {pendingTableData.length > 0 && `(${pendingTableData.length})`}
+                    </span>
+                  </Col>
+                  {completedTableData.length > 0 && (
+                    <Col>
+                      <Button 
+                        size="small"
+                        type="text"
+                        onClick={() => {
+                          const nextVal = !completedMinimized;
+                          setCompletedMinimized(nextVal);
+                          localStorage.setItem('reloj_completed_minimized', nextVal.toString());
+                        }}
+                        style={{ 
+                          color: completedMinimized ? '#93c5fd' : 'rgba(255,255,255,0.6)', 
+                          fontSize: 11, 
+                          fontWeight: 700,
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: 6
+                        }}
+                      >
+                        {completedMinimized ? `▼ Ver Realizadas (${completedTableData.length})` : '▲ Ocultar Realizadas'}
+                      </Button>
+                    </Col>
+                  )}
+                </Row>
+              }
+              style={{ 
+                background: '#0d131f', 
+                borderColor: 'rgba(255, 255, 255, 0.08)', 
+                borderRadius: 14,
+                overflow: 'hidden'
+              }}
+              styles={{ body: { padding: 0 } }}
+            >
+              <Table 
+                dataSource={pendingTableData} 
+                columns={pendingColumns} 
+                loading={loadingCartelera}
+                pagination={{ pageSize: 8 }}
+                locale={{ emptyText: <Text style={{ color: 'rgba(255,255,255,0.35)' }}>No hay peleas programadas pendientes</Text> }}
+                className="custom-table"
+                style={{ background: 'transparent' }}
+              />
+            </Card>
 
-            {/* Right Column: completed fights */}
-            <Col xs={24} lg={11}>
-              <Card 
-                title={
-                  <Row justify="space-between" align="middle" style={{ width: '100%' }}>
-                    <Col>
-                      <span style={{ color: '#f1f5f9', fontSize: 12, fontWeight: 800, letterSpacing: '0.6px' }}>
-                        PELEAS REALIZADAS
-                      </span>
-                    </Col>
-                    <Col>
-                      {Object.keys(fightResults).length > 0 && (
-                        <Button type="text" danger size="small" onClick={clearAllResults} icon={<DeleteOutlined />} style={{ fontSize: 11, color: '#f87171' }}>
-                          Limpiar Historial
-                        </Button>
-                      )}
-                    </Col>
-                  </Row>
-                }
-                style={{ 
-                  background: '#0d131f', 
-                  borderColor: 'rgba(255, 255, 255, 0.08)', 
-                  borderRadius: 14,
-                  overflow: 'hidden'
-                }}
-                styles={{ body: { padding: 0 } }}
-              >
+            {/* Table: Completed Fights (Minimized / Collapsible) */}
+            <Card 
+              title={
+                <Row justify="space-between" align="middle" style={{ width: '100%' }}>
+                  <Col style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ color: '#f1f5f9', fontSize: 12, fontWeight: 800, letterSpacing: '0.6px' }}>
+                      PELEAS REALIZADAS ({completedTableData.length})
+                    </span>
+                  </Col>
+                  <Col style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {Object.keys(fightResults).length > 0 && (
+                      <Button type="text" danger size="small" onClick={clearAllResults} icon={<DeleteOutlined />} style={{ fontSize: 11, color: '#f87171' }}>
+                        Limpiar Historial
+                      </Button>
+                    )}
+                    <Button 
+                      size="small" 
+                      onClick={() => {
+                        const nextVal = !completedMinimized;
+                        setCompletedMinimized(nextVal);
+                        localStorage.setItem('reloj_completed_minimized', nextVal.toString());
+                      }}
+                      style={{ 
+                        background: 'rgba(255,255,255,0.05)', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        color: '#f1f5f9', 
+                        fontSize: 11, 
+                        fontWeight: 700, 
+                        borderRadius: 6 
+                      }}
+                    >
+                      {completedMinimized ? 'Expandir ▼' : 'Minimizar ▲'}
+                    </Button>
+                  </Col>
+                </Row>
+              }
+              style={{ 
+                background: '#0d131f', 
+                borderColor: 'rgba(255, 255, 255, 0.08)', 
+                borderRadius: 14,
+                overflow: 'hidden'
+              }}
+              styles={{ body: { padding: 0 } }}
+            >
+              {!completedMinimized && (
                 <Table 
                   dataSource={completedTableData} 
                   columns={completedColumns} 
@@ -2600,9 +2665,9 @@ export default function RelojView() {
                   className="custom-table"
                   style={{ background: 'transparent' }}
                 />
-              </Card>
-            </Col>
-          </Row>
+              )}
+            </Card>
+          </div>
         )}
 
       </div>
