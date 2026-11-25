@@ -1778,25 +1778,11 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                   </span>
                 </div>
                 <div style={{ width: '78%', display: 'flex', flexDirection: 'column' }}>
-                  {/* LADO BLANCO */}
-                  <div 
-                    onClick={() => isBettingOpen && openBetModal('B')}
-                    style={{
-                      background: '#ffffff', color: '#111111', padding: '8px 14px', fontWeight: 900, fontSize: 'clamp(12px, 3vw, 15px)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isBettingOpen ? 'pointer' : 'default', borderBottom: '1px solid #e2e8f0'
-                    }}
-                  >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {hasLoadedFight ? (fightInfo.gallo_b_name || 'LADO BLANCO') : 'LADO BLANCO'}
-                      {hasLoadedFight && weightB && <span style={{ fontSize: 11, color: '#4b5563', fontWeight: 800 }}>⚖️ {weightB}</span>}
-                    </span>
-                    {hasLoadedFight && <span style={{ color: '#1d4ed8', fontSize: 13, fontWeight: 900 }}>x{fightInfo.gallo_b_odds?.toFixed(2) || '1.90'}</span>}
-                  </div>
-
                   {/* LADO AZUL */}
                   <div 
                     onClick={() => isBettingOpen && openBetModal('A')}
                     style={{
-                      background: '#1d4ed8', color: '#ffffff', padding: '8px 14px', fontWeight: 900, fontSize: 'clamp(12px, 3vw, 15px)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isBettingOpen ? 'pointer' : 'default'
+                      background: '#1d4ed8', color: '#ffffff', padding: '8px 14px', fontWeight: 900, fontSize: 'clamp(12px, 3vw, 15px)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isBettingOpen ? 'pointer' : 'default', borderBottom: '1px solid rgba(255,255,255,0.2)'
                     }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1804,6 +1790,20 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                       {hasLoadedFight && weightA && <span style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 800 }}>⚖️ {weightA}</span>}
                     </span>
                     {hasLoadedFight && <span style={{ color: '#93c5fd', fontSize: 13, fontWeight: 900 }}>x{fightInfo.gallo_a_odds?.toFixed(2) || '1.90'}</span>}
+                  </div>
+
+                  {/* LADO BLANCO */}
+                  <div 
+                    onClick={() => isBettingOpen && openBetModal('B')}
+                    style={{
+                      background: '#ffffff', color: '#111111', padding: '8px 14px', fontWeight: 900, fontSize: 'clamp(12px, 3vw, 15px)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isBettingOpen ? 'pointer' : 'default'
+                    }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {hasLoadedFight ? (fightInfo.gallo_b_name || 'LADO BLANCO') : 'LADO BLANCO'}
+                      {hasLoadedFight && weightB && <span style={{ fontSize: 11, color: '#4b5563', fontWeight: 800 }}>⚖️ {weightB}</span>}
+                    </span>
+                    {hasLoadedFight && <span style={{ color: '#1d4ed8', fontSize: 13, fontWeight: 900 }}>x{fightInfo.gallo_b_odds?.toFixed(2) || '1.90'}</span>}
                   </div>
                 </div>
               </div>
@@ -2085,6 +2085,40 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
           </div>
 
           <Row gutter={16}>
+            {/* LADO AZUL */}
+            <Col span={12}>
+              <div 
+                onClick={() => {
+                  setIsSelectionModalOpen(false);
+                  if (selectionFight) {
+                    setFightInfo(selectionFight);
+                    openBetModal('A', selectionFight);
+                  }
+                }}
+                style={{
+                  background: '#0f3dd1',
+                  borderRadius: 12,
+                  padding: '24px 16px',
+                  cursor: 'pointer',
+                  border: '2px solid transparent',
+                  transition: 'all 0.2s ease',
+                  textAlign: 'center',
+                  boxShadow: '0 8px 20px rgba(15,61,209,0.2)'
+                }}
+                className="selection-btn-hover"
+              >
+                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: 900, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
+                  LADO AZUL
+                </div>
+                <div style={{ color: '#ffffff', fontWeight: 900, fontSize: 16, lineHeight: 1.2, minHeight: 38, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {selectionFight?.gallo_a_name || 'LADO AZUL'}
+                </div>
+                <div style={{ marginTop: 12, background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: 6, display: 'inline-block' }}>
+                  <span style={{ color: '#93c5fd', fontWeight: 900, fontSize: 12 }}>Odds: {selectionFight?.gallo_a_odds || '1.90'}</span>
+                </div>
+              </div>
+            </Col>
+
             {/* LADO BLANCO */}
             <Col span={12}>
               <div 
@@ -2115,40 +2149,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                 </div>
                 <div style={{ marginTop: 12, background: '#e6f4ea', padding: '4px 12px', borderRadius: 6, display: 'inline-block' }}>
                   <span style={{ color: '#137333', fontWeight: 900, fontSize: 12 }}>Odds: {selectionFight?.gallo_b_odds || '1.90'}</span>
-                </div>
-              </div>
-            </Col>
-
-            {/* LADO AZUL */}
-            <Col span={12}>
-              <div 
-                onClick={() => {
-                  setIsSelectionModalOpen(false);
-                  if (selectionFight) {
-                    setFightInfo(selectionFight);
-                    openBetModal('A', selectionFight);
-                  }
-                }}
-                style={{
-                  background: '#0f3dd1',
-                  borderRadius: 12,
-                  padding: '24px 16px',
-                  cursor: 'pointer',
-                  border: '2px solid transparent',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'center',
-                  boxShadow: '0 8px 20px rgba(15,61,209,0.2)'
-                }}
-                className="selection-btn-hover"
-              >
-                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: 900, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>
-                  LADO AZUL
-                </div>
-                <div style={{ color: '#ffffff', fontWeight: 900, fontSize: 16, lineHeight: 1.2, minHeight: 38, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {selectionFight?.gallo_a_name || 'LADO AZUL'}
-                </div>
-                <div style={{ marginTop: 12, background: 'rgba(255,255,255,0.15)', padding: '4px 12px', borderRadius: 6, display: 'inline-block' }}>
-                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: 12 }}>Odds: {selectionFight?.gallo_a_odds || '1.90'}</span>
                 </div>
               </div>
             </Col>

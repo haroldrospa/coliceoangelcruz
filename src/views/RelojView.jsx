@@ -550,7 +550,7 @@ export default function RelojView() {
   // Avatar rendering helper
   const renderRoosterAvatar = (side, photo) => {
     const isAzul = side === 'azul';
-    const borderCol = isAzul ? '#0f3dd1' : '#ffffff';
+    const borderCol = isAzul ? '#93c5fd' : '#0f3dd1';
     const avatarDim = isFullscreen ? 130 : 54;
     if (photo) {
       return (
@@ -574,7 +574,7 @@ export default function RelojView() {
         width: avatarDim,
         height: avatarDim,
         borderRadius: '50%',
-        background: isAzul ? 'linear-gradient(135deg, #0f2d8a 0%, #1e40af 100%)' : 'linear-gradient(135deg, #1f2937 0%, #4b5563 100%)',
+        background: isAzul ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)' : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
         border: `2.5px solid ${borderCol}`,
         display: 'flex',
         alignItems: 'center',
@@ -1404,25 +1404,27 @@ export default function RelojView() {
 
               <Col span={18}>
                 <div style={{ 
-                  background: '#ffffff', 
-                  color: '#111111', 
-                  padding: isFullscreen ? '20px 30px' : '12px 18px',
-                  fontWeight: 800,
-                  fontSize: isFullscreen ? 40 : 26,
-                  textTransform: 'uppercase',
-                  borderBottom: '1px solid #dddddd'
-                }}>
-                  {gallinoName ? gallinoName : '—'}
-                </div>
-
-                <div style={{ 
                   background: '#0f3dd1', 
                   color: '#ffffff', 
                   padding: isFullscreen ? '20px 30px' : '12px 18px',
                   fontWeight: 800,
                   fontSize: isFullscreen ? 40 : 26,
+                  textTransform: 'uppercase',
+                  borderBottom: '1px solid rgba(255,255,255,0.2)'
+                }}>
+                  <span style={{ fontSize: isFullscreen ? 16 : 12, color: '#93c5fd', marginRight: 12, fontWeight: 900 }}>LADO AZUL:</span>
+                  {gallinoName ? gallinoName : '—'}
+                </div>
+
+                <div style={{ 
+                  background: '#ffffff', 
+                  color: '#111111', 
+                  padding: isFullscreen ? '20px 30px' : '12px 18px',
+                  fontWeight: 800,
+                  fontSize: isFullscreen ? 40 : 26,
                   textTransform: 'uppercase'
                 }}>
+                  <span style={{ fontSize: isFullscreen ? 16 : 12, color: '#0f3dd1', marginRight: 12, fontWeight: 900 }}>LADO BLANCO:</span>
                   {blancoName ? blancoName : '—'}
                 </div>
               </Col>
@@ -1497,12 +1499,12 @@ export default function RelojView() {
             {/* Split layout: Gallo Azul (Left 5) - Clocks (Center 14) - Gallo Blanco (Right 5) */}
             <Row gutter={8} style={{ margin: '8px 0', minHeight: isFullscreen ? 320 : 220 }}>
               
-              {/* Left Side: Gallo Azul (White block) */}
+              {/* Left Side: Gallo Azul (Blue block) */}
               <Col span={5} style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ 
                   flex: 1, 
-                  background: '#ffffff', 
-                  color: '#111111', 
+                  background: '#0f3dd1', 
+                  color: '#ffffff', 
                   borderRadius: 8, 
                   padding: 12, 
                   display: 'flex', 
@@ -1510,19 +1512,19 @@ export default function RelojView() {
                   justifyContent: 'center',
                   alignItems: 'center',
                   textAlign: 'center',
-                  border: '1px solid #dddddd'
+                  border: '1px solid #06238b'
                 }}>
                   <div style={{ marginBottom: 10 }}>
                     {renderRoosterAvatar('azul', fotoAzul)}
                   </div>
-                  <div style={{ color: '#0f3dd1', fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>LADO AZUL</div>
-                  <div style={{ fontWeight: 900, fontSize: isFullscreen ? 28 : 18, textTransform: 'uppercase', lineHeight: 1.2, wordBreak: 'break-word', color: '#111' }}>
+                  <div style={{ color: '#93c5fd', fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>LADO AZUL</div>
+                  <div style={{ fontWeight: 900, fontSize: isFullscreen ? 28 : 18, textTransform: 'uppercase', lineHeight: 1.2, wordBreak: 'break-word', color: '#ffffff' }}>
                     {gallinoName ? gallinoName : '—'}
                   </div>
-                  <div style={{ marginTop: 12, borderTop: '1px solid #eee', paddingTop: 8, width: '100%', fontSize: isFullscreen ? 12 : 9, fontWeight: 700, color: '#555' }}>
-                    <div>PESO: <strong style={{ color: '#000' }}>{pesoAzul || '-'}</strong></div>
-                    <div style={{ margin: '2px 0' }}>MARCA: <strong style={{ color: '#000' }}>{marcaAzul || '-'}</strong></div>
-                    <div>COLOR: <strong style={{ color: '#000' }}>{colorAzul || '-'}</strong></div>
+                  <div style={{ marginTop: 12, borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: 8, width: '100%', fontSize: isFullscreen ? 12 : 9, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>
+                    <div>PESO: <strong style={{ color: '#fff' }}>{pesoAzul || '-'}</strong></div>
+                    <div style={{ margin: '2px 0' }}>MARCA: <strong style={{ color: '#fff' }}>{marcaAzul || '-'}</strong></div>
+                    <div>COLOR: <strong style={{ color: '#fff' }}>{colorAzul || '-'}</strong></div>
                   </div>
                 </div>
               </Col>
@@ -1583,12 +1585,12 @@ export default function RelojView() {
                 </Row>
               </Col>
 
-              {/* Right Side: Gallo Blanco (Blue block) */}
+              {/* Right Side: Gallo Blanco (White block) */}
               <Col span={5} style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ 
                   flex: 1, 
-                  background: '#0f3dd1', 
-                  color: '#ffffff', 
+                  background: '#ffffff', 
+                  color: '#111111', 
                   borderRadius: 8, 
                   padding: 12, 
                   display: 'flex', 
@@ -1596,19 +1598,19 @@ export default function RelojView() {
                   justifyContent: 'center',
                   alignItems: 'center',
                   textAlign: 'center',
-                  border: '1px solid #06238b'
+                  border: '1px solid #dddddd'
                 }}>
                   <div style={{ marginBottom: 10 }}>
                     {renderRoosterAvatar('blanco', fotoBlanco)}
                   </div>
-                  <div style={{ color: '#ffffff', opacity: 0.8, fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>LADO BLANCO</div>
-                  <div style={{ fontWeight: 900, fontSize: isFullscreen ? 28 : 18, textTransform: 'uppercase', lineHeight: 1.2, wordBreak: 'break-word', color: '#ffffff' }}>
+                  <div style={{ color: '#0f3dd1', fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>LADO BLANCO</div>
+                  <div style={{ fontWeight: 900, fontSize: isFullscreen ? 28 : 18, textTransform: 'uppercase', lineHeight: 1.2, wordBreak: 'break-word', color: '#111111' }}>
                     {blancoName ? blancoName : '—'}
                   </div>
-                  <div style={{ marginTop: 12, borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: 8, width: '100%', fontSize: isFullscreen ? 12 : 9, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>
-                    <div>PESO: <strong style={{ color: '#fff' }}>{pesoBlanco || '-'}</strong></div>
-                    <div style={{ margin: '2px 0' }}>MARCA: <strong style={{ color: '#fff' }}>{marcaBlanco || '-'}</strong></div>
-                    <div>COLOR: <strong style={{ color: '#fff' }}>{colorBlanco || '-'}</strong></div>
+                  <div style={{ marginTop: 12, borderTop: '1px solid #eee', paddingTop: 8, width: '100%', fontSize: isFullscreen ? 12 : 9, fontWeight: 700, color: '#555' }}>
+                    <div>PESO: <strong style={{ color: '#000' }}>{pesoBlanco || '-'}</strong></div>
+                    <div style={{ margin: '2px 0' }}>MARCA: <strong style={{ color: '#000' }}>{marcaBlanco || '-'}</strong></div>
+                    <div>COLOR: <strong style={{ color: '#000' }}>{colorBlanco || '-'}</strong></div>
                   </div>
                 </div>
               </Col>
@@ -1808,11 +1810,11 @@ export default function RelojView() {
               {/* Gallo Azul */}
               <Col xs={12} md={7}>
                 <div style={{ 
-                  background: '#ffffff', 
-                  color: '#111111', 
+                  background: '#0f3dd1', 
+                  color: '#ffffff', 
                   borderRadius: 10, 
                   padding: '8px 10px',
-                  borderLeft: '5px solid #0f3dd1',
+                  borderLeft: '5px solid #60a5fa',
                   boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
                   display: 'flex',
                   alignItems: 'center',
@@ -1822,14 +1824,14 @@ export default function RelojView() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
                     {renderRoosterAvatar('azul', fotoAzul)}
                     <div style={{ overflow: 'hidden', flex: 1 }}>
-                      <div style={{ fontSize: 9, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>LADO AZUL</div>
-                      <div style={{ fontWeight: 900, fontSize: 'clamp(14px, 3.5vw, 24px)', textTransform: 'uppercase', color: '#111111', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: 9, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>LADO AZUL</div>
+                      <div style={{ fontWeight: 900, fontSize: 'clamp(14px, 3.5vw, 24px)', textTransform: 'uppercase', color: '#ffffff', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {gallinoName ? gallinoName : '—'}
                       </div>
-                      <div style={{ display: 'flex', gap: 6, marginTop: 2, fontSize: 11, fontWeight: 900, color: '#333' }}>
-                        <span>P: <strong style={{ color: '#000' }}>{pesoAzul || '-'}</strong></span>
-                        <span>M: <strong style={{ color: '#000' }}>{marcaAzul || '-'}</strong></span>
-                        <span>C: <strong style={{ color: '#000' }}>{colorAzul || '-'}</strong></span>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 2, fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.9)' }}>
+                        <span>P: <strong style={{ color: '#fff' }}>{pesoAzul || '-'}</strong></span>
+                        <span>M: <strong style={{ color: '#fff' }}>{marcaAzul || '-'}</strong></span>
+                        <span>C: <strong style={{ color: '#fff' }}>{colorAzul || '-'}</strong></span>
                       </div>
                     </div>
                   </div>
@@ -1839,11 +1841,11 @@ export default function RelojView() {
               {/* Gallo Blanco */}
               <Col xs={12} md={7}>
                 <div style={{ 
-                  background: '#0f3dd1', 
-                  color: '#ffffff', 
+                  background: '#ffffff', 
+                  color: '#111111', 
                   borderRadius: 10, 
                   padding: '8px 10px',
-                  borderRight: '5px solid #ffffff',
+                  borderRight: '5px solid #0f3dd1',
                   boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
                   display: 'flex',
                   alignItems: 'center',
@@ -1853,14 +1855,14 @@ export default function RelojView() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
                     {renderRoosterAvatar('blanco', fotoBlanco)}
                     <div style={{ overflow: 'hidden', flex: 1 }}>
-                      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', fontWeight: 900, letterSpacing: 0.5 }}>LADO BLANCO</div>
-                      <div style={{ fontWeight: 900, fontSize: 'clamp(14px, 3.5vw, 24px)', textTransform: 'uppercase', color: '#ffffff', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontSize: 9, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>LADO BLANCO</div>
+                      <div style={{ fontWeight: 900, fontSize: 'clamp(14px, 3.5vw, 24px)', textTransform: 'uppercase', color: '#111111', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {blancoName ? blancoName : '—'}
                       </div>
-                      <div style={{ display: 'flex', gap: 6, marginTop: 2, fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.9)' }}>
-                        <span>P: <strong>{pesoBlanco || '-'}</strong></span>
-                        <span>M: <strong>{marcaBlanco || '-'}</strong></span>
-                        <span>C: <strong>{colorBlanco || '-'}</strong></span>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 2, fontSize: 11, fontWeight: 900, color: '#333' }}>
+                        <span>P: <strong style={{ color: '#000' }}>{pesoBlanco || '-'}</strong></span>
+                        <span>M: <strong style={{ color: '#000' }}>{marcaBlanco || '-'}</strong></span>
+                        <span>C: <strong style={{ color: '#000' }}>{colorBlanco || '-'}</strong></span>
                       </div>
                     </div>
                   </div>
