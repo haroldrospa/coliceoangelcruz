@@ -2562,9 +2562,12 @@ export default function RelojView() {
             <Card 
               title={
                 <Row justify="space-between" align="middle" style={{ width: '100%' }}>
-                  <Col>
+                  <Col style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                     <span style={{ color: '#f1f5f9', fontSize: 12, fontWeight: 800, letterSpacing: '0.6px' }}>
                       PELEAS PROGRAMADAS (PENDIENTES) {pendingTableData.length > 0 && `(${pendingTableData.length})`}
+                    </span>
+                    <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 500 }}>
+                      • Doble clic para cargar
                     </span>
                   </Col>
                   {completedTableData.length > 0 && (
@@ -2604,6 +2607,13 @@ export default function RelojView() {
                 dataSource={pendingTableData} 
                 columns={pendingColumns} 
                 loading={loadingCartelera}
+                onRow={(record) => ({
+                  onDoubleClick: () => {
+                    handleLoadFight(record);
+                  },
+                  style: { cursor: 'pointer' },
+                  title: `Doble clic para cargar la Pelea #${record.numero_pelea}`
+                })}
                 pagination={{ pageSize: 8 }}
                 locale={{ emptyText: <Text style={{ color: 'rgba(255,255,255,0.35)' }}>No hay peleas programadas pendientes</Text> }}
                 className="custom-table"
