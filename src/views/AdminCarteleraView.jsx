@@ -715,7 +715,7 @@ const AdminCarteleraView = () => {
   const columns = [
     { title: '#', dataIndex: 'numero_pelea', key: 'num', width: 40, align: 'center' },
     { 
-      title: 'LADO AZUL (IZQUIERDO)', 
+      title: 'GALLO AZUL (IZQUIERDO)', 
       className: 'column-group-border',
       children: [
         { title: 'T', dataIndex: 'turno_a', width: 40, align: 'center', render: t => <Text type="secondary">{t || '-'}</Text> },
@@ -733,7 +733,7 @@ const AdminCarteleraView = () => {
       render: () => <ThunderboltFilled style={{ color: '#10b981', fontSize: 18 }} />
     },
     { 
-      title: 'LADO BLANCO (DERECHO)', 
+      title: 'GALLO BLANCO (DERECHO)', 
       className: 'column-group-border',
       children: [
         { title: 'T', dataIndex: 'turno_b', width: 40, align: 'center', render: t => <Text type="secondary">{t || '-'}</Text> },
@@ -1419,7 +1419,7 @@ const AdminCarteleraView = () => {
             columns={[
               { title: '#', dataIndex: 'numero_pelea', width: 50, align: 'center', render: n => <strong style={{ color: '#10b981' }}>#{n}</strong> },
               {
-                title: 'LADO AZUL',
+                title: 'GALLO AZUL',
                 children: [
                   { title: 'Traba', dataIndex: 'traba_a', render: t => <Text style={{ color: '#93c5fd', fontWeight: 700 }}>{t}</Text> },
                   { title: 'Peso', render: (_, r) => <span style={{ color: '#fff' }}>{r.peso_libras_a}-{r.peso_onzas_a}.{r.peso_puntos_a}</span> },
@@ -1434,7 +1434,7 @@ const AdminCarteleraView = () => {
                 render: () => <Tag color="green" style={{ margin: 0, fontWeight: 900 }}>VS</Tag>
               },
               {
-                title: 'LADO BLANCO',
+                title: 'GALLO BLANCO',
                 children: [
                   { title: 'Traba', dataIndex: 'traba_b', render: t => <Text style={{ color: '#f3f4f6', fontWeight: 700 }}>{t}</Text> },
                   { title: 'Peso', render: (_, r) => <span style={{ color: '#fff' }}>{r.peso_libras_b}-{r.peso_onzas_b}.{r.peso_puntos_b}</span> },

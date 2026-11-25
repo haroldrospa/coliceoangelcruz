@@ -917,11 +917,11 @@ export default function RelojView() {
     let subtitle = '';
     
     if (resultType === 'Azul') {
-      title = '¡VICTORIA LADO AZUL!';
+      title = '¡VICTORIA GALLO AZUL!';
       subtitle = `${gallinoName || 'Traba Azul'} ha vencido a los ${durationStr} de combate`;
       playCelebrationSound('victory');
     } else if (resultType === 'Blanco') {
-      title = '¡VICTORIA LADO BLANCO!';
+      title = '¡VICTORIA GALLO BLANCO!';
       subtitle = `${blancoName || 'Traba Blanca'} ha vencido a los ${durationStr} de combate`;
       playCelebrationSound('victory');
     } else {
@@ -936,9 +936,9 @@ export default function RelojView() {
     // Show winner flash overlay on full scoreboard until a new fight is loaded
     const winWeight = resultType === 'Azul' ? (pesoAzul || '') : resultType === 'Blanco' ? (pesoBlanco || '') : '';
     const winnerDisplayName = resultType === 'Azul'
-      ? (gallinoName || 'LADO AZUL')
+      ? (gallinoName || 'GALLO AZUL')
       : resultType === 'Blanco'
-      ? (blancoName || 'LADO BLANCO')
+      ? (blancoName || 'GALLO BLANCO')
       : 'TABLAS';
     const flashData = { side: resultType, name: winnerDisplayName, fightNum: fightNumber, weight: winWeight };
     setWinnerFlash(flashData);
@@ -1096,7 +1096,7 @@ export default function RelojView() {
   const pendingColumns = [
     { title: '# Pelea', dataIndex: 'numero_pelea', key: 'numero_pelea', width: 90, align: 'center', render: (num) => <Text style={{ fontWeight: 800 }}>#{num}</Text> },
     { 
-      title: 'Lado Azul (Izquierdo)', 
+      title: 'Gallo Azul (Izquierdo)', 
       key: 'gallo_azul', 
       render: (_, r) => (
         <div>
@@ -1108,7 +1108,7 @@ export default function RelojView() {
       ) 
     },
     { 
-      title: 'Lado Blanco (Derecho)', 
+      title: 'Gallo Blanco (Derecho)', 
       key: 'gallo_blanco', 
       render: (_, r) => (
         <div>
@@ -1268,7 +1268,7 @@ export default function RelojView() {
           gap: 6
         }}>
           <span className="bell-ringing" style={{ display: 'inline-block', fontSize: '1.3em' }}>🔔</span>
-          <span>PELEA #{winnerFlash.fightNum} — {isTablas ? 'COMBATE FINALIZADO' : `LADO ${winnerFlash.side.toUpperCase()}`}</span>
+          <span>PELEA #{winnerFlash.fightNum} — {isTablas ? 'COMBATE FINALIZADO' : `GALLO ${winnerFlash.side.toUpperCase()}`}</span>
           <span className="bell-ringing" style={{ display: 'inline-block', fontSize: '1.3em' }}>🔔</span>
         </div>
 
@@ -1529,7 +1529,7 @@ export default function RelojView() {
                   textTransform: 'uppercase',
                   borderBottom: '1px solid rgba(255,255,255,0.2)'
                 }}>
-                  <span style={{ fontSize: isFullscreen ? 16 : 12, color: '#93c5fd', marginRight: 12, fontWeight: 900 }}>LADO AZUL:</span>
+                  <span style={{ fontSize: isFullscreen ? 16 : 12, color: '#93c5fd', marginRight: 12, fontWeight: 900 }}>GALLO AZUL:</span>
                   {gallinoName ? gallinoName : '—'}
                 </div>
 
@@ -1541,7 +1541,7 @@ export default function RelojView() {
                   fontSize: isFullscreen ? 40 : 26,
                   textTransform: 'uppercase'
                 }}>
-                  <span style={{ fontSize: isFullscreen ? 16 : 12, color: '#0f3dd1', marginRight: 12, fontWeight: 900 }}>LADO BLANCO:</span>
+                  <span style={{ fontSize: isFullscreen ? 16 : 12, color: '#0f3dd1', marginRight: 12, fontWeight: 900 }}>GALLO BLANCO:</span>
                   {blancoName ? blancoName : '—'}
                 </div>
               </Col>
@@ -1570,9 +1570,9 @@ export default function RelojView() {
               }}>
                 {gallinoName || blancoName ? (
                   <span>
-                    ••• {gallinoName || 'LADO AZUL'} [ MARCA: {marcaAzul || '-'} • PESO: {pesoAzul || '-'} • COLOR: {colorAzul || '-'} ] 
+                    ••• {gallinoName || 'GALLO AZUL'} [ MARCA: {marcaAzul || '-'} • PESO: {pesoAzul || '-'} • COLOR: {colorAzul || '-'} ] 
                     <span style={{ color: '#ef4444', margin: '0 40px', fontWeight: 900 }}>VS</span> 
-                    {blancoName || 'LADO BLANCO'} [ MARCA: {marcaBlanco || '-'} • PESO: {pesoBlanco || '-'} • COLOR: {colorBlanco || '-'} ] •••
+                    {blancoName || 'GALLO BLANCO'} [ MARCA: {marcaBlanco || '-'} • PESO: {pesoBlanco || '-'} • COLOR: {colorBlanco || '-'} ] •••
                   </span>
                 ) : (
                   <span>••• COLISEO ANGEL CRUZ • LISTO PARA LA PELEA • SELECCIONE LOS GALLOS DE LA CARTELERA ABAJO •••</span>
@@ -1636,7 +1636,7 @@ export default function RelojView() {
                   <div style={{ marginBottom: 10 }}>
                     {renderRoosterAvatar('azul', fotoAzul)}
                   </div>
-                  <div style={{ color: '#93c5fd', fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>LADO AZUL</div>
+                  <div style={{ color: '#93c5fd', fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>GALLO AZUL</div>
                   <div style={{ fontWeight: 900, fontSize: isFullscreen ? 28 : 18, textTransform: 'uppercase', lineHeight: 1.2, wordBreak: 'break-word', color: '#ffffff' }}>
                     {gallinoName ? gallinoName : '—'}
                   </div>
@@ -1722,7 +1722,7 @@ export default function RelojView() {
                   <div style={{ marginBottom: 10 }}>
                     {renderRoosterAvatar('blanco', fotoBlanco)}
                   </div>
-                  <div style={{ color: '#0f3dd1', fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>LADO BLANCO</div>
+                  <div style={{ color: '#0f3dd1', fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>GALLO BLANCO</div>
                   <div style={{ fontWeight: 900, fontSize: isFullscreen ? 28 : 18, textTransform: 'uppercase', lineHeight: 1.2, wordBreak: 'break-word', color: '#111111' }}>
                     {blancoName ? blancoName : '—'}
                   </div>
@@ -1757,9 +1757,9 @@ export default function RelojView() {
               }}>
                 {gallinoName || blancoName ? (
                   <span>
-                    ••• {gallinoName || 'LADO AZUL'} [ MARCA: {marcaAzul || '-'} • PESO: {pesoAzul || '-'} • COLOR: {colorAzul || '-'} ] 
+                    ••• {gallinoName || 'GALLO AZUL'} [ MARCA: {marcaAzul || '-'} • PESO: {pesoAzul || '-'} • COLOR: {colorAzul || '-'} ] 
                     <span style={{ color: '#ef4444', margin: '0 40px', fontWeight: 900 }}>VS</span> 
-                    {blancoName || 'LADO BLANCO'} [ MARCA: {marcaBlanco || '-'} • PESO: {pesoBlanco || '-'} • COLOR: {colorBlanco || '-'} ] •••
+                    {blancoName || 'GALLO BLANCO'} [ MARCA: {marcaBlanco || '-'} • PESO: {pesoBlanco || '-'} • COLOR: {colorBlanco || '-'} ] •••
                   </span>
                 ) : (
                   <span>••• COLISEO ANGEL CRUZ • LISTO PARA LA PELEA • SELECCIONE LOS GALLOS DE LA CARTELERA ABAJO •••</span>
@@ -1882,7 +1882,7 @@ export default function RelojView() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
                     {renderRoosterAvatar('azul', fotoAzul)}
                     <div style={{ overflow: 'hidden', flex: 1 }}>
-                      <div style={{ fontSize: 9, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>LADO AZUL</div>
+                      <div style={{ fontSize: 9, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>GALLO AZUL</div>
                       <div style={{ fontWeight: 900, fontSize: 'clamp(14px, 3.5vw, 24px)', textTransform: 'uppercase', color: '#ffffff', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {gallinoName ? gallinoName : '—'}
                       </div>
@@ -1913,7 +1913,7 @@ export default function RelojView() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
                     {renderRoosterAvatar('blanco', fotoBlanco)}
                     <div style={{ overflow: 'hidden', flex: 1 }}>
-                      <div style={{ fontSize: 9, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>LADO BLANCO</div>
+                      <div style={{ fontSize: 9, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>GALLO BLANCO</div>
                       <div style={{ fontWeight: 900, fontSize: 'clamp(14px, 3.5vw, 24px)', textTransform: 'uppercase', color: '#111111', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {blancoName ? blancoName : '—'}
                       </div>
@@ -2176,7 +2176,7 @@ export default function RelojView() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} />
                     <Text style={{ color: '#60a5fa', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      LADO AZUL (IZQUIERDA)
+                      GALLO AZUL (IZQUIERDA)
                     </Text>
                   </div>
                   <Row gutter={6}>
@@ -2221,7 +2221,7 @@ export default function RelojView() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ffffff' }} />
                     <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      LADO BLANCO (DERECHA)
+                      GALLO BLANCO (DERECHA)
                     </Text>
                   </div>
                   <Row gutter={6}>
@@ -2625,10 +2625,10 @@ export default function RelojView() {
               </div>
               <div>
                 <div style={{ color: '#93c5fd', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  LADO AZUL (PLACA)
+                  GALLO AZUL
                 </div>
                 <div style={{ color: '#ffffff', fontSize: 15, fontWeight: 900, lineHeight: 1.1 }}>
-                  {gallinoName || 'LADO AZUL'}
+                  {gallinoName || 'GALLO AZUL'}
                 </div>
               </div>
             </div>
@@ -2664,10 +2664,10 @@ export default function RelojView() {
               </div>
               <div>
                 <div style={{ color: '#475569', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  LADO BLANCO
+                  GALLO BLANCO
                 </div>
                 <div style={{ color: '#0f172a', fontSize: 15, fontWeight: 900, lineHeight: 1.1 }}>
-                  {blancoName || 'LADO BLANCO'}
+                  {blancoName || 'GALLO BLANCO'}
                 </div>
               </div>
             </div>
