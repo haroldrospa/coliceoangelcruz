@@ -15,7 +15,8 @@ import {
   ControlOutlined,
   EditOutlined,
   PictureOutlined,
-  CheckOutlined
+  CheckOutlined,
+  ClearOutlined
 } from '@ant-design/icons';
 import { supabase, rawFetch, broadcastEventStatus, resolveBetsForEvent, upsertSetting } from '../lib/supabase';
 
@@ -204,6 +205,8 @@ export default function RelojView() {
       return null;
     }
   });
+
+  const isFightLoaded = Boolean(gallinoName || blancoName);
   
   // Betting phase state (2-minute countdown before fight starts)
   const [bettingPhase, setBettingPhase] = useState(false);
@@ -236,63 +239,33 @@ export default function RelojView() {
       const data = await rawFetch('cartelera_fights?select=*&order=numero_pelea.asc');
       if (data) {
         setCarteleraFights(data);
-        const events = await rawFetch('events?select=*');
-        
-        // Build fightResults from Supabase finished events to stay 100% in sync
-        const dbResults = {};
-        if (events) {
-          const finishedEvents = events.filter(e => e.status === 'FINISHED');
-          const localResults = JSON.parse(localStorage.getItem('fight_results_reloj') || '{}');
-          for (const ev of finishedEvents) {
-            const num = parseInt(ev.post_number);
-            if (num) {
-              const winnerSideMap = { 'A': 'Azul', 'B': 'Blanco', 'D': 'Tablas' };
-              dbResults[num] = {
-                result: winnerSideMap[ev.winner_side] || 'Tablas',
-                duration: localResults[num]?.duration || '-',
-                timestamp: ev.updated_at ? new Date(ev.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'
-              };
-            }
-          }
-        }
-        setFightResults(dbResults);
-        localStorage.setItem('fight_results_reloj', JSON.stringify(dbResults));
-
-        // Sync local to DB (fallback in case some local result was registered offline)
-        const localResults = JSON.parse(localStorage.getItem('fight_results_reloj') || '{}');
-        for (const f of data) {
-          const resultInfo = localResults[f.numero_pelea];
-          if (resultInfo) {
-            const ev = events ? events.find(e => parseInt(e.post_number) === f.numero_pelea) : null;
-            if (!ev || ev.status !== 'FINISHED') {
-              const winnerSideMap = { 'Azul': 'A', 'Blanco': 'B', 'Tablas': 'D' };
-              const winnerSide = winnerSideMap[resultInfo.result] || 'D';
-              
-              const weightA = JSON.stringify({ weight: `${f.peso_libras_a}-${f.peso_onzas_a}.${f.peso_puntos_a}`, color: f.color_a, marca: f.marca_a, clase: f.clase_a, turno: f.turno_a });
-              const weightB = JSON.stringify({ weight: `${f.peso_libras_b}-${f.peso_onzas_b}.${f.peso_puntos_b}`, color: f.color_b, marca: f.marca_b, clase: f.clase_b, turno: f.turno_b });
-
-              const payload = {
-                post_number: f.numero_pelea.toString(),
-                gallo_a_name: f.traba_a,
-                gallo_b_name: f.traba_b,
-                gallo_a_weight: weightA,
-                gallo_b_weight: weightB,
-                gallo_a_odds: 1.9,
-                gallo_b_odds: 1.9,
-                status: 'FINISHED',
-                winner_side: winnerSide
-              };
-              try {
-                if (ev) {
-                  await rawFetch(`events`, { method: 'PATCH', body: payload, query: `id=eq.${ev.id}` });
-                } else {
-                  await rawFetch('events', { method: 'POST', body: payload });
-                }
-              } catch (syncErr) {
-                console.error("Cartelera sync fight error:", syncErr);
+        if (data.length === 0) {
+          // If cartelera is empty, ensure clean state and no fake completed fights
+          setFightResults({});
+          localStorage.removeItem('fight_results_reloj');
+        } else {
+          const events = await rawFetch('events?select=*');
+          
+          // Build fightResults ONLY from Supabase finished events that match existing cartelera fights
+          const dbResults = {};
+          if (events && events.length > 0) {
+            const finishedEvents = events.filter(e => e.status === 'FINISHED');
+            const localResults = JSON.parse(localStorage.getItem('fight_results_reloj') || '{}');
+            for (const ev of finishedEvents) {
+              const num = parseInt(ev.post_number);
+              const matchingFight = data.find(f => f.numero_pelea === num);
+              if (num && matchingFight) {
+                const winnerSideMap = { 'A': 'Azul', 'B': 'Blanco', 'D': 'Tablas' };
+                dbResults[num] = {
+                  result: winnerSideMap[ev.winner_side] || 'Tablas',
+                  duration: localResults[num]?.duration || '-',
+                  timestamp: ev.updated_at ? new Date(ev.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'
+                };
               }
             }
           }
+          setFightResults(dbResults);
+          localStorage.setItem('fight_results_reloj', JSON.stringify(dbResults));
         }
       }
     } catch (err) {
@@ -424,37 +397,56 @@ export default function RelojView() {
           }
         }
 
-        // 2. Restore fight display data (prefer active localStorage fight, fallback to Supabase)
-        const savedNum = localStorage.getItem('reloj_fight_number');
-        const savedA = localStorage.getItem('reloj_gallino_name');
-        const savedB = localStorage.getItem('reloj_blanco_name');
+        // 2. Restore fight display data (prefer active live/closed event in Supabase, fallback to running clock)
+        const activeEv = await rawFetch('events?select=*&status=in.(LIVE,CLOSED)&order=updated_at.desc&limit=1');
+        if (activeEv && activeEv[0]) {
+          const ev = activeEv[0];
+          const num = parseInt(ev.post_number) || 1;
 
-        if (savedNum && (clockRunning || savedA || savedB)) {
-          const num = parseInt(savedNum, 10);
           setFightNumber(num);
+          if (ev.gallo_a_name) setGallinoName(ev.gallo_a_name);
+          if (ev.gallo_b_name) setBlancoName(ev.gallo_b_name);
+          // Restore weight/color/marca from cartelera if available
+          const savedCartelera = await rawFetch('cartelera_fights?select=*&numero_pelea=eq.' + num);
+          if (savedCartelera && savedCartelera[0]) {
+            const f = savedCartelera[0];
+            setPesoAzul(`${f.peso_libras_a}-${f.peso_onzas_a}.${f.peso_puntos_a}`);
+            setColorAzul(f.color_a || '');
+            setMarcaAzul(f.marca_a || '');
+            setPesoBlanco(`${f.peso_libras_b}-${f.peso_onzas_b}.${f.peso_puntos_b}`);
+            setColorBlanco(f.color_b || '');
+            setMarcaBlanco(f.marca_b || '');
+          }
+        } else if (clockRunning) {
+          const savedNum = localStorage.getItem('reloj_fight_number');
+          const savedA = localStorage.getItem('reloj_gallino_name');
+          const savedB = localStorage.getItem('reloj_blanco_name');
+          if (savedNum) setFightNumber(parseInt(savedNum, 10));
           if (savedA) setGallinoName(savedA);
           if (savedB) setBlancoName(savedB);
         } else {
-          const activeEv = await rawFetch('events?select=*&status=in.(LIVE,CLOSED)&order=updated_at.desc&limit=1');
-          if (activeEv && activeEv[0]) {
-            const ev = activeEv[0];
-            const num = parseInt(ev.post_number) || 1;
-
-            setFightNumber(num);
-            if (ev.gallo_a_name) setGallinoName(ev.gallo_a_name);
-            if (ev.gallo_b_name) setBlancoName(ev.gallo_b_name);
-            // Restore weight/color/marca from cartelera if available
-            const savedCartelera = await rawFetch('cartelera_fights?select=*&numero_pelea=eq.' + num);
-            if (savedCartelera && savedCartelera[0]) {
-              const f = savedCartelera[0];
-              setPesoAzul(`${f.peso_libras_a}-${f.peso_onzas_a}.${f.peso_puntos_a}`);
-              setColorAzul(f.color_a || '');
-              setMarcaAzul(f.marca_a || '');
-              setPesoBlanco(`${f.peso_libras_b}-${f.peso_onzas_b}.${f.peso_puntos_b}`);
-              setColorBlanco(f.color_b || '');
-              setMarcaBlanco(f.marca_b || '');
-            }
-          }
+          // No fight is currently running: ensure completely clean state with no mock/stale fight loaded
+          setFightNumber(1);
+          setGallinoName('');
+          setBlancoName('');
+          setPesoAzul('');
+          setColorAzul('');
+          setMarcaAzul('');
+          setPesoBlanco('');
+          setColorBlanco('');
+          setMarcaBlanco('');
+          setBettingPhase(false);
+          localStorage.setItem('betting_active', 'false');
+          localStorage.removeItem('reloj_gallino_name');
+          localStorage.removeItem('reloj_blanco_name');
+          localStorage.removeItem('reloj_peso_azul');
+          localStorage.removeItem('reloj_color_azul');
+          localStorage.removeItem('reloj_marca_azul');
+          localStorage.removeItem('reloj_peso_blanco');
+          localStorage.removeItem('reloj_color_blanco');
+          localStorage.removeItem('reloj_marca_blanco');
+          localStorage.removeItem('betting_fight_number');
+          localStorage.removeItem('betting_started_at');
         }
 
         // 3. Restore scoreboard design style from Supabase settings
@@ -807,6 +799,63 @@ export default function RelojView() {
     localStorage.setItem('sub_running', 'false');
     
     message.info('Relojes restablecidos');
+  };
+
+  // Quitar/Descargar pelea actual del reloj y volver al estado sin pelea cargada
+  const handleClearCurrentFight = async () => {
+    if (bettingTimerRef.current) clearInterval(bettingTimerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    setBettingPhase(false);
+    setBettingTimeLeft(0);
+    setIsRunning(false);
+    setSubTimeLeft(null);
+    setCareoFinished(false);
+    setTimeLeft(presetDuration);
+    setElapsedTime(0);
+
+    // Limpiar datos de los gallos en estado
+    setGallinoName('');
+    setBlancoName('');
+    setPesoAzul('');
+    setColorAzul('');
+    setMarcaAzul('');
+    setPesoBlanco('');
+    setColorBlanco('');
+    setMarcaBlanco('');
+    setFotoAzul(null);
+    setFotoBlanco(null);
+    setWinnerFlash(null);
+
+    // Limpiar localStorage de la pelea
+    localStorage.removeItem('reloj_fight_number');
+    localStorage.removeItem('reloj_gallino_name');
+    localStorage.removeItem('reloj_blanco_name');
+    localStorage.removeItem('reloj_peso_azul');
+    localStorage.removeItem('reloj_color_azul');
+    localStorage.removeItem('reloj_marca_azul');
+    localStorage.removeItem('reloj_peso_blanco');
+    localStorage.removeItem('reloj_color_blanco');
+    localStorage.removeItem('reloj_marca_blanco');
+    localStorage.removeItem('winner_flash');
+    localStorage.removeItem('fight_active');
+    localStorage.setItem('clock_running', 'false');
+    localStorage.setItem('betting_active', 'false');
+    localStorage.setItem('sub_running', 'false');
+
+    // Transmitir reloj en 0 sin apuestas
+    broadcastClockState(false, 0, presetDuration, null);
+
+    // Si había un evento en vivo, actualizarlo a PENDING para cerrar apuestas
+    try {
+      if (fightNumber) {
+        await upsertEvent(fightNumber, 'PENDING');
+      }
+    } catch (e) {
+      console.warn('Error clearing fight status in database:', e);
+    }
+
+    message.success('Pelea descargada del reloj');
   };
 
   const handleStartSubTimer = (seconds, label) => {
@@ -1350,7 +1399,7 @@ export default function RelojView() {
                 padding: '16px 8px'
               }}>
                 <span style={{ color: '#ef4444', fontWeight: 800, fontSize: isFullscreen ? 22 : 14, letterSpacing: 2 }}>PELEA</span>
-                <span style={{ color: '#ffffff', fontWeight: 900, fontSize: isFullscreen ? 60 : 38, lineHeight: 1 }}>{fightNumber}</span>
+                <span style={{ color: '#ffffff', fontWeight: 900, fontSize: isFullscreen ? 60 : 38, lineHeight: 1 }}>{isFightLoaded ? fightNumber : '-'}</span>
               </Col>
 
               <Col span={18}>
@@ -1363,7 +1412,7 @@ export default function RelojView() {
                   textTransform: 'uppercase',
                   borderBottom: '1px solid #dddddd'
                 }}>
-                  {gallinoName ? gallinoName : ''}
+                  {gallinoName ? gallinoName : '—'}
                 </div>
 
                 <div style={{ 
@@ -1374,7 +1423,7 @@ export default function RelojView() {
                   fontSize: isFullscreen ? 40 : 26,
                   textTransform: 'uppercase'
                 }}>
-                  {blancoName ? blancoName : ''}
+                  {blancoName ? blancoName : '—'}
                 </div>
               </Col>
             </Row>
@@ -1468,7 +1517,7 @@ export default function RelojView() {
                   </div>
                   <div style={{ color: '#0f3dd1', fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>LADO AZUL</div>
                   <div style={{ fontWeight: 900, fontSize: isFullscreen ? 28 : 18, textTransform: 'uppercase', lineHeight: 1.2, wordBreak: 'break-word', color: '#111' }}>
-                    {gallinoName ? gallinoName : ''}
+                    {gallinoName ? gallinoName : '—'}
                   </div>
                   <div style={{ marginTop: 12, borderTop: '1px solid #eee', paddingTop: 8, width: '100%', fontSize: isFullscreen ? 12 : 9, fontWeight: 700, color: '#555' }}>
                     <div>PESO: <strong style={{ color: '#000' }}>{pesoAzul || '-'}</strong></div>
@@ -1483,7 +1532,7 @@ export default function RelojView() {
                 {/* Pelea block */}
                 <div style={{ background: '#1d1d1d', border: '1px solid #2d2d2d', borderRadius: 8, padding: 6, textAlign: 'center' }}>
                   <span style={{ color: '#ef4444', fontWeight: 800, fontSize: isFullscreen ? 18 : 12, marginRight: 8 }}>PELEA</span>
-                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: isFullscreen ? 26 : 18 }}>{fightNumber}</span>
+                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: isFullscreen ? 26 : 18 }}>{isFightLoaded ? fightNumber : '-'}</span>
                 </div>
 
                 {/* Remaining Time (Huge display) */}
@@ -1554,7 +1603,7 @@ export default function RelojView() {
                   </div>
                   <div style={{ color: '#ffffff', opacity: 0.8, fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>LADO BLANCO</div>
                   <div style={{ fontWeight: 900, fontSize: isFullscreen ? 28 : 18, textTransform: 'uppercase', lineHeight: 1.2, wordBreak: 'break-word', color: '#ffffff' }}>
-                    {blancoName ? blancoName : ''}
+                    {blancoName ? blancoName : '—'}
                   </div>
                   <div style={{ marginTop: 12, borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: 8, width: '100%', fontSize: isFullscreen ? 12 : 9, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>
                     <div>PESO: <strong style={{ color: '#fff' }}>{pesoBlanco || '-'}</strong></div>
@@ -1691,7 +1740,9 @@ export default function RelojView() {
                   boxShadow: 'inset 0 1px 3px rgba(255,255,255,0.1)'
                 }}>
                   <div style={{ color: '#ef4444', fontWeight: 900, fontSize: isFullscreen ? 12 : 9, letterSpacing: 0.5, lineHeight: 1 }}>COMBATE</div>
-                  <div style={{ color: '#ffffff', fontWeight: 900, fontSize: isFullscreen ? 34 : 20, lineHeight: 1.1 }}>#{fightNumber}</div>
+                  <div style={{ color: '#ffffff', fontWeight: 900, fontSize: isFullscreen ? 34 : 20, lineHeight: 1.1 }}>
+                    {isFightLoaded ? `#${fightNumber}` : '-'}
+                  </div>
                 </div>
               </Col>
 
@@ -1773,7 +1824,7 @@ export default function RelojView() {
                     <div style={{ overflow: 'hidden', flex: 1 }}>
                       <div style={{ fontSize: 9, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>LADO AZUL</div>
                       <div style={{ fontWeight: 900, fontSize: 'clamp(14px, 3.5vw, 24px)', textTransform: 'uppercase', color: '#111111', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {gallinoName ? gallinoName : ''}
+                        {gallinoName ? gallinoName : '—'}
                       </div>
                       <div style={{ display: 'flex', gap: 6, marginTop: 2, fontSize: 11, fontWeight: 900, color: '#333' }}>
                         <span>P: <strong style={{ color: '#000' }}>{pesoAzul || '-'}</strong></span>
@@ -1804,7 +1855,7 @@ export default function RelojView() {
                     <div style={{ overflow: 'hidden', flex: 1 }}>
                       <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', fontWeight: 900, letterSpacing: 0.5 }}>LADO BLANCO</div>
                       <div style={{ fontWeight: 900, fontSize: 'clamp(14px, 3.5vw, 24px)', textTransform: 'uppercase', color: '#ffffff', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {blancoName ? blancoName : ''}
+                        {blancoName ? blancoName : '—'}
                       </div>
                       <div style={{ display: 'flex', gap: 6, marginTop: 2, fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.9)' }}>
                         <span>P: <strong>{pesoBlanco || '-'}</strong></span>
@@ -1835,6 +1886,20 @@ export default function RelojView() {
                       PARÁMETROS DEL COMBATE
                     </span>
                   </div>
+                }
+                extra={
+                  isFightLoaded ? (
+                    <Button
+                      size="small"
+                      danger
+                      type="dashed"
+                      icon={<ClearOutlined />}
+                      onClick={handleClearCurrentFight}
+                      style={{ fontSize: 11, fontWeight: 800 }}
+                    >
+                      Descargar Pelea
+                    </Button>
+                  ) : null
                 }
                 style={{ 
                   background: 'linear-gradient(145deg, rgba(20, 28, 44, 0.95) 0%, rgba(10, 14, 24, 0.98) 100%)',

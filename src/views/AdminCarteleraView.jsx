@@ -6,7 +6,7 @@ import {
 import { 
   PlusOutlined, FilePdfOutlined, LockOutlined, UnlockOutlined, 
   ThunderboltFilled, SaveOutlined, DeleteOutlined, EditOutlined, CloseOutlined,
-  ExclamationCircleOutlined, WarningOutlined, UndoOutlined
+  ExclamationCircleOutlined, WarningOutlined, UndoOutlined, UploadOutlined, FileTextOutlined
 } from '@ant-design/icons';
 import { supabase, rawFetch } from '../lib/supabase';
 import jsPDF from 'jspdf';
@@ -32,6 +32,9 @@ const AdminCarteleraView = () => {
   const [editingRoosterId, setEditingRoosterId] = useState(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [parsedImportFights, setParsedImportFights] = useState([]);
+  const [editingFight, setEditingFight] = useState(null);
   const [nextTurn, setNextTurn] = useState(1);
   const [weightDiff, setWeightDiff] = useState(0);
 
@@ -303,21 +306,226 @@ const AdminCarteleraView = () => {
     setWeightDiff(Math.abs(ozA - ozB));
   };
 
+  const parseCarteleraTXT = (content) => {
+    const lines = content.split(/\r?\n/).filter(l => l.trim().length > 0);
+    const parsedFights = [];
+
+    for (const line of lines) {
+      const fields = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') inQuotes = !inQuotes;
+        else if (c === ',' && !inQuotes) { fields.push(cur.trim().replace(/^"|"$/g, '').trim()); cur = ''; }
+        else cur += c;
+      }
+      fields.push(cur.trim().replace(/^"|"$/g, '').trim());
+
+      if (fields.length < 25) continue;
+
+      const fechaRaw = fields[0]; // ej. '25/11/2026'
+      let fechaISO = new Date().toISOString().split('T')[0];
+      if (fechaRaw) {
+        const parts = fechaRaw.split('/');
+        if (parts.length === 3) {
+          fechaISO = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+      }
+
+      const numPelea = parseInt(fields[1]) || (parsedFights.length + 1);
+
+      const parseWeight = (raw) => {
+        const totalOz = parseFloat(raw) || 0;
+        const lbs = Math.floor(totalOz / 16);
+        const remOz = totalOz % 16;
+        const oz = Math.floor(remOz);
+        const pts = Math.round((remOz - oz) * 10);
+        return { lbs, oz, pts };
+      };
+
+      const wA = parseWeight(fields[11]);
+      const wB = parseWeight(fields[24]);
+
+      const cleanMarca = (val) => {
+        const num = parseInt(val);
+        return isNaN(num) ? null : num;
+      };
+
+      const cleanStr = (val) => val ? val.trim() : '';
+
+      const colorNormalize = (col) => {
+        if (!col) return 'Joco';
+        const upper = col.toUpperCase().trim();
+        const map = {
+          'JOCO': 'Joco',
+          'GALLINO': 'Gallino',
+          'BLANCO': 'Blanco',
+          'PINTO': 'Pinto',
+          'JABAO': 'Jabao',
+          'INDIO': 'Indio',
+          'AMARILLO': 'Amarillo',
+          'CENIZO': 'Cenizo',
+          'GIRO': 'Giro',
+          'NEGRO': 'Negro',
+          'MELADO': 'Melado'
+        };
+        return map[upper] || (col.charAt(0).toUpperCase() + col.slice(1).toLowerCase());
+      };
+
+      parsedFights.push({
+        numero_pelea: numPelea,
+        fecha_evento: fechaISO,
+        posta: 0,
+        traba_a: cleanStr(fields[5]) || cleanStr(fields[10]),
+        peso_libras_a: wA.lbs,
+        peso_onzas_a: wA.oz,
+        peso_puntos_a: wA.pts,
+        color_a: colorNormalize(fields[12]),
+        marca_a: cleanMarca(fields[6]),
+        clase_a: cleanStr(fields[7]),
+        turno_a: cleanStr(fields[2]),
+
+        traba_b: cleanStr(fields[18]) || cleanStr(fields[23]),
+        peso_libras_b: wB.lbs,
+        peso_onzas_b: wB.oz,
+        peso_puntos_b: wB.pts,
+        color_b: colorNormalize(fields[25]),
+        marca_b: cleanMarca(fields[19]),
+        clase_b: cleanStr(fields[20]),
+        turno_b: cleanStr(fields[15]),
+        locked: false
+      });
+    }
+    return parsedFights;
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result;
+      if (typeof content !== 'string') return;
+      const parsed = parseCarteleraTXT(content);
+      if (parsed.length === 0) {
+        message.error('No se pudieron extraer peleas válidas del archivo TXT.');
+        return;
+      }
+      setParsedImportFights(parsed);
+      setIsImportModalOpen(true);
+    };
+    reader.onerror = () => {
+      message.error('Error al leer el archivo');
+    };
+    reader.readAsText(file);
+    // Reset file input so user can choose same file again if desired
+    e.target.value = '';
+  };
+
+  const handleConfirmImport = async () => {
+    if (parsedImportFights.length === 0) return;
+    setLoading(true);
+    try {
+      // Si ya hay peleas, eliminarlas primero para reemplazar limpiamente
+      if (fights.length > 0) {
+        const ids = fights.map(f => f.id).join(',');
+        await rawFetch('cartelera_fights', {
+          method: 'DELETE',
+          query: `id=in.(${ids})`
+        });
+      }
+
+      // Insertar las nuevas peleas en cartelera_fights
+      let successCount = 0;
+      for (const fight of parsedImportFights) {
+        try {
+          await rawFetch('cartelera_fights', {
+            method: 'POST',
+            body: fight
+          });
+          successCount++;
+        } catch (insertErr) {
+          console.error('Error insertando pelea #' + fight.numero_pelea, insertErr);
+        }
+      }
+
+      message.success(`¡Éxito! Se cargaron ${successCount} peleas a la cartelera. Ahora puedes editarlas antes de cerrarla.`);
+      setIsImportModalOpen(false);
+      setParsedImportFights([]);
+      setIsLocked(false);
+      fetchFights();
+    } catch (e) {
+      console.error(e);
+      message.error('Error al importar las peleas');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenEditFight = (fight) => {
+    setEditingFight(fight);
+    form.setFieldsValue({
+      numero_pelea: fight.numero_pelea,
+      posta: fight.posta || 0,
+      fecha_evento: fight.fecha_evento || new Date().toISOString().split('T')[0],
+      traba_a: fight.traba_a,
+      peso_libras_a: fight.peso_libras_a || 0,
+      peso_onzas_a: fight.peso_onzas_a || 0,
+      peso_puntos_a: fight.peso_puntos_a || 0,
+      color_a: fight.color_a || 'Joco',
+      traba_b: fight.traba_b,
+      peso_libras_b: fight.peso_libras_b || 0,
+      peso_onzas_b: fight.peso_onzas_b || 0,
+      peso_puntos_b: fight.peso_puntos_b || 0,
+      color_b: fight.color_b || 'Joco'
+    });
+    const ozA = calculateTotalOz(fight, 'a');
+    const ozB = calculateTotalOz(fight, 'b');
+    setWeightDiff(Math.abs(ozA - ozB));
+    setIsModalOpen(true);
+  };
+
+  const handleOpenNewFight = () => {
+    setEditingFight(null);
+    form.resetFields();
+    form.setFieldsValue({
+      numero_pelea: fights.length + 1,
+      fecha_evento: new Date().toISOString().split('T')[0],
+      peso_libras_a: 3, peso_onzas_a: 0, peso_puntos_a: 0,
+      peso_libras_b: 3, peso_onzas_b: 0, peso_puntos_b: 0,
+      color_a: 'Joco', color_b: 'Joco'
+    });
+    setWeightDiff(0);
+    setIsModalOpen(true);
+  };
+
   const handleSave = async (values) => {
-    if (isLocked) return message.warning('La cartelera está cerrada para edición');
+    if (isLocked) return message.warning('La cartelera está cerrada para edición. Abre la edición primero.');
     
     setLoading(true);
     try {
-      await rawFetch('cartelera_fights', {
-        method: 'POST',
-        body: values
-      });
-      message.success('Pelea registrada');
+      if (editingFight && editingFight.id) {
+        await rawFetch('cartelera_fights', {
+          method: 'PATCH',
+          body: values,
+          query: `id=eq.${editingFight.id}`
+        });
+        message.success(`Pelea #${values.numero_pelea || editingFight.numero_pelea} actualizada`);
+      } else {
+        await rawFetch('cartelera_fights', {
+          method: 'POST',
+          body: values
+        });
+        message.success('Pelea registrada');
+      }
       setIsModalOpen(false);
+      setEditingFight(null);
       form.resetFields();
       fetchFights();
     } catch (e) {
-      message.error('Error al guardar');
+      message.error('Error al guardar la pelea');
     } finally {
       setLoading(false);
     }
@@ -352,7 +560,7 @@ const AdminCarteleraView = () => {
                        gallo_b_name: f.traba_b,
                        gallo_a_weight: JSON.stringify({ weight: `${f.peso_libras_a}-${f.peso_onzas_a}.${f.peso_puntos_a}`, color: f.color_a, marca: f.marca_a, clase: f.clase_a, turno: f.turno_a }),
                        gallo_b_weight: JSON.stringify({ weight: `${f.peso_libras_b}-${f.peso_onzas_b}.${f.peso_puntos_b}`, color: f.color_b, marca: f.marca_b, clase: f.clase_b, turno: f.turno_b }),
-                       status: 'LIVE'
+                       status: 'PENDING'
 
                    }
                });
@@ -538,24 +746,33 @@ const AdminCarteleraView = () => {
     },
     {
       title: 'Acción',
-      width: 70,
+      width: 100,
       align: 'center',
       render: (_, r) => (
-        <Popconfirm
-          title="¿Eliminar esta pelea?"
-          description={isLocked ? "La cartelera está cerrada. ¿Deseas eliminar este combate de todas formas?" : "¿Estás seguro de que deseas eliminar este combate?"}
-          onConfirm={() => deleteFight(r)}
-          okText="Eliminar"
-          cancelText="Cancelar"
-          okButtonProps={{ danger: true }}
-        >
+        <Space size="small">
           <Button 
-            danger 
             type="text" 
-            icon={<DeleteOutlined />} 
-            title="Eliminar Pelea"
+            icon={<EditOutlined style={{ color: '#10b981', fontSize: 16 }} />} 
+            onClick={() => handleOpenEditFight(r)}
+            disabled={isLocked}
+            title={isLocked ? "La cartelera está cerrada para edición" : "Editar Pelea"}
           />
-        </Popconfirm>
+          <Popconfirm
+            title="¿Eliminar esta pelea?"
+            description={isLocked ? "La cartelera está cerrada. ¿Deseas eliminar este combate de todas formas?" : "¿Estás seguro de que deseas eliminar este combate?"}
+            onConfirm={() => deleteFight(r)}
+            okText="Eliminar"
+            cancelText="Cancelar"
+            okButtonProps={{ danger: true }}
+          >
+            <Button 
+              danger 
+              type="text" 
+              icon={<DeleteOutlined style={{ fontSize: 16 }} />} 
+              title="Eliminar Pelea"
+            />
+          </Popconfirm>
+        </Space>
       )
     }
   ];
@@ -581,6 +798,32 @@ const AdminCarteleraView = () => {
           </div>
         </div>
         <Space>
+          {/* BOTÓN CARGAR DESDE ARCHIVO TXT */}
+          <input 
+            type="file" 
+            accept=".txt,.TXT" 
+            id="cartelera-file-upload" 
+            style={{ display: 'none' }} 
+            onChange={handleFileUpload} 
+          />
+          <Button 
+            type="primary"
+            icon={<UploadOutlined />} 
+            onClick={() => document.getElementById('cartelera-file-upload')?.click()}
+            style={{ background: '#10b981', fontWeight: 700 }}
+            disabled={isLocked}
+          >
+            Cargar Cartelera (.TXT)
+          </Button>
+
+          <Button 
+            icon={<PlusOutlined />} 
+            onClick={handleOpenNewFight}
+            disabled={isLocked}
+          >
+            Nueva Pelea Manual
+          </Button>
+
           <Button 
             icon={isLocked ? <UnlockOutlined /> : <LockOutlined />} 
             danger={!isLocked}
@@ -777,17 +1020,19 @@ const AdminCarteleraView = () => {
       <Modal 
         title={
           <div style={{ padding: '10px 0' }}>
-            <Title level={4} style={{ color: '#fff', margin: 0, letterSpacing: '1px' }}>REGISTRO DE ENFRENTAMIENTO</Title>
+            <Title level={4} style={{ color: '#fff', margin: 0, letterSpacing: '1px' }}>
+              {editingFight ? `EDITAR PELEA #${editingFight.numero_pelea}` : 'REGISTRO DE ENFRENTAMIENTO'}
+            </Title>
             <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>COLISEO ANGEL CRUZ - CONTROL DE PESAJE</Text>
           </div>
         }
         open={isModalOpen} 
-        onCancel={() => setIsModalOpen(false)}
+        onCancel={() => { setIsModalOpen(false); setEditingFight(null); }}
         onOk={() => form.submit()}
         width={1100}
         forceRender
         confirmLoading={loading}
-        okText="REGISTRAR PELEA"
+        okText={editingFight ? "GUARDAR CAMBIOS" : "REGISTRAR PELEA"}
         closeIcon={<Title level={5} style={{ color: 'rgba(255,255,255,0.3)', margin: 0 }}>✕</Title>}
         styles={{ 
             content: { background: '#0a0a0a', border: '1px solid rgba(16,185,129,0.2)', padding: 0, borderRadius: 16, overflow: 'hidden' },
@@ -809,17 +1054,22 @@ const AdminCarteleraView = () => {
         >
           <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px 24px', borderRadius: 12, marginBottom: 32, border: '1px solid rgba(255,255,255,0.05)' }}>
             <Row gutter={24} align="middle">
-              <Col span={8}>
+              <Col span={6}>
+                <Form.Item name="numero_pelea" label={<span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>NÚMERO DE PELEA</span>} style={{ marginBottom: 0 }}>
+                  <InputNumber min={1} style={{ width: '100%', height: 45, background: '#050505', border: '1px solid rgba(16,185,129,0.3)', color: '#fff', fontSize: 16 }} />
+                </Form.Item>
+              </Col>
+              <Col span={6}>
                 <Form.Item name="posta" label={<span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>MONTO DE LA POSTA</span>} style={{ marginBottom: 0 }}>
                   <InputNumber prefix={<Text style={{ color: '#10b981' }}>$</Text>} style={{ width: '100%', height: 45, background: '#050505', border: '1px solid rgba(16,185,129,0.3)', color: '#fff', fontSize: 16 }} />
                 </Form.Item>
               </Col>
-              <Col span={8}>
+              <Col span={6}>
                 <Form.Item name="fecha_evento" label={<span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>FECHA DEL EVENTO</span>} style={{ marginBottom: 0 }}>
                   <Input type="date" style={{ height: 45, background: '#050505', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }} />
                 </Form.Item>
               </Col>
-              <Col span={8}>
+              <Col span={6}>
                  <div style={{ textAlign: 'right' }}>
                     <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, display: 'block' }}>ESTADO DE PESAJE</Text>
                     {weightDiff <= 3 ? (
@@ -1115,6 +1365,85 @@ const AdminCarteleraView = () => {
           <Button onClick={() => setIsClearModalOpen(false)} disabled={loading}>
             Cancelar
           </Button>
+        </div>
+      </Modal>
+
+      {/* MODAL DE CONFIRMACIÓN DE IMPORTACIÓN DE ARCHIVO TXT */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: '50%',
+              background: 'rgba(16, 185, 129, 0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <FileTextOutlined style={{ color: '#10b981', fontSize: 20 }} />
+            </div>
+            <div>
+              <Title level={4} style={{ color: '#fff', margin: 0, fontSize: 16 }}>Confirmar Carga de Cartelera desde Archivo</Title>
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
+                Se detectaron {parsedImportFights.length} peleas listas para cargarse. Revisa la vista previa antes de confirmar.
+              </Text>
+            </div>
+          </div>
+        }
+        open={isImportModalOpen}
+        onCancel={() => { setIsImportModalOpen(false); setParsedImportFights([]); }}
+        onOk={handleConfirmImport}
+        width={950}
+        okText={`CONFIRMAR Y CARGAR ${parsedImportFights.length} PELEAS`}
+        confirmLoading={loading}
+        okButtonProps={{ style: { background: '#10b981', height: 40, fontWeight: 800 } }}
+        styles={{
+          content: { background: '#0a0a0a', border: '1px solid #10b981', borderRadius: 16, overflow: 'hidden' },
+          header: { background: 'rgba(16,185,129,0.05)', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)' },
+          body: { padding: '20px 24px' }
+        }}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Alert
+            message="Confirmación requerida"
+            description={`Al confirmar, se guardarán ${parsedImportFights.length} peleas en la cartelera. Una vez cargadas podrás editarlas libremente (nombre de traba, pesos, plumas, orden) antes de cerrar o publicar la cartelera.`}
+            type="info"
+            showIcon
+            style={{ borderRadius: 10, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)' }}
+          />
+        </div>
+
+        <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+          <Table
+            size="small"
+            dataSource={parsedImportFights}
+            rowKey="numero_pelea"
+            pagination={false}
+            columns={[
+              { title: '#', dataIndex: 'numero_pelea', width: 50, align: 'center', render: n => <strong style={{ color: '#10b981' }}>#{n}</strong> },
+              {
+                title: 'LADO AZUL',
+                children: [
+                  { title: 'Traba', dataIndex: 'traba_a', render: t => <Text style={{ color: '#93c5fd', fontWeight: 700 }}>{t}</Text> },
+                  { title: 'Peso', render: (_, r) => <span style={{ color: '#fff' }}>{r.peso_libras_a}-{r.peso_onzas_a}.{r.peso_puntos_a}</span> },
+                  { title: 'Color', dataIndex: 'color_a' },
+                  { title: 'Placa', dataIndex: 'marca_a', align: 'center', render: m => m || '-' }
+                ]
+              },
+              {
+                title: 'VS',
+                align: 'center',
+                width: 40,
+                render: () => <Tag color="green" style={{ margin: 0, fontWeight: 900 }}>VS</Tag>
+              },
+              {
+                title: 'LADO BLANCO',
+                children: [
+                  { title: 'Traba', dataIndex: 'traba_b', render: t => <Text style={{ color: '#f3f4f6', fontWeight: 700 }}>{t}</Text> },
+                  { title: 'Peso', render: (_, r) => <span style={{ color: '#fff' }}>{r.peso_libras_b}-{r.peso_onzas_b}.{r.peso_puntos_b}</span> },
+                  { title: 'Color', dataIndex: 'color_b' },
+                  { title: 'Placa', dataIndex: 'marca_b', align: 'center', render: m => m || '-' }
+                ]
+              }
+            ]}
+          />
         </div>
       </Modal>
 

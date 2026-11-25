@@ -258,18 +258,21 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const channelRef = useRef(null);
   const chatContainerRef = useRef(null);
 
-  // Fight State
-  const [fightInfo, setFightInfo] = useState({
+  // Empty / Default Fight Object
+  const EMPTY_FIGHT = {
     id: null,
-    gallo_a_name: 'Gallo Azul',
-    gallo_b_name: 'Gallo Blanco',
-    gallo_a_weight: '3.2 lbs',
-    gallo_b_weight: '3.1 lbs',
-    post_number: '1',
+    gallo_a_name: '',
+    gallo_b_name: '',
+    gallo_a_weight: '',
+    gallo_b_weight: '',
+    post_number: '',
     gallo_a_odds: 1.90,
     gallo_b_odds: 1.90,
     status: 'PENDING'
-  });
+  };
+
+  // Fight State
+  const [fightInfo, setFightInfo] = useState(EMPTY_FIGHT);
 
   const [betTimerSeconds, setBetTimerSeconds] = useState(null);
 
@@ -338,14 +341,17 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const [clockSubTimeLeft, setClockSubTimeLeft] = useState(null);
   const [scoreboardStyle, setScoreboardStyle] = useState(() => localStorage.getItem('scoreboard_style') || 'broadcast');
   const [bettingCountdown, setBettingCountdown] = useState(120);
-  const [winnerFlash, setWinnerFlash] = useState(() => {
-    try {
-      const saved = localStorage.getItem('winner_flash');
-      return saved ? JSON.parse(saved) : null;
-    } catch (e) {
-      return null;
-    }
-  });
+  const [winnerFlash, setWinnerFlash] = useState(null);
+
+  // Auto-dismiss winner flash banner after 12 seconds so it never gets stuck
+  useEffect(() => {
+    if (!winnerFlash) return;
+    const t = setTimeout(() => {
+      setWinnerFlash(null);
+      localStorage.removeItem('winner_flash');
+    }, 12000);
+    return () => clearTimeout(t);
+  }, [winnerFlash]);
 
   useEffect(() => {
     const calcBettingTime = () => {
@@ -530,32 +536,17 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     const initData = async () => {
       try {
 
-        // Fetch latest event to check if a fight is LIVE/CLOSED or recently FINISHED
-        const latestEvents = await rawFetch(`events?select=*&order=updated_at.desc&limit=1`);
-        if (latestEvents && latestEvents[0]) {
-            const latest = latestEvents[0];
-            if (latest.status === 'LIVE' || latest.status === 'CLOSED') {
-              setFightInfo(latest);
-              setWinnerFlash(null);
-              localStorage.removeItem('winner_flash');
-            } else if (latest.status === 'FINISHED') {
-              setFightInfo(prev => ({ ...prev, id: null, status: 'PENDING' }));
-              const winSide = latest.winner_side;
-              const winWeight = latest.winner_weight || '';
-              const winName = latest.winner_name || (winSide === 'A' ? latest.gallo_a_name : winSide === 'B' ? latest.gallo_b_name : 'TABLAS');
-              const flashData = {
-                side: winSide === 'A' ? 'Azul' : winSide === 'B' ? 'Blanco' : 'Tablas',
-                name: winName,
-                fightNum: latest.post_number,
-                weight: winWeight
-              };
-              setWinnerFlash(flashData);
-              localStorage.setItem('winner_flash', JSON.stringify(flashData));
-            } else {
-              setFightInfo(prev => ({ ...prev, id: null, status: 'PENDING' }));
-            }
+        // Fetch only active (LIVE or CLOSED) fight; if none, ensure clean empty state
+        const activeEvents = await rawFetch(`events?select=*&status=in.(LIVE,CLOSED)&order=updated_at.desc&limit=1`);
+        if (activeEvents && activeEvents[0]) {
+            const active = activeEvents[0];
+            setFightInfo(active);
+            setWinnerFlash(null);
+            localStorage.removeItem('winner_flash');
         } else {
-            setFightInfo(prev => ({ ...prev, id: null, status: 'PENDING' }));
+            setFightInfo(EMPTY_FIGHT);
+            setWinnerFlash(null);
+            localStorage.removeItem('winner_flash');
         }
 
         // Fetch matched cartelera fights and events, then merge them
@@ -762,10 +753,9 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, payload => {
         if (payload.eventType === 'DELETE') {
             setTodayProgram(prev => prev.filter(e => e.id !== payload.old.id));
-            // If the current active fight was deleted, we should probably clear it or wait for the next update
             setFightInfo(prev => {
                 if (prev.id === payload.old.id) {
-                    return { id: null, status: 'PENDING', gallo_a_name: 'Gallo Azul', gallo_b_name: 'Gallo Blanco' };
+                    return EMPTY_FIGHT;
                 }
                 return prev;
             });
@@ -780,8 +770,8 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     return payload.new;
                 } else if (payload.new.status === 'FINISHED' || payload.new.status === 'PENDING') {
                     // If it was the active fight and just finished or reset to pending, clear it
-                    if (prev.id === payload.new.id || parseInt(prev.post_number) === parseInt(payload.new.post_number)) {
-                        return { id: null, status: 'PENDING', gallo_a_name: 'Gallo Azul', gallo_b_name: 'Gallo Blanco' };
+                    if (prev.id === payload.new.id || (prev.post_number && parseInt(prev.post_number) === parseInt(payload.new.post_number))) {
+                        return EMPTY_FIGHT;
                     }
                 }
                 return prev;
@@ -896,14 +886,15 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
           };
           setWinnerFlash(flashData);
           localStorage.setItem('winner_flash', JSON.stringify(flashData));
+          setFightInfo(EMPTY_FIGHT);
+        } else if (status === 'LIVE' || status === 'CLOSED') {
+          setFightInfo(prev => {
+            if ((prev.post_number && parseInt(prev.post_number) === parseInt(post_number)) || prev.id === id) {
+              return { ...prev, status, winner_side, updated_at: nowIso };
+            }
+            return prev;
+          });
         }
-
-        setFightInfo(prev => {
-          if (parseInt(prev.post_number) === parseInt(post_number) || prev.id === id) {
-            return { ...prev, status, winner_side, updated_at: nowIso };
-          }
-          return prev;
-        });
 
         setTodayProgram(prev => prev.map(item => {
           if (parseInt(item.post_number) === parseInt(post_number) || item.id === id) {
@@ -966,45 +957,25 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   useEffect(() => {
     const syncAll = async () => {
       try {
-        // 1. Sync active or latest finished fight
-        const latestEvents = await rawFetch(`events?select=*&order=updated_at.desc&limit=1`);
-        if (latestEvents && latestEvents[0]) {
-          const fresh = latestEvents[0];
-          if (fresh.status === 'LIVE' || fresh.status === 'CLOSED') {
-            setFightInfo(prev => {
-              if (prev.id === fresh.id && prev.status !== fresh.status) {
-                if (fresh.status === 'CLOSED') {
-                  setIsBetModalOpen(false);
-                  setIsSelectionModalOpen(false);
-                }
+        // 1. Sync active fight (LIVE or CLOSED)
+        const activeEvents = await rawFetch(`events?select=*&status=in.(LIVE,CLOSED)&order=updated_at.desc&limit=1`);
+        if (activeEvents && activeEvents[0]) {
+          const fresh = activeEvents[0];
+          setFightInfo(prev => {
+            if (prev.id === fresh.id && prev.status !== fresh.status) {
+              if (fresh.status === 'CLOSED') {
+                setIsBetModalOpen(false);
+                setIsSelectionModalOpen(false);
               }
-              return fresh;
-            });
-            setWinnerFlash(null);
-            localStorage.removeItem('winner_flash');
-          } else if (fresh.status === 'FINISHED') {
-            setFightInfo(prev => {
-              if (prev.status === 'LIVE' || prev.status === 'CLOSED') {
-                return { id: null, status: 'PENDING', gallo_a_name: 'Gallo Azul', gallo_b_name: 'Gallo Blanco' };
-              }
-              return prev;
-            });
-            const winSide = fresh.winner_side;
-            const winWeight = fresh.winner_weight || '';
-            const winName = fresh.winner_name || (winSide === 'A' ? fresh.gallo_a_name : winSide === 'B' ? fresh.gallo_b_name : 'TABLAS');
-            const flashData = {
-              side: winSide === 'A' ? 'Azul' : winSide === 'B' ? 'Blanco' : 'Tablas',
-              name: winName,
-              fightNum: fresh.post_number,
-              weight: winWeight
-            };
-            setWinnerFlash(flashData);
-            localStorage.setItem('winner_flash', JSON.stringify(flashData));
-          }
+            }
+            return fresh;
+          });
+          setWinnerFlash(null);
+          localStorage.removeItem('winner_flash');
         } else {
           setFightInfo(prev => {
-            if (prev.status === 'LIVE' || prev.status === 'CLOSED') {
-              return { id: null, status: 'PENDING', gallo_a_name: 'Gallo Azul', gallo_b_name: 'Gallo Blanco' };
+            if (prev.id || prev.status === 'LIVE' || prev.status === 'CLOSED') {
+              return EMPTY_FIGHT;
             }
             return prev;
           });
@@ -1129,6 +1100,9 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  const hasLoadedFight = Boolean(fightInfo?.id && (fightInfo.status === 'LIVE' || fightInfo.status === 'CLOSED'));
+  const isBettingOpen = Boolean(hasLoadedFight && fightInfo.status === 'LIVE' && ((betTimerSeconds !== null && betTimerSeconds > 0) || (bettingCountdown !== null && bettingCountdown > 0)));
+
   const openBetSelectionModal = (fight) => {
     if (!currentUser) return setCurrentView('login');
     if (fight && (fight.status === 'CLOSED' || fight.status === 'FINISHED')) {
@@ -1141,7 +1115,8 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const openBetModal = (side, targetFight = fightInfo) => {
     if (!currentUser) return setCurrentView('login');
     const f = targetFight || fightInfo;
-    if (f && f.status !== 'LIVE') return msg.warning('APUESTAS CERRADAS');
+    const isTargetLive = f && f.id && f.status === 'LIVE' && (f.id === fightInfo.id ? isBettingOpen : true);
+    if (!isTargetLive) return msg.warning('APUESTAS CERRADAS');
     setBetSide(side);
     setIsBetModalOpen(true);
   };
@@ -1352,11 +1327,13 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     return String(val);
   };
 
-  const activeProgItem = todayProgram.find(p => (fightInfo.id && p.id === fightInfo.id) || (p.post_number && parseInt(p.post_number) === parseInt(fightInfo.post_number)));
-  const rawWeightA = fightInfo.gallo_a_weight || fightInfo.peso_a || activeProgItem?.gallo_a_weight || activeProgItem?.peso_a || activeProgItem?.peso;
-  const rawWeightB = fightInfo.gallo_b_weight || fightInfo.peso_b || activeProgItem?.gallo_b_weight || activeProgItem?.peso_b;
-  const weightA = formatWeight(rawWeightA);
-  const weightB = formatWeight(rawWeightB);
+  const activeProgItem = hasLoadedFight
+    ? todayProgram.find(p => (fightInfo.id && p.id === fightInfo.id) || (p.post_number && parseInt(p.post_number) === parseInt(fightInfo.post_number)))
+    : null;
+  const rawWeightA = hasLoadedFight ? (fightInfo.gallo_a_weight || fightInfo.peso_a || activeProgItem?.gallo_a_weight || activeProgItem?.peso_a || activeProgItem?.peso) : '';
+  const rawWeightB = hasLoadedFight ? (fightInfo.gallo_b_weight || fightInfo.peso_b || activeProgItem?.gallo_b_weight || activeProgItem?.peso_b) : '';
+  const weightA = rawWeightA ? formatWeight(rawWeightA) : '';
+  const weightB = rawWeightB ? formatWeight(rawWeightB) : '';
 
   return (
     <div style={{ background: 'var(--obsidian)', minHeight: '100vh', padding: '16px', maxWidth: 1200, margin: '0 auto', paddingBottom: 100 }}>
@@ -1416,7 +1393,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         {overlayVisible && (
           <div style={{ width: '100%' }}>
             {/* LIVE BETTING COUNTDOWN BANNER ON RELOJ SCOREBOARD */}
-            {fightInfo.status === 'LIVE' && (
+            {isBettingOpen && (
               <div style={{
                 width: '100%',
                 marginTop: 12,
@@ -1581,7 +1558,9 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                   flexShrink: 0 
                 }}>
                   <span style={{ color: '#ef4444', fontWeight: 900, fontSize: 8, letterSpacing: 0.5, lineHeight: 1 }}>COMBATE</span>
-                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: 18, lineHeight: 1.1, marginTop: 2 }}>#{fightInfo.post_number || '1'}</span>
+                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: 18, lineHeight: 1.1, marginTop: 2 }}>
+                    {hasLoadedFight && fightInfo.post_number ? `#${fightInfo.post_number}` : '-'}
+                  </span>
                 </div>
 
                 {/* Clocks Panel */}
@@ -1624,7 +1603,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, width: '100%' }}>
                 {/* Gallo Azul Pill */}
                 <div 
-                  onClick={() => fightInfo.status === 'LIVE' && openBetModal('A')}
+                  onClick={() => isBettingOpen && openBetModal('A')}
                   style={{ 
                     background: '#1d4ed8', 
                     color: '#ffffff', 
@@ -1632,26 +1611,26 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     padding: '6px 10px',
                     borderLeft: '4px solid #93c5fd',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    cursor: fightInfo.status === 'LIVE' ? 'pointer' : 'default',
+                    cursor: isBettingOpen ? 'pointer' : 'default',
                     overflow: 'hidden'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                     <span style={{ fontSize: 9, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>LADO AZUL</span>
-                    {weightA && (
+                    {hasLoadedFight && weightA && (
                       <span style={{ fontSize: 10, color: '#bfdbfe', fontWeight: 900 }}>
                         ⚖️ {weightA}
                       </span>
                     )}
                   </div>
                   <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 15px)', textTransform: 'uppercase', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {fightInfo.gallo_a_name || 'LADO AZUL'}
+                    {hasLoadedFight ? (fightInfo.gallo_a_name || 'LADO AZUL') : '—'}
                   </div>
                 </div>
 
                 {/* Gallo Blanco Pill */}
                 <div 
-                  onClick={() => fightInfo.status === 'LIVE' && openBetModal('B')}
+                  onClick={() => isBettingOpen && openBetModal('B')}
                   style={{ 
                     background: '#ffffff', 
                     color: '#111111', 
@@ -1659,20 +1638,20 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     padding: '6px 10px',
                     borderRight: '4px solid #0f3dd1',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    cursor: fightInfo.status === 'LIVE' ? 'pointer' : 'default',
+                    cursor: isBettingOpen ? 'pointer' : 'default',
                     overflow: 'hidden'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                     <span style={{ fontSize: 9, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>LADO BLANCO</span>
-                    {weightB && (
+                    {hasLoadedFight && weightB && (
                       <span style={{ fontSize: 10, color: '#1e40af', fontWeight: 900 }}>
                         ⚖️ {weightB}
                       </span>
                     )}
                   </div>
                   <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 15px)', textTransform: 'uppercase', color: '#111111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {fightInfo.gallo_b_name || 'LADO BLANCO'}
+                    {hasLoadedFight ? (fightInfo.gallo_b_name || 'LADO BLANCO') : '—'}
                   </div>
                 </div>
               </div>
@@ -1692,21 +1671,25 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr', gap: 10, alignItems: 'center' }}>
                 {/* Left Azul */}
                 <div 
-                  onClick={() => fightInfo.status === 'LIVE' && openBetModal('A')}
-                  style={{ background: '#1d4ed8', color: '#ffffff', borderRadius: 8, padding: 12, textAlign: 'center', cursor: fightInfo.status === 'LIVE' ? 'pointer' : 'default' }}
+                  onClick={() => isBettingOpen && openBetModal('A')}
+                  style={{ background: '#1d4ed8', color: '#ffffff', borderRadius: 8, padding: 12, textAlign: 'center', cursor: isBettingOpen ? 'pointer' : 'default' }}
                 >
                   <div style={{ fontSize: 10, color: '#93c5fd', fontWeight: 900 }}>LADO AZUL</div>
                   <div style={{ fontWeight: 900, fontSize: 18, textTransform: 'uppercase', margin: '4px 0' }}>
-                    {fightInfo.gallo_a_name || 'LADO AZUL'}
+                    {hasLoadedFight ? (fightInfo.gallo_a_name || 'LADO AZUL') : '—'}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 900, color: '#bfdbfe' }}>
-                    {weightA && <span>⚖️ {weightA}</span>}
-                    <span>x{fightInfo.gallo_a_odds?.toFixed(2) || '1.90'}</span>
-                  </div>
+                  {hasLoadedFight && (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 900, color: '#bfdbfe' }}>
+                      {weightA && <span>⚖️ {weightA}</span>}
+                      <span>x{fightInfo.gallo_a_odds?.toFixed(2) || '1.90'}</span>
+                    </div>
+                  )}
                 </div>
                 {/* Center Timers */}
                 <div style={{ background: '#111111', borderRadius: 8, padding: 10, textAlign: 'center', border: '1px solid #222' }}>
-                  <div style={{ color: '#ef4444', fontWeight: 900, fontSize: 12, letterSpacing: 1 }}>PELEA #{fightInfo.post_number || '1'}</div>
+                  <div style={{ color: '#ef4444', fontWeight: 900, fontSize: 12, letterSpacing: 1 }}>
+                    {hasLoadedFight && fightInfo.post_number ? `PELEA #${fightInfo.post_number}` : 'SIN PELEA'}
+                  </div>
                   <div style={{ color: '#f59e0b', fontSize: 32, fontWeight: 900, fontFamily: 'Outfit', lineHeight: 1, margin: '4px 0' }}>
                     {formatClockTime(clockTimeLeft)}
                   </div>
@@ -1717,17 +1700,19 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                 </div>
                 {/* Right Blanco */}
                 <div 
-                  onClick={() => fightInfo.status === 'LIVE' && openBetModal('B')}
-                  style={{ background: '#ffffff', color: '#111111', borderRadius: 8, padding: 12, textAlign: 'center', cursor: fightInfo.status === 'LIVE' ? 'pointer' : 'default' }}
+                  onClick={() => isBettingOpen && openBetModal('B')}
+                  style={{ background: '#ffffff', color: '#111111', borderRadius: 8, padding: 12, textAlign: 'center', cursor: isBettingOpen ? 'pointer' : 'default' }}
                 >
                   <div style={{ fontSize: 10, color: '#0f3dd1', fontWeight: 900 }}>LADO BLANCO</div>
                   <div style={{ fontWeight: 900, fontSize: 18, textTransform: 'uppercase', margin: '4px 0' }}>
-                    {fightInfo.gallo_b_name || 'LADO BLANCO'}
+                    {hasLoadedFight ? (fightInfo.gallo_b_name || 'LADO BLANCO') : '—'}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 900, color: '#1d4ed8' }}>
-                    {weightB && <span>⚖️ {weightB}</span>}
-                    <span>x{fightInfo.gallo_b_odds?.toFixed(2) || '1.90'}</span>
-                  </div>
+                  {hasLoadedFight && (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 900, color: '#1d4ed8' }}>
+                      {weightB && <span>⚖️ {weightB}</span>}
+                      <span>x{fightInfo.gallo_b_odds?.toFixed(2) || '1.90'}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1788,42 +1773,44 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               <div style={{ display: 'flex', border: '1px solid #2d2d2d', borderRadius: 10, overflow: 'hidden', background: '#111111' }}>
                 <div style={{ width: '22%', background: '#161616', borderRight: '1px solid #2d2d2d', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6px' }}>
                   <span style={{ color: '#ef4444', fontWeight: 900, fontSize: 10, letterSpacing: 1.5 }}>PELEA</span>
-                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: 28, lineHeight: 1 }}>{fightInfo.post_number || '1'}</span>
+                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: 28, lineHeight: 1 }}>
+                    {hasLoadedFight && fightInfo.post_number ? fightInfo.post_number : '-'}
+                  </span>
                 </div>
                 <div style={{ width: '78%', display: 'flex', flexDirection: 'column' }}>
                   {/* LADO BLANCO */}
                   <div 
-                    onClick={() => fightInfo.status === 'LIVE' && openBetModal('B')}
+                    onClick={() => isBettingOpen && openBetModal('B')}
                     style={{
-                      background: '#ffffff', color: '#111111', padding: '8px 14px', fontWeight: 900, fontSize: 'clamp(12px, 3vw, 15px)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: fightInfo.status === 'LIVE' ? 'pointer' : 'default', borderBottom: '1px solid #e2e8f0'
+                      background: '#ffffff', color: '#111111', padding: '8px 14px', fontWeight: 900, fontSize: 'clamp(12px, 3vw, 15px)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isBettingOpen ? 'pointer' : 'default', borderBottom: '1px solid #e2e8f0'
                     }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {fightInfo.gallo_b_name || 'LADO BLANCO'}
-                      {weightB && <span style={{ fontSize: 11, color: '#4b5563', fontWeight: 800 }}>⚖️ {weightB}</span>}
+                      {hasLoadedFight ? (fightInfo.gallo_b_name || 'LADO BLANCO') : 'LADO BLANCO'}
+                      {hasLoadedFight && weightB && <span style={{ fontSize: 11, color: '#4b5563', fontWeight: 800 }}>⚖️ {weightB}</span>}
                     </span>
-                    <span style={{ color: '#1d4ed8', fontSize: 13, fontWeight: 900 }}>x{fightInfo.gallo_b_odds?.toFixed(2) || '1.90'}</span>
+                    {hasLoadedFight && <span style={{ color: '#1d4ed8', fontSize: 13, fontWeight: 900 }}>x{fightInfo.gallo_b_odds?.toFixed(2) || '1.90'}</span>}
                   </div>
 
                   {/* LADO AZUL */}
                   <div 
-                    onClick={() => fightInfo.status === 'LIVE' && openBetModal('A')}
+                    onClick={() => isBettingOpen && openBetModal('A')}
                     style={{
-                      background: '#1d4ed8', color: '#ffffff', padding: '8px 14px', fontWeight: 900, fontSize: 'clamp(12px, 3vw, 15px)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: fightInfo.status === 'LIVE' ? 'pointer' : 'default'
+                      background: '#1d4ed8', color: '#ffffff', padding: '8px 14px', fontWeight: 900, fontSize: 'clamp(12px, 3vw, 15px)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isBettingOpen ? 'pointer' : 'default'
                     }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {fightInfo.gallo_a_name || 'LADO AZUL'}
-                      {weightA && <span style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 800 }}>⚖️ {weightA}</span>}
+                      {hasLoadedFight ? (fightInfo.gallo_a_name || 'LADO AZUL') : 'LADO AZUL'}
+                      {hasLoadedFight && weightA && <span style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 800 }}>⚖️ {weightA}</span>}
                     </span>
-                    <span style={{ color: '#93c5fd', fontSize: 13, fontWeight: 900 }}>x{fightInfo.gallo_a_odds?.toFixed(2) || '1.90'}</span>
+                    {hasLoadedFight && <span style={{ color: '#93c5fd', fontSize: 13, fontWeight: 900 }}>x{fightInfo.gallo_a_odds?.toFixed(2) || '1.90'}</span>}
                   </div>
                 </div>
               </div>
 
               {/* Ticker footer */}
               <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700, textAlign: 'center', marginTop: 10, letterSpacing: 1 }}>
-                ••• COLISEO ANGEL CRUZ [ MARCA: {fightInfo.post_number || '1'} • EN VIVO ] •••
+                ••• COLISEO ANGEL CRUZ [ MARCA: {hasLoadedFight && fightInfo.post_number ? fightInfo.post_number : '-'} • EN VIVO ] •••
               </div>
             </div>
           )}
@@ -1880,7 +1867,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                       <div 
                         key={event.id}
                         onClick={() => {
-                          if (event.status !== 'FINISHED') {
+                          if (event.status === 'LIVE' || event.status === 'CLOSED') {
                             setFightInfo(event);
                             const player = document.querySelector('.player-container');
                             player?.scrollIntoView({ behavior: 'smooth' });
@@ -1888,7 +1875,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                         }}
                         className={`cart-card-premium ${isActive ? 'active-match' : ''}`}
                         style={{
-                          cursor: event.status === 'FINISHED' ? 'default' : 'pointer'
+                          cursor: (event.status === 'LIVE' || event.status === 'CLOSED') ? 'pointer' : 'default'
                         }}
                       >
                         {/* Card Header */}
@@ -2409,7 +2396,9 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                   flexShrink: 0 
                 }}>
                   <span style={{ color: '#ef4444', fontWeight: 900, fontSize: 8, letterSpacing: 0.5, lineHeight: 1 }}>COMBATE</span>
-                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: 16, lineHeight: 1.1, marginTop: 1 }}>#{fightInfo.post_number || '1'}</span>
+                  <span style={{ color: '#ffffff', fontWeight: 900, fontSize: 16, lineHeight: 1.1, marginTop: 1 }}>
+                    {hasLoadedFight && fightInfo.post_number ? `#${fightInfo.post_number}` : '-'}
+                  </span>
                 </div>
 
                 {/* Clocks Panel */}
@@ -2451,7 +2440,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, width: '100%' }}>
                 {/* Gallo Azul Pill */}
                 <div 
-                  onClick={() => fightInfo.status === 'LIVE' && openBetModal('A')}
+                  onClick={() => isBettingOpen && openBetModal('A')}
                   style={{ 
                     background: '#1d4ed8', 
                     color: '#ffffff', 
@@ -2459,26 +2448,26 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     padding: '5px 8px',
                     borderLeft: '4px solid #93c5fd',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    cursor: fightInfo.status === 'LIVE' ? 'pointer' : 'default',
+                    cursor: isBettingOpen ? 'pointer' : 'default',
                     overflow: 'hidden'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                     <span style={{ fontSize: 8, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>LADO AZUL</span>
-                    {weightA && (
+                    {hasLoadedFight && weightA && (
                       <span style={{ fontSize: 9, color: '#bfdbfe', fontWeight: 900 }}>
                         ⚖️ {weightA}
                       </span>
                     )}
                   </div>
                   <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 14px)', textTransform: 'uppercase', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {fightInfo.gallo_a_name || 'LADO AZUL'}
+                    {hasLoadedFight ? (fightInfo.gallo_a_name || 'LADO AZUL') : '—'}
                   </div>
                 </div>
 
                 {/* Gallo Blanco Pill */}
                 <div 
-                  onClick={() => fightInfo.status === 'LIVE' && openBetModal('B')}
+                  onClick={() => isBettingOpen && openBetModal('B')}
                   style={{ 
                     background: '#ffffff', 
                     color: '#111111', 
@@ -2486,20 +2475,20 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     padding: '5px 8px',
                     borderRight: '4px solid #0f3dd1',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    cursor: fightInfo.status === 'LIVE' ? 'pointer' : 'default',
+                    cursor: isBettingOpen ? 'pointer' : 'default',
                     overflow: 'hidden'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                     <span style={{ fontSize: 8, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>LADO BLANCO</span>
-                    {weightB && (
+                    {hasLoadedFight && weightB && (
                       <span style={{ fontSize: 9, color: '#1e40af', fontWeight: 900 }}>
                         ⚖️ {weightB}
                       </span>
                     )}
                   </div>
                   <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 14px)', textTransform: 'uppercase', color: '#111111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {fightInfo.gallo_b_name || 'LADO BLANCO'}
+                    {hasLoadedFight ? (fightInfo.gallo_b_name || 'LADO BLANCO') : '—'}
                   </div>
                 </div>
               </div>
@@ -2507,7 +2496,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
           )}
 
           {/* Facebook Live Quick Betting Bar */}
-          {fightInfo.id && fightInfo.status === 'LIVE' ? (
+          {isBettingOpen ? (
             <div style={{
               padding: '10px 14px',
               background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)',
