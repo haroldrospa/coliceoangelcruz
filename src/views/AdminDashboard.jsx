@@ -444,62 +444,288 @@ const AdminDashboard = () => {
   };
 
   const eventColumns = [
-    { title: 'PELEA #', dataIndex: 'post_number', key: 'post', width: 72, fixed: 'left', render: (t) => <Text style={{ color: 'var(--champagne)', fontWeight: 900, whiteSpace: 'nowrap' }}>#{t}</Text> },
-    { title: 'GALLOS', key: 'ga', minWidth: 170, render: (_, r) => <div style={{ color: '#fff', whiteSpace: 'nowrap' }}>{r.gallo_a_name.replace('[ARCHIVED] ', '')} <span style={{ color: '#ef4444', fontWeight: 800 }}>vs</span> {r.gallo_b_name}</div> },
-    { title: 'GANADOR', key: 'winner', width: 95, align: 'center', render: (_, r) => {
-        if (r.status !== 'FINISHED' && r.status !== 'CLOSED') return <Text style={{ color: 'rgba(255,255,255,0.1)' }}>-</Text>;
-        if (r.winner_side === 'D') return <Tag color="orange" style={{ fontWeight: 800 }}>TABLAS</Tag>;
-        return <Tag color={r.winner_side === 'A' ? 'blue' : 'default'} style={{ fontWeight: 800 }}>{r.winner_side === 'A' ? 'AZUL' : 'BLANCO'}</Tag>;
-    }},
-    { title: 'ESTADO', dataIndex: 'status', key: 'status', width: 110, align: 'center', render: (s, r) => {
-      if (s === 'LIVE') return <Tag color="green" style={{ fontWeight: 800 }}>VIVO</Tag>;
-      if (s === 'FINISHED') {
-         const hasReplay = r.stream_url && (r.stream_url.includes('/storage/') || r.stream_url.match(/\.(mp4|webm|mov|ogg)$/i));
-         return (
-           <Space size={4}>
-             <Tag color="cyan">TERMINADA</Tag>
-             {!hasReplay && <Badge count="SIN VIDEO" style={{ backgroundColor: '#ff4d4f', fontSize: 9, fontWeight: 900, borderRadius: 4, height: 16, lineHeight: '16px' }} />}
-           </Space>
-         );
-      }
-      return <Tag>{s}</Tag>;
-    }},
-    { title: 'ACCIONES', key: 'actions', width: 230, render: (_, r) => (
-      <Space size={6} wrap>
-        {r.status === 'LIVE' && <Button size="small" onClick={() => updateStatus(r.id, 'CLOSED')}>CERRAR</Button>}
-        {r.status === 'CLOSED' && (
-          <Space size={4} wrap>
-            <Button size="small" type="primary" style={{ background: '#10b981' }} onClick={() => setWinnerAndPayout(r, 'A')}>PAGAR AZUL</Button>
-            <Button size="small" type="primary" style={{ background: '#d4af37' }} onClick={() => setWinnerAndPayout(r, 'B')}>PAGAR BLANCO</Button>
-            <Button size="small" type="default" onClick={() => setWinnerAndPayout(r, 'D')}>TABLAS</Button>
-          </Space>
-        )}
-        {r.status === 'FINISHED' && (
-          <Badge dot={!(r.stream_url && (r.stream_url.includes('/storage/') || r.stream_url.match(/\.(mp4|webm|mov|ogg)$/i)))} color="#ff4d4f" offset={[-2, 2]}>
-            <Button 
-                size="small" 
-                icon={<VideoCameraOutlined />} 
-                onClick={() => openReplayEditor(r)}
-                style={{ color: '#d4af37', borderColor: '#d4af37' }}
-            >
-                REPETICIÓN
-            </Button>
-          </Badge>
-        )}
-        <div onClick={e => e.stopPropagation()}>
-          <Popconfirm
-            title="¿ELIMINAR PELEA?"
-            description="Esta acción no se puede deshacer."
-            onConfirm={() => handleDeleteEvent(r)}
-            okText="SÍ, ELIMINAR"
-            cancelText="NO"
-            okButtonProps={{ danger: true }}
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+    { 
+      title: 'PELEA', 
+      dataIndex: 'post_number', 
+      key: 'post', 
+      width: 85, 
+      align: 'center',
+      fixed: 'left', 
+      render: (t) => (
+        <span style={{ 
+          display: 'inline-block',
+          background: 'rgba(245, 158, 11, 0.12)', 
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          color: '#fbbf24', 
+          fontWeight: 900, 
+          fontSize: 13,
+          padding: '4px 10px',
+          borderRadius: 8,
+          whiteSpace: 'nowrap'
+        }}>
+          #{t}
+        </span>
+      ) 
+    },
+    { 
+      title: 'COMBATIENTES', 
+      key: 'ga', 
+      minWidth: 260, 
+      render: (_, r) => (
+        <div style={{ 
+          display: 'inline-flex', 
+          alignItems: 'center', 
+          gap: 10, 
+          background: 'rgba(0, 0, 0, 0.35)', 
+          padding: '6px 14px', 
+          borderRadius: 10, 
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          whiteSpace: 'nowrap'
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 8px rgba(59, 130, 246, 0.6)' }} />
+            <span style={{ color: '#93c5fd', fontWeight: 800, fontSize: 13, textTransform: 'uppercase' }}>
+              {r.gallo_a_name.replace('[ARCHIVED] ', '')}
+            </span>
+          </span>
+
+          <span style={{ 
+            background: 'rgba(239, 68, 68, 0.15)', 
+            color: '#f87171', 
+            fontSize: 9, 
+            fontWeight: 900, 
+            padding: '2px 6px', 
+            borderRadius: 6,
+            letterSpacing: '0.5px' 
+          }}>
+            VS
+          </span>
+
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ffffff', boxShadow: '0 0 8px rgba(255, 255, 255, 0.5)' }} />
+            <span style={{ color: '#ffffff', fontWeight: 800, fontSize: 13, textTransform: 'uppercase' }}>
+              {r.gallo_b_name}
+            </span>
+          </span>
         </div>
-      </Space>
-    )}
+      ) 
+    },
+    { 
+      title: 'GANADOR', 
+      key: 'winner', 
+      width: 120, 
+      align: 'center', 
+      render: (_, r) => {
+        if (r.status !== 'FINISHED' && r.status !== 'CLOSED') return <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>—</Text>;
+        if (r.winner_side === 'D') {
+          return (
+            <span style={{ 
+              display: 'inline-flex', alignItems: 'center', gap: 4, 
+              background: 'rgba(217, 119, 6, 0.15)', border: '1px solid rgba(245, 158, 11, 0.4)', 
+              color: '#fbbf24', padding: '3px 10px', borderRadius: 8, fontWeight: 900, fontSize: 11, whiteSpace: 'nowrap' 
+            }}>
+              ⚖️ TABLAS
+            </span>
+          );
+        }
+        const isAzul = r.winner_side === 'A';
+        return (
+          <span style={{ 
+            display: 'inline-flex', alignItems: 'center', gap: 5, 
+            background: isAzul ? 'rgba(37, 99, 235, 0.15)' : 'rgba(255, 255, 255, 0.08)', 
+            border: isAzul ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid rgba(255, 255, 255, 0.25)', 
+            color: isAzul ? '#60a5fa' : '#ffffff', 
+            padding: '3px 10px', borderRadius: 8, fontWeight: 900, fontSize: 11, whiteSpace: 'nowrap' 
+          }}>
+            {isAzul ? '🔵 AZUL' : '⚪ BLANCO'}
+          </span>
+        );
+      }
+    },
+    { 
+      title: 'ESTADO', 
+      dataIndex: 'status', 
+      key: 'status', 
+      width: 130, 
+      align: 'center', 
+      render: (s) => {
+        if (s === 'LIVE') {
+          return (
+            <span style={{ 
+              display: 'inline-flex', alignItems: 'center', gap: 6, 
+              background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', 
+              color: '#10b981', padding: '4px 10px', borderRadius: 8, fontWeight: 900, fontSize: 11, whiteSpace: 'nowrap' 
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
+              EN VIVO
+            </span>
+          );
+        }
+        if (s === 'CLOSED') {
+          return (
+            <span style={{ 
+              display: 'inline-flex', alignItems: 'center', gap: 6, 
+              background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.35)', 
+              color: '#f87171', padding: '4px 10px', borderRadius: 8, fontWeight: 900, fontSize: 11, whiteSpace: 'nowrap' 
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444' }} />
+              CERRADA
+            </span>
+          );
+        }
+        if (s === 'FINISHED') {
+          return (
+            <span style={{ 
+              display: 'inline-flex', alignItems: 'center', gap: 6, 
+              background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', 
+              color: '#38bdf8', padding: '4px 10px', borderRadius: 8, fontWeight: 900, fontSize: 11, whiteSpace: 'nowrap' 
+            }}>
+              TERMINADA
+            </span>
+          );
+        }
+        return <Tag style={{ borderRadius: 6, fontWeight: 800 }}>{s}</Tag>;
+      }
+    },
+    { 
+      title: 'ACCIONES', 
+      key: 'actions', 
+      width: 290, 
+      align: 'right',
+      render: (_, r) => {
+        const hasReplay = r.stream_url && (r.stream_url.includes('/storage/') || r.stream_url.match(/\.(mp4|webm|mov|ogg)$/i));
+        return (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+            {r.status === 'LIVE' && (
+              <button 
+                onClick={() => updateStatus(r.id, 'CLOSED')}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  color: '#f87171',
+                  borderRadius: 7,
+                  padding: '5px 12px',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                CERRAR APUESTAS
+              </button>
+            )}
+
+            {r.status === 'CLOSED' && (
+              <>
+                <button 
+                  onClick={() => setWinnerAndPayout(r, 'A')}
+                  title="Declarar Ganador Gallo Azul"
+                  style={{
+                    background: '#2563eb',
+                    border: 'none',
+                    color: '#ffffff',
+                    borderRadius: 7,
+                    padding: '5px 10px',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(37,99,235,0.3)',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  PAGAR AZUL
+                </button>
+                <button 
+                  onClick={() => setWinnerAndPayout(r, 'B')}
+                  title="Declarar Ganador Gallo Blanco"
+                  style={{
+                    background: '#ffffff',
+                    border: 'none',
+                    color: '#0f172a',
+                    borderRadius: 7,
+                    padding: '5px 10px',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(255,255,255,0.2)',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  PAGAR BLANCO
+                </button>
+                <button 
+                  onClick={() => setWinnerAndPayout(r, 'D')}
+                  title="Declarar Empate / Tablas"
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    color: '#fbbf24',
+                    borderRadius: 7,
+                    padding: '4px 8px',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  TABLAS
+                </button>
+              </>
+            )}
+
+            {r.status === 'FINISHED' && (
+              <button 
+                onClick={() => openReplayEditor(r)}
+                style={{
+                  background: hasReplay ? 'rgba(212, 175, 55, 0.12)' : 'rgba(239, 68, 68, 0.1)',
+                  border: hasReplay ? '1px solid rgba(212, 175, 55, 0.35)' : '1px dashed rgba(239, 68, 68, 0.4)',
+                  color: hasReplay ? '#d4af37' : '#f87171',
+                  borderRadius: 7,
+                  padding: '5px 12px',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <VideoCameraOutlined />
+                <span>{hasReplay ? 'REPETICIÓN' : 'SUBIR VIDEO'}</span>
+              </button>
+            )}
+
+            <div onClick={e => e.stopPropagation()}>
+              <Popconfirm
+                title="¿ELIMINAR PELEA?"
+                description="Esta acción no se puede deshacer."
+                onConfirm={() => handleDeleteEvent(r)}
+                okText="SÍ, ELIMINAR"
+                cancelText="NO"
+                okButtonProps={{ danger: true }}
+              >
+                <Button 
+                  type="text" 
+                  danger 
+                  icon={<DeleteOutlined style={{ fontSize: 14 }} />} 
+                  style={{ 
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    borderRadius: 6,
+                    height: 28,
+                    width: 28,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: 0
+                  }} 
+                />
+              </Popconfirm>
+            </div>
+          </div>
+        );
+      }
+    }
   ];
 
   const depositColumns = [
@@ -512,92 +738,102 @@ const AdminDashboard = () => {
   ];
 
   const tabItems = [
-    { key: '1', label: <span>PELEAS</span>, children: (
+    { key: '1', label: <span>PELEAS ({events.length})</span>, children: (
         <div>
           {/* Responsive Action Toolbar */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            justifyContent: 'space-between',
+            gap: 10,
             flexWrap: 'wrap',
             marginBottom: 16
           }}>
-            <Button 
-              onClick={() => setIsModalOpen(true)} 
-              icon={<PlusOutlined />}
-              style={{ 
-                  height: 38, 
-                  borderRadius: 10, 
-                  fontWeight: 700, 
-                  background: '#10b981', 
-                  color: '#fff', 
-                  border: 'none',
-                  boxShadow: '0 4px 12px rgba(16,185,129,0.2)',
-                  fontSize: 12,
-                  flex: '1 1 auto',
-                  minWidth: 120
-              }}
-            >
-              NUEVA PELEA
-            </Button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }}>
+              <Button 
+                onClick={() => setIsModalOpen(true)} 
+                icon={<PlusOutlined />}
+                style={{ 
+                    height: 38, 
+                    borderRadius: 10, 
+                    fontWeight: 700, 
+                    background: '#10b981', 
+                    color: '#fff', 
+                    border: 'none',
+                    boxShadow: '0 4px 12px rgba(16,185,129,0.2)',
+                    fontSize: 12
+                }}
+              >
+                NUEVA PELEA
+              </Button>
 
-            <Button 
-              onClick={() => setIsBulkModalOpen(true)} 
-              icon={<TrophyOutlined />}
-              style={{ 
-                  height: 38, 
-                  borderRadius: 10, 
-                  fontWeight: 700, 
-                  background: 'rgba(16,185,129,0.1)', 
-                  color: '#10b981', 
-                  border: '1px solid rgba(16,185,129,0.2)',
-                  fontSize: 12,
-                  flex: '1 1 auto',
-                  minWidth: 120
-              }}
-            >
-              CARGA MASIVA
-            </Button>
+              <Button 
+                onClick={() => setIsBulkModalOpen(true)} 
+                icon={<TrophyOutlined />}
+                style={{ 
+                    height: 38, 
+                    borderRadius: 10, 
+                    fontWeight: 700, 
+                    background: 'rgba(16,185,129,0.1)', 
+                    color: '#10b981', 
+                    border: '1px solid rgba(16,185,129,0.2)',
+                    fontSize: 12
+                }}
+              >
+                CARGA MASIVA
+              </Button>
 
-            <Button 
-              onClick={() => {
-                  setEditingEvent(null);
-                  setIsReplayModalOpen(true);
-                  form.resetFields();
-              }} 
-              icon={<VideoCameraOutlined />} 
-              style={{ 
-                  height: 38, 
-                  borderRadius: 10, 
-                  fontWeight: 700, 
-                  background: 'rgba(212,175,55,0.1)', 
-                  color: '#d4af37', 
-                  border: '1px solid rgba(212,175,55,0.2)',
-                  fontSize: 12,
-                  flex: '1 1 auto',
-                  minWidth: 140
-              }}
-            >
-              REPETICIÓN
-            </Button>
+              <Button 
+                onClick={() => {
+                    setEditingEvent(null);
+                    setIsReplayModalOpen(true);
+                    form.resetFields();
+                }} 
+                icon={<VideoCameraOutlined />} 
+                style={{ 
+                    height: 38, 
+                    borderRadius: 10, 
+                    fontWeight: 700, 
+                    background: 'rgba(212,175,55,0.1)', 
+                    color: '#d4af37', 
+                    border: '1px solid rgba(212,175,55,0.2)',
+                    fontSize: 12
+                }}
+              >
+                REPETICIÓN
+              </Button>
+            </div>
+
+            <div style={{ 
+              background: 'rgba(16, 185, 129, 0.08)', 
+              border: '1px solid rgba(16, 185, 129, 0.2)', 
+              color: '#10b981', 
+              padding: '6px 14px', 
+              borderRadius: 10, 
+              fontWeight: 800, 
+              fontSize: 11,
+              letterSpacing: '0.5px'
+            }}>
+              ⚡ {events.length} COMBATES REGISTRADOS
+            </div>
           </div>
 
-          <div style={{ padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 6, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            borderRadius: 14,
+            overflow: 'hidden'
+          }}>
+            <div className="mobile-only" style={{ padding: '8px 12px', background: 'rgba(16, 185, 129, 0.05)', borderBottom: '1px solid rgba(255, 255, 255, 0.04)', fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
               👉 Desliza horizontalmente la tabla para ver cuotas y acciones
-            </Text>
-            <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 700 }}>
-              {events.length} Peleas
-            </Text>
-          </div>
-
-          <div className="responsive-table-container">
+            </div>
+            <div className="responsive-table-container" style={{ margin: 0 }}>
               <Table 
                   columns={eventColumns} 
                   dataSource={events} 
                   pagination={false} 
                   rowKey="id" 
-                  scroll={{ x: 750 }}
+                  scroll={{ x: 820 }}
                   onRow={(record) => ({
                       onClick: () => {
                           if (record.status === 'FINISHED') openReplayEditor(record);
@@ -605,12 +841,20 @@ const AdminDashboard = () => {
                   })}
                   rowClassName={(record) => record.status === 'FINISHED' ? 'clickable-row' : ''}
               />
+            </div>
           </div>
         </div>
     )},
     { key: '2', label: <span>TESORERÍA</span>, children: (
-        <div className="responsive-table-container">
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          borderRadius: 14,
+          overflow: 'hidden'
+        }}>
+          <div className="responsive-table-container" style={{ margin: 0 }}>
             <Table columns={depositColumns} dataSource={deposits} pagination={false} rowKey="id" scroll={{ x: 550 }} />
+          </div>
         </div>
     )}
   ];
@@ -896,6 +1140,27 @@ const AdminDashboard = () => {
            0% { opacity: 1; transform: scale(1); }
            50% { opacity: 0.7; transform: scale(0.95); }
            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .ant-table-thead > tr > th {
+          background: rgba(255, 255, 255, 0.03) !important;
+          color: rgba(255, 255, 255, 0.55) !important;
+          font-size: 11px !important;
+          font-weight: 800 !important;
+          letter-spacing: 0.8px !important;
+          text-transform: uppercase !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+          white-space: nowrap !important;
+          padding: 12px 14px !important;
+        }
+        .ant-table-tbody > tr > td {
+          background: transparent !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+          padding: 10px 14px !important;
+          color: rgba(255, 255, 255, 0.9) !important;
+        }
+        .ant-table-row:hover > td {
+          background: rgba(255, 255, 255, 0.02) !important;
         }
       `}</style>
     </>
