@@ -3281,10 +3281,10 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                   : (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B' ? '#ffffff' : '#f59e0b')
               ),
               background: winnerFlash.side === 'Azul' || winnerFlash.side === 'A'
-                ? 'linear-gradient(180deg, #1e3a8a 0%, #0b1329 100%)'
+                ? 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)'
                 : (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B'
-                  ? 'linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%)'
-                  : 'linear-gradient(180deg, #92400e 0%, #1e1b18 100%)'
+                  ? 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)'
+                  : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'
                 ),
               color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff'
             }}

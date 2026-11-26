@@ -1470,17 +1470,27 @@ export default function RelojView() {
         padding: compact ? '8px 12px' : '14px 20px',
         animation: 'winnerFlashIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
         backdropFilter: 'blur(16px)',
-        background: 'rgba(11, 15, 25, 0.94)',
-        border: isAzul
-          ? '1.5px solid #3b82f6'
+        ...(isAzul
+          ? {
+              background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)',
+              border: '2.5px solid #60a5fa',
+              boxShadow: '0 12px 50px rgba(0,0,0,0.85), 0 0 35px rgba(29,78,216,0.6)',
+              color: '#ffffff'
+            }
           : isBlanco
-          ? '1.5px solid rgba(255,255,255,0.8)'
-          : '1.5px solid #f59e0b',
-        boxShadow: isAzul
-          ? '0 12px 50px rgba(0,0,0,0.85), 0 0 30px rgba(59,130,246,0.3)'
-          : isBlanco
-          ? '0 12px 50px rgba(0,0,0,0.85), 0 0 30px rgba(255,255,255,0.2)'
-          : '0 12px 50px rgba(0,0,0,0.85), 0 0 30px rgba(245,158,11,0.3)'
+          ? {
+              background: 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)',
+              border: '2.5px solid #cbd5e1',
+              boxShadow: '0 12px 50px rgba(0,0,0,0.85), 0 0 35px rgba(255,255,255,0.4)',
+              color: '#0f172a'
+            }
+          : {
+              background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+              border: '2.5px solid #f59e0b',
+              boxShadow: '0 12px 50px rgba(0,0,0,0.85), 0 0 35px rgba(245,158,11,0.5)',
+              color: '#ffffff'
+            }
+        )
       }}>
         {/* Dismiss Button */}
         <button
@@ -1493,15 +1503,15 @@ export default function RelojView() {
             position: 'absolute',
             top: 8,
             right: 10,
-            background: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            color: 'rgba(255,255,255,0.7)',
+            background: isBlanco ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.25)',
+            border: isBlanco ? '1px solid rgba(0,0,0,0.15)' : '1px solid rgba(255,255,255,0.2)',
+            color: isBlanco ? '#0f172a' : '#ffffff',
             borderRadius: '50%',
             width: 26,
             height: 26,
             cursor: 'pointer',
             fontSize: 12,
-            fontWeight: 700,
+            fontWeight: 800,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1516,10 +1526,10 @@ export default function RelojView() {
         {/* Bell + Fight Header */}
         <div style={{
           fontSize: 'clamp(10px, 2.5vw, 13px)',
-          fontWeight: 800,
+          fontWeight: 900,
           letterSpacing: '1.5px',
           textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.6)',
+          color: isBlanco ? '#334155' : 'rgba(255,255,255,0.9)',
           marginBottom: 4,
           display: 'flex',
           alignItems: 'center',
@@ -1535,7 +1545,7 @@ export default function RelojView() {
           fontSize: 'clamp(20px, 4.5vw, 34px)',
           fontWeight: 900,
           fontFamily: 'Outfit, sans-serif',
-          color: '#ffffff',
+          color: isBlanco ? '#0f172a' : '#ffffff',
           textTransform: 'uppercase',
           textAlign: 'center',
           lineHeight: 1.15,
@@ -1546,7 +1556,7 @@ export default function RelojView() {
           ) : (
             <span>
               🏆 GANADOR:{' '}
-              <span style={{ color: isAzul ? '#93c5fd' : '#ffffff' }}>
+              <span style={{ color: isBlanco ? '#0f3dd1' : '#ffffff' }}>
                 {winnerFlash.name}
               </span>
             </span>
@@ -1557,19 +1567,19 @@ export default function RelojView() {
         {winnerFlash.weight && (
           <div style={{
             marginTop: 8,
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.12)',
+            background: isBlanco ? 'rgba(15,23,42,0.08)' : 'rgba(0,0,0,0.25)',
+            border: isBlanco ? '1px solid rgba(15,23,42,0.15)' : '1px solid rgba(255,255,255,0.25)',
             borderRadius: 8,
             padding: '4px 14px',
             fontSize: 'clamp(11px, 2.5vw, 14px)',
             fontWeight: 800,
-            color: 'rgba(255,255,255,0.85)',
+            color: isBlanco ? '#0f172a' : '#ffffff',
             display: 'flex',
             alignItems: 'center',
             gap: 6
           }}>
-            <span style={{ color: 'rgba(255,255,255,0.5)' }}>⚖️ PESO:</span>
-            <strong style={{ color: '#ffffff' }}>{winnerFlash.weight}</strong>
+            <span style={{ color: isBlanco ? '#475569' : 'rgba(255,255,255,0.7)' }}>⚖️ PESO:</span>
+            <strong style={{ color: isBlanco ? '#0f172a' : '#fbbf24' }}>{winnerFlash.weight}</strong>
           </div>
         )}
       </div>
