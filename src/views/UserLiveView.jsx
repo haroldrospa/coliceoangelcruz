@@ -352,15 +352,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const [fotoAzul, setFotoAzul] = useState(() => localStorage.getItem('reloj_foto_azul') || null);
   const [fotoBlanco, setFotoBlanco] = useState(() => localStorage.getItem('reloj_foto_blanco') || null);
 
-  // Auto-dismiss winner flash banner after 90 seconds so it never gets stuck
-  useEffect(() => {
-    if (!winnerFlash) return;
-    const t = setTimeout(() => {
-      setWinnerFlash(null);
-      localStorage.removeItem('winner_flash');
-    }, 90000);
-    return () => clearTimeout(t);
-  }, [winnerFlash]);
+  // Keep winner flash until a new fight is loaded (no auto-dismiss timer)
 
   useEffect(() => {
     const calcBettingTime = () => {
@@ -554,39 +546,28 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
             localStorage.removeItem('winner_flash');
         } else {
             setFightInfo(EMPTY_FIGHT);
-            // Check if there was a fight finished recently (within the last 4 minutes) so mobile/reconnected viewers see the result
+            // Check if there was a finished fight so viewers see the winner in the clock until a new fight is loaded
             try {
               const finishedEvents = await rawFetch(`events?select=*&status=eq.FINISHED&order=updated_at.desc&limit=1`);
               if (finishedEvents && finishedEvents[0]) {
                 const fin = finishedEvents[0];
-                const finTime = new Date(fin.updated_at || fin.created_at).getTime();
-                if (Date.now() - finTime < 240000) { // Within 4 minutes
-                  const winnerSide = fin.winner_side;
-                  let winnerWeight = '';
-                  try {
-                    const wObj = winnerSide === 'A' ? JSON.parse(fin.gallo_a_weight || '{}') : JSON.parse(fin.gallo_b_weight || '{}');
-                    winnerWeight = wObj.weight || '';
-                  } catch (_) {}
-                  const winnerDisplayName = winnerSide === 'A' ? (fin.gallo_a_name || 'GALLO AZUL') : winnerSide === 'B' ? (fin.gallo_b_name || 'GALLO BLANCO') : 'TABLAS';
-                  const flashData = {
-                    side: winnerSide === 'A' ? 'Azul' : winnerSide === 'B' ? 'Blanco' : 'Tablas',
-                    name: winnerDisplayName,
-                    fightNum: fin.post_number,
-                    weight: winnerWeight
-                  };
-                  setWinnerFlash(flashData);
-                } else {
-                  setWinnerFlash(null);
-                  localStorage.removeItem('winner_flash');
-                }
-              } else {
-                setWinnerFlash(null);
-                localStorage.removeItem('winner_flash');
+                const winnerSide = fin.winner_side;
+                let winnerWeight = '';
+                try {
+                  const wObj = winnerSide === 'A' ? JSON.parse(fin.gallo_a_weight || '{}') : JSON.parse(fin.gallo_b_weight || '{}');
+                  winnerWeight = wObj.weight || '';
+                } catch (_) {}
+                const winnerDisplayName = winnerSide === 'A' ? (fin.gallo_a_name || 'GALLO AZUL') : winnerSide === 'B' ? (fin.gallo_b_name || 'GALLO BLANCO') : 'TABLAS';
+                const flashData = {
+                  side: winnerSide === 'A' ? 'Azul' : winnerSide === 'B' ? 'Blanco' : 'Tablas',
+                  name: winnerDisplayName,
+                  fightNum: fin.post_number,
+                  weight: winnerWeight
+                };
+                setWinnerFlash(flashData);
+                localStorage.setItem('winner_flash', JSON.stringify(flashData));
               }
-            } catch (_) {
-              setWinnerFlash(null);
-              localStorage.removeItem('winner_flash');
-            }
+            } catch (_) {}
         }
 
         // Fetch matched cartelera fights and events, then merge them
@@ -657,7 +638,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
             if (wfSetting && wfSetting.value) {
               try {
                 const wf = typeof wfSetting.value === 'string' ? JSON.parse(wfSetting.value) : wfSetting.value;
-                if (wf && wf.timestamp && Date.now() - wf.timestamp < 180000) {
+                if (wf && wf.side) {
                   setWinnerFlash(wf);
                   localStorage.setItem('winner_flash', JSON.stringify(wf));
                 }
@@ -871,7 +852,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               if (payload.new.id === 'winner_flash_state') {
                   try {
                       const wf = typeof payload.new.value === 'string' ? JSON.parse(payload.new.value) : payload.new.value;
-                      if (wf && wf.timestamp && Date.now() - wf.timestamp < 180000) {
+                      if (wf && wf.side) {
                           setWinnerFlash(wf);
                           localStorage.setItem('winner_flash', JSON.stringify(wf));
                       } else {
@@ -1597,6 +1578,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     const isBlanco = winnerFlash.side === 'Blanco' || winnerFlash.side === 'B';
     const isAzul = winnerFlash.side === 'Azul' || winnerFlash.side === 'A';
     const isTablas = !isBlanco && !isAzul;
+    const hasPhoto = (isAzul && fotoAzul) || (isBlanco && fotoBlanco);
 
     return (
       <div style={{
@@ -1607,7 +1589,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: compact ? 8 : 12,
-        padding: compact ? '8px 16px' : '12px 24px',
+        padding: compact ? '6px 12px' : '10px 20px',
         animation: 'winnerFlashIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         ...(isAzul
           ? {
@@ -1628,45 +1610,63 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
             }
         )
       }}>
-        {/* Minimalist Winner Content */}
-        <div style={{ textAlign: 'center', width: '100%', padding: '0 20px' }}>
-          <div style={{
-            fontSize: 'clamp(10px, 1.8vw, 12px)',
-            fontWeight: 800,
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            opacity: isBlanco ? 0.7 : 0.9,
-            marginBottom: 3
-          }}>
-            PELEA #{winnerFlash.fightNum || fightInfo.post_number} · {isTablas ? 'COMBATE EN TABLAS' : `GALLO ${winnerFlash.side.toUpperCase()}`}
-          </div>
-          <div style={{
-            fontSize: compact ? 'clamp(16px, 3.8vw, 24px)' : 'clamp(20px, 4.5vw, 32px)',
-            fontWeight: 900,
-            fontFamily: 'Outfit, sans-serif',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            lineHeight: 1.15,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-            flexWrap: 'wrap'
-          }}>
-            <span>GANADOR: {winnerFlash.name}</span>
-            {winnerFlash.weight && (
-              <span style={{
-                fontSize: '0.55em',
-                fontWeight: 800,
-                padding: '3px 10px',
-                borderRadius: 8,
-                background: isBlanco ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.2)',
-                color: isBlanco ? '#0f172a' : '#ffffff',
-                letterSpacing: '0.5px'
-              }}>
-                PESO: {winnerFlash.weight}
-              </span>
-            )}
+        {/* Minimalist Winner Content Inside Clock Box */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          gap: compact ? 10 : 16, 
+          width: '100%', 
+          padding: '0 10px' 
+        }}>
+          {isAzul && fotoAzul && (
+            <div style={{ flexShrink: 0 }}>
+              {renderLiveRoosterAvatar('azul', fotoAzul, compact ? 42 : 56)}
+            </div>
+          )}
+          {isBlanco && fotoBlanco && (
+            <div style={{ flexShrink: 0 }}>
+              {renderLiveRoosterAvatar('blanco', fotoBlanco, compact ? 42 : 56)}
+            </div>
+          )}
+          <div style={{ textAlign: hasPhoto ? 'left' : 'center', minWidth: 0 }}>
+            <div style={{
+              fontSize: 'clamp(9px, 1.8vw, 12px)',
+              fontWeight: 800,
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              opacity: isBlanco ? 0.7 : 0.9,
+              marginBottom: 2
+            }}>
+              PELEA #{winnerFlash.fightNum || fightInfo.post_number} · {isTablas ? 'COMBATE EN TABLAS' : `GALLO ${winnerFlash.side.toUpperCase()}`}
+            </div>
+            <div style={{
+              fontSize: compact ? 'clamp(15px, 3.8vw, 22px)' : 'clamp(18px, 4.2vw, 30px)',
+              fontWeight: 900,
+              fontFamily: 'Outfit, sans-serif',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              lineHeight: 1.15,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              flexWrap: 'wrap'
+            }}>
+              <span>GANADOR: {winnerFlash.name}</span>
+              {winnerFlash.weight && (
+                <span style={{
+                  fontSize: '0.55em',
+                  fontWeight: 800,
+                  padding: '2px 8px',
+                  borderRadius: 6,
+                  background: isBlanco ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.2)',
+                  color: isBlanco ? '#0f172a' : '#ffffff',
+                  letterSpacing: '0.5px'
+                }}>
+                  PESO: {winnerFlash.weight}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1679,16 +1679,16 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
           }}
           style={{
             position: 'absolute',
-            top: 8,
-            right: 10,
+            top: 6,
+            right: 8,
             background: 'transparent',
             border: 'none',
             color: isBlanco ? '#0f172a' : '#ffffff',
             opacity: 0.6,
-            width: 28,
-            height: 28,
+            width: 24,
+            height: 24,
             cursor: 'pointer',
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
@@ -3235,193 +3235,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* BIG CELEBRATORY WINNER OVERLAY (FOR CELL / FULLSCREEN & SPECTATORS) */}
-      {/* ======================================================== */}
-      {winnerFlash && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000005,
-            background: 'rgba(5, 8, 16, 0.94)',
-            backdropFilter: 'blur(24px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-            animation: 'winnerModalFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
-          }}
-          onClick={() => {
-            setWinnerFlash(null);
-            localStorage.removeItem('winner_flash');
-          }}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: '100%',
-              maxWidth: 460,
-              borderRadius: 22,
-              padding: '30px 22px 24px',
-              textAlign: 'center',
-              position: 'relative',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.95), 0 0 50px ' + (
-                winnerFlash.side === 'Azul' || winnerFlash.side === 'A' 
-                  ? 'rgba(37,99,235,0.45)' 
-                  : (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B' ? 'rgba(255,255,255,0.35)' : 'rgba(245,158,11,0.45)')
-              ),
-              border: '3px solid ' + (
-                winnerFlash.side === 'Azul' || winnerFlash.side === 'A' 
-                  ? '#3b82f6' 
-                  : (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B' ? '#ffffff' : '#f59e0b')
-              ),
-              background: winnerFlash.side === 'Azul' || winnerFlash.side === 'A'
-                ? 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)'
-                : (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B'
-                  ? 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)'
-                  : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)'
-                ),
-              color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff'
-            }}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => {
-                setWinnerFlash(null);
-                localStorage.removeItem('winner_flash');
-              }}
-              style={{
-                position: 'absolute',
-                top: 12,
-                right: 12,
-                background: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)',
-                border: 'none',
-                color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff',
-                borderRadius: '50%',
-                width: 34,
-                height: 34,
-                fontSize: 16,
-                fontWeight: 900,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-              }}
-              title="Cerrar"
-            >
-              ✕
-            </button>
-
-            {/* Header with ringing bells */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              fontSize: 'clamp(12px, 3.5vw, 16px)',
-              fontWeight: 900,
-              letterSpacing: '2px',
-              textTransform: 'uppercase',
-              marginBottom: 16,
-              color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#475569' : '#93c5fd'
-            }}>
-              <span className="bell-ringing" style={{ fontSize: '1.4em' }}>🔔</span>
-              <span>PELEA #{winnerFlash.fightNum || fightInfo.post_number} · {
-                (winnerFlash.side === 'Azul' || winnerFlash.side === 'A') 
-                  ? 'GALLO AZUL' 
-                  : ((winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? 'GALLO BLANCO' : 'TABLAS')
-              }</span>
-              <span className="bell-ringing" style={{ fontSize: '1.4em' }}>🔔</span>
-            </div>
-
-            {/* Winner Rooster Photo / Avatar if available */}
-            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
-              {(winnerFlash.side === 'Azul' || winnerFlash.side === 'A') && (
-                renderLiveRoosterAvatar('azul', fotoAzul, 96)
-              )}
-              {(winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') && (
-                renderLiveRoosterAvatar('blanco', fotoBlanco, 96)
-              )}
-              {winnerFlash.side !== 'Azul' && winnerFlash.side !== 'A' && winnerFlash.side !== 'Blanco' && winnerFlash.side !== 'B' && (
-                <div style={{ fontSize: 52 }}>🤝</div>
-              )}
-            </div>
-
-            {/* Winner Tagline */}
-            <div style={{
-              fontSize: 'clamp(11px, 3vw, 14px)',
-              fontWeight: 900,
-              letterSpacing: 2,
-              textTransform: 'uppercase',
-              marginBottom: 6,
-              color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#1e40af' : '#fbbf24'
-            }}>
-              {winnerFlash.side === 'Tablas' ? '¡COMBATE DECLARADO EN TABLAS!' : '¡CAMPEÓN DE LA PELEA!'}
-            </div>
-
-            {/* Giant Winner Name */}
-            <div style={{
-              fontSize: 'clamp(26px, 8vw, 44px)',
-              fontWeight: 900,
-              lineHeight: 1.1,
-              textTransform: 'uppercase',
-              marginBottom: 14,
-              letterSpacing: '0.5px',
-              textShadow: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? 'none' : '0 2px 14px rgba(0,0,0,0.7)'
-            }}>
-              {winnerFlash.side === 'Tablas' ? 'PELEA EN TABLAS' : (winnerFlash.name || 'GALLO GANADOR')}
-            </div>
-
-            {/* Official Weight Badge */}
-            {winnerFlash.weight && (
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                background: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : 'rgba(255,255,255,0.15)',
-                color: '#ffffff',
-                borderRadius: 20,
-                padding: '6px 18px',
-                fontSize: 'clamp(12px, 3.2vw, 15px)',
-                fontWeight: 900,
-                border: '1px solid rgba(255,255,255,0.25)',
-                marginBottom: 18
-              }}>
-                <span>⚖️ PESO OFICIAL:</span>
-                <span style={{ color: '#fbbf24' }}>{winnerFlash.weight}</span>
-              </div>
-            )}
-
-            {/* Dismiss button */}
-            <div style={{ marginTop: 6 }}>
-              <button
-                onClick={() => {
-                  setWinnerFlash(null);
-                  localStorage.removeItem('winner_flash');
-                }}
-                style={{
-                  background: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff',
-                  color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#ffffff' : '#0f172a',
-                  border: 'none',
-                  borderRadius: 12,
-                  padding: '12px 28px',
-                  fontSize: 14,
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-              >
-                Cerrar Notificación
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

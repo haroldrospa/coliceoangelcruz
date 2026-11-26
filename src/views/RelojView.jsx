@@ -1456,6 +1456,7 @@ export default function RelojView() {
     const isBlanco = winnerFlash.side === 'Blanco' || winnerFlash.side === 'B';
     const isAzul = winnerFlash.side === 'Azul' || winnerFlash.side === 'A';
     const isTablas = !isBlanco && !isAzul;
+    const hasPhoto = (isAzul && fotoAzul) || (isBlanco && fotoBlanco);
 
     return (
       <div style={{
@@ -1487,45 +1488,63 @@ export default function RelojView() {
             }
         )
       }}>
-        {/* Minimalist Winner Content */}
-        <div style={{ textAlign: 'center', width: '100%', padding: '0 20px' }}>
-          <div style={{
-            fontSize: 'clamp(10px, 1.8vw, 12px)',
-            fontWeight: 800,
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            opacity: isBlanco ? 0.7 : 0.9,
-            marginBottom: 3
-          }}>
-            PELEA #{winnerFlash.fightNum} · {isTablas ? 'COMBATE EN TABLAS' : `GALLO ${winnerFlash.side.toUpperCase()}`}
-          </div>
-          <div style={{
-            fontSize: compact ? 'clamp(16px, 3.8vw, 24px)' : 'clamp(20px, 4.5vw, 32px)',
-            fontWeight: 900,
-            fontFamily: 'Outfit, sans-serif',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            lineHeight: 1.15,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 12,
-            flexWrap: 'wrap'
-          }}>
-            <span>GANADOR: {winnerFlash.name}</span>
-            {winnerFlash.weight && (
-              <span style={{
-                fontSize: '0.55em',
-                fontWeight: 800,
-                padding: '3px 10px',
-                borderRadius: 8,
-                background: isBlanco ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.2)',
-                color: isBlanco ? '#0f172a' : '#ffffff',
-                letterSpacing: '0.5px'
-              }}>
-                PESO: {winnerFlash.weight}
-              </span>
-            )}
+        {/* Minimalist Winner Content Inside Clock Box */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          gap: compact ? 12 : 20, 
+          width: '100%', 
+          padding: '0 16px' 
+        }}>
+          {isAzul && fotoAzul && (
+            <div style={{ flexShrink: 0 }}>
+              {renderRoosterAvatar('azul', fotoAzul)}
+            </div>
+          )}
+          {isBlanco && fotoBlanco && (
+            <div style={{ flexShrink: 0 }}>
+              {renderRoosterAvatar('blanco', fotoBlanco)}
+            </div>
+          )}
+          <div style={{ textAlign: hasPhoto ? 'left' : 'center', minWidth: 0 }}>
+            <div style={{
+              fontSize: 'clamp(10px, 1.8vw, 12px)',
+              fontWeight: 800,
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              opacity: isBlanco ? 0.7 : 0.9,
+              marginBottom: 3
+            }}>
+              PELEA #{winnerFlash.fightNum} · {isTablas ? 'COMBATE EN TABLAS' : `GALLO ${winnerFlash.side.toUpperCase()}`}
+            </div>
+            <div style={{
+              fontSize: compact ? 'clamp(16px, 3.8vw, 24px)' : 'clamp(20px, 4.5vw, 32px)',
+              fontWeight: 900,
+              fontFamily: 'Outfit, sans-serif',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              lineHeight: 1.15,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap'
+            }}>
+              <span>GANADOR: {winnerFlash.name}</span>
+              {winnerFlash.weight && (
+                <span style={{
+                  fontSize: '0.55em',
+                  fontWeight: 800,
+                  padding: '3px 10px',
+                  borderRadius: 8,
+                  background: isBlanco ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.2)',
+                  color: isBlanco ? '#0f172a' : '#ffffff',
+                  letterSpacing: '0.5px'
+                }}>
+                  PESO: {winnerFlash.weight}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1552,11 +1571,8 @@ export default function RelojView() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 10,
-            transition: 'opacity 0.15s ease'
+            zIndex: 10
           }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
           title="Cerrar"
         >
           ✕
