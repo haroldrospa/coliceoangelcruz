@@ -359,54 +359,6 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
       </Header>
 
       <Content>{renderContent()}</Content>
-
-      {currentView !== 'login' && (
-        <div className="mobile-nav mobile-only">
-          {/* Left Side Items */}
-          <div className="capsule-side">
-            {leftItems.map(item => {
-              const isActive = currentView === item.key;
-              return (
-                <div 
-                  key={item.key} 
-                  onClick={() => setCurrentView(item.key)} 
-                  className={`capsule-item ${isActive ? 'active' : ''}`}
-                >
-                  {getIcon(item.key, isActive)}
-                  {isActive && <div className="active-indicator-dot" />}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Center Home Button (Larger & Floating) */}
-          {homeItem && (
-            <div 
-              onClick={() => setCurrentView('live')} 
-              className={`capsule-home-btn ${isHomeActive ? 'active' : ''}`}
-            >
-              {getIcon('live', isHomeActive)}
-            </div>
-          )}
-
-          {/* Right Side Items */}
-          <div className="capsule-side">
-            {rightItems.map(item => {
-              const isActive = currentView === item.key;
-              return (
-                <div 
-                  key={item.key} 
-                  onClick={() => setCurrentView(item.key)} 
-                  className={`capsule-item ${isActive ? 'active' : ''}`}
-                >
-                  {getIcon(item.key, isActive)}
-                  {isActive && <div className="active-indicator-dot" />}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </Layout>
   );
 }

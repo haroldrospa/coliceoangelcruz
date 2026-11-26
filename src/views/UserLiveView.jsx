@@ -1704,7 +1704,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   };
 
   return (
-    <div style={{ background: 'var(--obsidian)', minHeight: '100vh', padding: '16px', maxWidth: 1200, margin: '0 auto', paddingBottom: 100 }}>
+    <div style={{ background: 'var(--obsidian)', minHeight: '100vh', padding: '16px', maxWidth: 1200, margin: '0 auto', paddingBottom: 24 }}>
       {/* PRIMARY BATTLE ZONE: Centered Stream Player & Reloj Scoreboard */}
       <div style={{ maxWidth: 900, margin: '0 auto 24px auto', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         
