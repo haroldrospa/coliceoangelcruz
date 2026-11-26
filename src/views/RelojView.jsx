@@ -147,9 +147,9 @@ export default function RelojView() {
   // Careo / Sub-timers state
   const [subTimeLeft, setSubTimeLeft] = useState(null); // null or seconds remaining (red clock)
   const [subTimerLabel, setSubTimerLabel] = useState('');
-  const [careoFinished, setCareoFinished] = useState(false);
+  const [careoFinished, setCareoFinished] = useState(() => localStorage.getItem('fight_awaiting_winner') === 'true');
   const [pauseMainOnSub, setPauseMainOnSub] = useState(false);
-  const [showOutcomeModal, setShowOutcomeModal] = useState(false);
+  const [showOutcomeModal, setShowOutcomeModal] = useState(() => localStorage.getItem('fight_awaiting_winner') === 'true');
   const [scoreboardStyle, setScoreboardStyle] = useState(() => localStorage.getItem('scoreboard_style') || 'broadcast'); // 'modern', 'arena', 'broadcast'
   
   // Rooster Photos state
@@ -166,7 +166,9 @@ export default function RelojView() {
   const [fightNumber, setFightNumber] = useState(() => parseInt(localStorage.getItem('reloj_fight_number') || '1', 10));
 
   useEffect(() => {
-    setCareoFinished(false);
+    if (localStorage.getItem('fight_awaiting_winner') !== 'true') {
+      setCareoFinished(false);
+    }
   }, [fightNumber]);
 
   const [gallinoName, setGallinoName] = useState(() => localStorage.getItem('reloj_gallino_name') || '');
@@ -422,7 +424,16 @@ export default function RelojView() {
 
     setPresetDuration(totalDuration);
 
-    if (isRun && startedAt) {
+    if (localStorage.getItem('fight_awaiting_winner') === 'true') {
+      // Fight has concluded (e.g. Careo ended) and is waiting for judge's mandatory outcome decision
+      setIsRunning(false);
+      localStorage.setItem('clock_running', 'false');
+      localStorage.removeItem('fight_active');
+      setElapsedTime(elapsedPaused);
+      setTimeLeft(Math.max(0, totalDuration - elapsedPaused));
+      setShowOutcomeModal(true);
+      setCareoFinished(true);
+    } else if (isRun && startedAt) {
       const now = new Date().getTime();
       const delta = Math.floor((now - parseInt(startedAt, 10)) / 1000);
       const currentElapsed = elapsedPaused + delta;
@@ -802,16 +813,34 @@ export default function RelojView() {
         const remaining = subTotal - delta;
 
         if (remaining <= 0) {
-          clearInterval(subTimerRef.current);
+          if (subTimerRef.current) clearInterval(subTimerRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
+
+          // Calcular tiempo exacto de detención del combate
+          const startedAt = parseInt(localStorage.getItem('clock_started_at') || '0', 10);
+          const elapsedPaused = parseInt(localStorage.getItem('clock_elapsed_paused') || '0', 10);
+          const finalElapsed = (startedAt > 0)
+            ? Math.min(presetDuration, elapsedPaused + Math.floor((Date.now() - startedAt) / 1000))
+            : elapsedTime;
+
+          setElapsedTime(finalElapsed);
+          setTimeLeft(Math.max(0, presetDuration - finalElapsed));
           setSubTimeLeft(null);
           setCareoFinished(true);
           setIsRunning(false);
+          setShowOutcomeModal(true);
+
           localStorage.setItem('clock_running', 'false');
           localStorage.setItem('sub_running', 'false');
-          broadcastClockState(false, elapsedTime, presetDuration, null);
+          localStorage.removeItem('sub_timer_left');
+          localStorage.removeItem('fight_active');
+          localStorage.setItem('clock_elapsed_paused', finalElapsed.toString());
+          localStorage.setItem('fight_awaiting_winner', 'true');
+          localStorage.setItem('fight_awaiting_winner_number', fightNumber.toString());
+
+          broadcastClockState(false, finalElapsed, presetDuration, null);
           playSynthesizedSound('buzzer');
-          message.info(`¡Tiempo de ${subTimerLabel} concluido!`);
-          setShowOutcomeModal(true);
+          message.info(`¡Tiempo de ${subTimerLabel || 'CAREO'} concluido! Selecciona el ganador oficial.`);
         } else {
           setSubTimeLeft(remaining);
         }
@@ -823,7 +852,7 @@ export default function RelojView() {
     return () => {
       if (subTimerRef.current) clearInterval(subTimerRef.current);
     };
-  }, [subTimeLeft, subTimerLabel, message, setShowOutcomeModal]);
+  }, [subTimeLeft, subTimerLabel, message, presetDuration, fightNumber, elapsedTime]);
 
   const upsertEvent = async (fightNum, status, winnerSide = null, winnerNameForBroadcast = null, winnerWeightForBroadcast = null) => {
     try {
@@ -949,6 +978,11 @@ export default function RelojView() {
 
   // Actions
   const handleStart = () => {
+    if (showOutcomeModal || localStorage.getItem('fight_awaiting_winner') === 'true') {
+      message.warning('⚠️ Debes seleccionar el ganador oficial del combate (Azul, Blanco o Tablas) para continuar.');
+      setShowOutcomeModal(true);
+      return;
+    }
     if (!gallinoName && !blancoName) {
       message.error('⚠️ Debes cargar una pelea de la cartelera antes de iniciar el combate.');
       return;
@@ -999,14 +1033,22 @@ export default function RelojView() {
   };
 
   const handleReset = () => {
+    if (showOutcomeModal || localStorage.getItem('fight_awaiting_winner') === 'true') {
+      message.warning('⚠️ Debes registrar el resultado de la pelea actual antes de restablecer.');
+      setShowOutcomeModal(true);
+      return;
+    }
     setIsRunning(false);
     setSubTimeLeft(null);
     setCareoFinished(false);
+    setShowOutcomeModal(false);
     setTimeLeft(presetDuration);
     setElapsedTime(0);
     
     // Clear fight_active - fight is over / reset
     localStorage.removeItem('fight_active');
+    localStorage.removeItem('fight_awaiting_winner');
+    localStorage.removeItem('fight_awaiting_winner_number');
     localStorage.setItem('clock_running', 'false');
     
     broadcastClockState(false, 0, presetDuration, null);
@@ -1025,6 +1067,7 @@ export default function RelojView() {
     setIsRunning(false);
     setSubTimeLeft(null);
     setCareoFinished(false);
+    setShowOutcomeModal(false);
     setTimeLeft(presetDuration);
     setElapsedTime(0);
 
@@ -1055,6 +1098,8 @@ export default function RelojView() {
     localStorage.removeItem('reloj_foto_blanco');
     localStorage.removeItem('winner_flash');
     localStorage.removeItem('fight_active');
+    localStorage.removeItem('fight_awaiting_winner');
+    localStorage.removeItem('fight_awaiting_winner_number');
     localStorage.setItem('clock_running', 'false');
     localStorage.setItem('betting_active', 'false');
     localStorage.setItem('sub_running', 'false');
@@ -1120,6 +1165,36 @@ export default function RelojView() {
     broadcastClockState(isRunning, elapsedTime, presetDuration, null);
   };
 
+  // Omitir careo y abrir selección obligatoria de ganador
+  const handleOmitCareoAndChooseWinner = () => {
+    if (subTimerRef.current) clearInterval(subTimerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    const startedAt = parseInt(localStorage.getItem('clock_started_at') || '0', 10);
+    const elapsedPaused = parseInt(localStorage.getItem('clock_elapsed_paused') || '0', 10);
+    const finalElapsed = (startedAt > 0 && isRunning)
+      ? Math.min(presetDuration, elapsedPaused + Math.floor((Date.now() - startedAt) / 1000))
+      : elapsedTime;
+
+    setElapsedTime(finalElapsed);
+    setTimeLeft(Math.max(0, presetDuration - finalElapsed));
+    setSubTimeLeft(null);
+    setCareoFinished(true);
+    setIsRunning(false);
+    setShowOutcomeModal(true);
+
+    localStorage.setItem('clock_running', 'false');
+    localStorage.setItem('sub_running', 'false');
+    localStorage.removeItem('sub_timer_left');
+    localStorage.removeItem('fight_active');
+    localStorage.setItem('clock_elapsed_paused', finalElapsed.toString());
+    localStorage.setItem('fight_awaiting_winner', 'true');
+    localStorage.setItem('fight_awaiting_winner_number', fightNumber.toString());
+
+    broadcastClockState(false, finalElapsed, presetDuration, null);
+    message.info('Careo concluido. Selecciona el ganador oficial.');
+  };
+
   // Helper formatting mm:ss
   const formatTime = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -1130,6 +1205,15 @@ export default function RelojView() {
   // Log Fight Result & Trigger Premium Confetti Celebration Overlay
   const handleSaveFightResult = async (resultType) => {
     setCareoFinished(false);
+    setShowOutcomeModal(false);
+    localStorage.removeItem('fight_awaiting_winner');
+    localStorage.removeItem('fight_awaiting_winner_number');
+    localStorage.removeItem('fight_active');
+    localStorage.setItem('clock_running', 'false');
+    setIsRunning(false);
+    if (subTimerRef.current) clearInterval(subTimerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+
     const durationStr = formatTime(elapsedTime);
     const newResults = {
       ...fightResults,
@@ -1221,6 +1305,11 @@ export default function RelojView() {
   };
 
   const handleLoadFight = (fight) => {
+    if (showOutcomeModal || localStorage.getItem('fight_awaiting_winner') === 'true') {
+      message.warning('⚠️ Debes registrar el ganador oficial del combate actual antes de cambiar de pelea.');
+      setShowOutcomeModal(true);
+      return;
+    }
     setFightNumber(fight.numero_pelea);
     setGallinoName(fight.traba_a || '');
     setBlancoName(fight.traba_b || '');
@@ -2433,6 +2522,7 @@ export default function RelojView() {
                           block 
                           type="primary" 
                           danger 
+                          disabled={showOutcomeModal || careoFinished}
                           icon={<PauseCircleOutlined style={{ fontSize: 18 }} />} 
                           onClick={handlePause}
                           style={{ height: 48, borderRadius: 10, fontWeight: 800, fontSize: 14, letterSpacing: '0.5px' }}
@@ -2443,21 +2533,21 @@ export default function RelojView() {
                         <Button 
                           block 
                           type="primary" 
-                          disabled={!gallinoName && !blancoName}
+                          disabled={(!gallinoName && !blancoName) || showOutcomeModal || careoFinished}
                           style={{ 
                             height: 48, 
                             borderRadius: 10, 
                             fontWeight: 800, 
                             fontSize: 14,
                             letterSpacing: '0.5px',
-                            background: (gallinoName || blancoName) ? '#10b981' : 'rgba(255,255,255,0.04)', 
-                            borderColor: (gallinoName || blancoName) ? '#10b981' : 'rgba(255,255,255,0.08)',
-                            color: (gallinoName || blancoName) ? '#ffffff' : 'rgba(255,255,255,0.3)'
+                            background: ((gallinoName || blancoName) && !showOutcomeModal && !careoFinished) ? '#10b981' : 'rgba(255,255,255,0.04)', 
+                            borderColor: ((gallinoName || blancoName) && !showOutcomeModal && !careoFinished) ? '#10b981' : 'rgba(255,255,255,0.08)',
+                            color: ((gallinoName || blancoName) && !showOutcomeModal && !careoFinished) ? '#ffffff' : 'rgba(255,255,255,0.3)'
                           }} 
                           icon={<PlayCircleOutlined style={{ fontSize: 18 }} />} 
                           onClick={handleStart}
                         >
-                          INICIAR COMBATE
+                          {(showOutcomeModal || careoFinished) ? 'DECISIÓN PENDIENTE' : 'INICIAR COMBATE'}
                         </Button>
                       )}
                       <Tooltip title="Restablecer reloj">
@@ -2721,7 +2811,7 @@ export default function RelojView() {
                       <Button 
                         type="link" 
                         size="small"
-                        onClick={() => setCareoFinished(true)}
+                        onClick={handleOmitCareoAndChooseWinner}
                         style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: 600, padding: 0 }}
                       >
                         (Omitir careo y habilitar ganador)
@@ -2734,14 +2824,29 @@ export default function RelojView() {
                       <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         REGISTRAR GANADOR
                       </Text>
-                      <Button 
-                        type="link" 
-                        size="small"
-                        onClick={() => setCareoFinished(false)}
-                        style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, padding: 0 }}
-                      >
-                        Reiniciar Careo ↺
-                      </Button>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <Button 
+                          type="link" 
+                          size="small"
+                          onClick={() => setShowOutcomeModal(true)}
+                          style={{ color: '#38bdf8', fontSize: 10, fontWeight: 700, padding: 0 }}
+                        >
+                          Abrir Ventana ↗
+                        </Button>
+                        <Button 
+                          type="link" 
+                          size="small"
+                          onClick={() => {
+                            setCareoFinished(false);
+                            setShowOutcomeModal(false);
+                            localStorage.removeItem('fight_awaiting_winner');
+                            localStorage.removeItem('fight_awaiting_winner_number');
+                          }}
+                          style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, padding: 0 }}
+                        >
+                          Reiniciar Careo ↺
+                        </Button>
+                      </div>
                     </div>
                     <Row gutter={8}>
                       <Col span={8}>
@@ -2942,11 +3047,13 @@ export default function RelojView() {
 
       </div>
 
-      {/* Modal de decisión rápida al terminar Careo/Tierra */}
+      {/* Modal de decisión obligatoria al terminar Careo/Tierra */}
       <Modal
         open={showOutcomeModal}
         footer={null}
         closable={false}
+        maskClosable={false}
+        keyboard={false}
         centered
         width={480}
         styles={{ body: { background: 'linear-gradient(145deg, #111827 0%, #0b0f19 100%)', padding: '24px 28px', borderRadius: 20 } }}
@@ -2972,20 +3079,17 @@ export default function RelojView() {
           </div>
 
           <Title level={4} style={{ color: '#ffffff', margin: '0 0 6px 0', fontFamily: 'Outfit', fontWeight: 900, fontSize: 20 }}>
-            Pelea #{fightNumber} Finalizada
+            Pelea #{fightNumber} Concluida
           </Title>
-          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, fontFamily: 'Outfit' }}>
-            Selecciona el ganador oficial para cerrar el combate:
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, fontFamily: 'Outfit' }}>
+            Selección obligatoria del ganador oficial para registrar el combate:
           </Text>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Ganó Azul */}
           <button 
-            onClick={() => {
-              handleSaveFightResult('Azul');
-              setShowOutcomeModal(false);
-            }} 
+            onClick={() => handleSaveFightResult('Azul')} 
             style={{ 
               width: '100%',
               background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)', 
@@ -3021,10 +3125,7 @@ export default function RelojView() {
 
           {/* Ganó Blanco */}
           <button 
-            onClick={() => {
-              handleSaveFightResult('Blanco');
-              setShowOutcomeModal(false);
-            }} 
+            onClick={() => handleSaveFightResult('Blanco')} 
             style={{ 
               width: '100%',
               background: 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)', 
@@ -3060,10 +3161,7 @@ export default function RelojView() {
 
           {/* PELEA EN TABLAS */}
           <button 
-            onClick={() => {
-              handleSaveFightResult('Tablas');
-              setShowOutcomeModal(false);
-            }} 
+            onClick={() => handleSaveFightResult('Tablas')} 
             style={{ 
               width: '100%',
               background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', 
@@ -3084,21 +3182,6 @@ export default function RelojView() {
               DECLARAR TABLAS (EMPATE)
             </span>
           </button>
-
-          {/* Descartar / Seguir combate */}
-          <Button 
-            type="text" 
-            onClick={() => setShowOutcomeModal(false)} 
-            style={{ 
-              color: 'rgba(255,255,255,0.45)', 
-              fontWeight: 700, 
-              marginTop: 4, 
-              fontFamily: 'Outfit',
-              fontSize: 12
-            }}
-          >
-            Continuar combate sin registrar
-          </Button>
         </div>
       </Modal>
 
