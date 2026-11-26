@@ -1604,22 +1604,73 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         inset: 0,
         zIndex: 100,
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: compact ? 8 : 12,
-        padding: compact ? '6px 12px' : '10px 18px',
-        boxShadow: '0 0 50px rgba(0,0,0,0.85)',
-        animation: 'winnerFlashIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-        backdropFilter: 'blur(10px)',
+        padding: compact ? '8px 16px' : '12px 24px',
+        animation: 'winnerFlashIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         ...(isAzul
-          ? { background: 'linear-gradient(135deg, rgba(15,61,209,0.98) 0%, rgba(30,58,138,0.99) 100%)', border: '2px solid #3b82f6' }
+          ? {
+              background: '#1d4ed8',
+              boxShadow: '0 8px 30px rgba(29,78,216,0.5)',
+              color: '#ffffff'
+            }
           : isBlanco
-          ? { background: 'linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(241,245,249,0.99) 100%)', border: '2px solid #ffffff' }
-          : { background: 'linear-gradient(135deg, rgba(217,119,6,0.98) 0%, rgba(180,83,9,0.99) 100%)', border: '2px solid #f59e0b' }
+          ? {
+              background: '#ffffff',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.18)',
+              color: '#0f172a'
+            }
+          : {
+              background: '#d97706',
+              boxShadow: '0 8px 30px rgba(217,119,6,0.4)',
+              color: '#ffffff'
+            }
         )
       }}>
-        {/* Close Button */}
+        {/* Minimalist Winner Content */}
+        <div style={{ textAlign: 'center', width: '100%', padding: '0 20px' }}>
+          <div style={{
+            fontSize: 'clamp(10px, 1.8vw, 12px)',
+            fontWeight: 800,
+            letterSpacing: '2px',
+            textTransform: 'uppercase',
+            opacity: isBlanco ? 0.7 : 0.9,
+            marginBottom: 3
+          }}>
+            PELEA #{winnerFlash.fightNum || fightInfo.post_number} · {isTablas ? 'COMBATE EN TABLAS' : `GALLO ${winnerFlash.side.toUpperCase()}`}
+          </div>
+          <div style={{
+            fontSize: compact ? 'clamp(16px, 3.8vw, 24px)' : 'clamp(20px, 4.5vw, 32px)',
+            fontWeight: 900,
+            fontFamily: 'Outfit, sans-serif',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            lineHeight: 1.15,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            flexWrap: 'wrap'
+          }}>
+            <span>GANADOR: {winnerFlash.name}</span>
+            {winnerFlash.weight && (
+              <span style={{
+                fontSize: '0.55em',
+                fontWeight: 800,
+                padding: '3px 10px',
+                borderRadius: 8,
+                background: isBlanco ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.2)',
+                color: isBlanco ? '#0f172a' : '#ffffff',
+                letterSpacing: '0.5px'
+              }}>
+                PESO: {winnerFlash.weight}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Minimalist Dismiss Button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -1628,17 +1679,17 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
           }}
           style={{
             position: 'absolute',
-            top: 4,
-            right: 6,
-            background: isBlanco ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.3)',
+            top: 8,
+            right: 10,
+            background: 'transparent',
             border: 'none',
             color: isBlanco ? '#0f172a' : '#ffffff',
-            borderRadius: '50%',
-            width: 22,
-            height: 22,
+            opacity: 0.6,
+            width: 28,
+            height: 28,
             cursor: 'pointer',
-            fontSize: 11,
-            fontWeight: 900,
+            fontSize: 14,
+            fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1648,58 +1699,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         >
           ✕
         </button>
-
-        {/* Bell + Fight Header */}
-        <div style={{
-          fontSize: compact ? 'clamp(9px, 2.5vw, 11px)' : 'clamp(10px, 2.5vw, 13px)',
-          fontWeight: 900,
-          letterSpacing: '1.5px',
-          textTransform: 'uppercase',
-          color: isBlanco ? '#475569' : 'rgba(255,255,255,0.85)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          lineHeight: 1,
-          marginBottom: 3
-        }}>
-          <span className="bell-ringing" style={{ display: 'inline-block', fontSize: '1.25em' }}>🔔</span>
-          <span>PELEA #{winnerFlash.fightNum || fightInfo.post_number} — {isTablas ? 'COMBATE FINALIZADO' : `GALLO ${winnerFlash.side.toUpperCase()}`}</span>
-          <span className="bell-ringing" style={{ display: 'inline-block', fontSize: '1.25em' }}>🔔</span>
-        </div>
-
-        {/* Big Winner Name */}
-        <div style={{
-          fontSize: compact ? 'clamp(14px, 4vw, 20px)' : 'clamp(18px, 4.5vw, 30px)',
-          fontWeight: 900,
-          fontFamily: 'Outfit, sans-serif',
-          color: isBlanco ? '#0f172a' : '#ffffff',
-          textTransform: 'uppercase',
-          textAlign: 'center',
-          lineHeight: 1.1,
-          letterSpacing: '0.5px'
-        }}>
-          {isTablas ? '🤝 ¡PELEA EN TABLAS / NULA!' : `🏆 GANADOR: ${winnerFlash.name}`}
-        </div>
-
-        {/* Weight Pill if present */}
-        {winnerFlash.weight && (
-          <div style={{
-            marginTop: 3,
-            background: isBlanco ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.15)',
-            border: isBlanco ? '1px solid rgba(15,23,42,0.18)' : '1px solid rgba(255,255,255,0.25)',
-            borderRadius: 6,
-            padding: '1px 8px',
-            fontSize: compact ? 'clamp(9px, 2.2vw, 11px)' : 'clamp(10px, 2.5vw, 12px)',
-            fontWeight: 900,
-            color: isBlanco ? '#0f172a' : '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4
-          }}>
-            <span>⚖️ PESO DEL GALLO:</span>
-            <strong style={{ fontSize: '1.05em' }}>{winnerFlash.weight}</strong>
-          </div>
-        )}
       </div>
     );
   };

@@ -113,8 +113,17 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
            <Title level={5} style={{ color: 'var(--text-main)', margin: 0, fontWeight: 900, letterSpacing: '0.3px', fontFamily: 'Outfit, sans-serif', textTransform: 'uppercase', fontSize: 'clamp(10px, 1vw, 13px)', whiteSpace: 'nowrap' }}>COLISEO ANGEL CRUZ</Title>
         </div>
 
-        {/* Minimalist Nav Links (Fits perfectly without scroll) */}
-        <div style={{ display: 'flex', gap: 'clamp(1px, 0.4vw, 4px)', alignItems: 'center', flexWrap: 'nowrap', overflow: 'hidden' }}>
+        {/* Minimalist Pill Capsule Nav */}
+        <div style={{ 
+          display: 'flex', 
+          gap: 3, 
+          alignItems: 'center', 
+          flexWrap: 'nowrap',
+          background: theme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+          border: theme === 'dark' ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid rgba(0, 0, 0, 0.06)',
+          borderRadius: 22,
+          padding: '3px 4px'
+        }}>
           {itemsToShow.map(item => {
             const isActive = currentView === item.key;
             return (
@@ -125,44 +134,36 @@ function MainContent({ currentUser, setCurrentUser, currentView, setCurrentView,
                    cursor: 'pointer', 
                    display: 'flex', 
                    alignItems: 'center', 
-                   gap: 5, 
-                   padding: '6px clamp(6px, 0.8vw, 12px)',
-                   borderRadius: '8px',
-                   background: isActive ? (theme === 'dark' ? 'rgba(16, 185, 129, 0.14)' : 'rgba(16, 185, 129, 0.12)') : 'transparent',
+                   gap: 6, 
+                   padding: '5px clamp(8px, 0.9vw, 13px)',
+                   borderRadius: 16,
+                   background: isActive ? (theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.07)') : 'transparent',
+                   color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
                    transition: 'all 0.2s ease',
-                   border: 'none',
-                   position: 'relative',
                    whiteSpace: 'nowrap',
                    flexShrink: 0
                 }}
                 className="nav-tab-item"
               >
-                <span style={{ color: isActive ? '#10b981' : 'var(--text-muted)', fontSize: 13, transition: 'color 0.2s', display: 'flex', alignItems: 'center' }}>
+                <span style={{ 
+                  color: isActive ? (theme === 'dark' ? '#38bdf8' : '#0284c7') : 'var(--text-muted)', 
+                  fontSize: 13, 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  opacity: isActive ? 1 : 0.65
+                }}>
                   {getIcon(item.key, isActive)}
                 </span>
                 <Text style={{ 
-                  color: isActive ? (theme === 'dark' ? '#ffffff' : '#0f172a') : 'var(--text-muted)', 
+                  color: isActive ? 'var(--text-main)' : 'var(--text-muted)', 
                   fontSize: 'clamp(10px, 0.85vw, 11px)', 
-                  fontWeight: isActive ? 900 : 700, 
-                  letterSpacing: '0.3px', 
+                  fontWeight: isActive ? 800 : 500, 
+                  letterSpacing: '0.4px', 
                   textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-block',
-                  transition: 'color 0.2s'
+                  whiteSpace: 'nowrap'
                 }}>
                   {item.label}
                 </Text>
-                {isActive && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: -2,
-                    left: '15%',
-                    right: '15%',
-                    height: 2,
-                    background: '#10b981',
-                    borderRadius: 2
-                  }} />
-                )}
               </div>
             );
           })}

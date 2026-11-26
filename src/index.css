@@ -272,12 +272,11 @@ body.light-theme .step-circle-inactive {
 }
 
 .nav-tab-item:hover {
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 .nav-tab-item:hover span {
-  color: #10b981 !important;
+  opacity: 1 !important;
 }
 
 .nav-tab-item:hover .ant-typography {
@@ -285,8 +284,7 @@ body.light-theme .step-circle-inactive {
 }
 
 body.light-theme .nav-tab-item:hover {
-  background: rgba(0, 0, 0, 0.04) !important;
-  border-color: rgba(0, 0, 0, 0.08) !important;
+  background: rgba(0, 0, 0, 0.05) !important;
 }
 
 body.light-theme .nav-tab-item:hover .ant-typography {
