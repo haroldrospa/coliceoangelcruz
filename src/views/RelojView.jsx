@@ -153,8 +153,8 @@ export default function RelojView() {
   const [scoreboardStyle, setScoreboardStyle] = useState(() => localStorage.getItem('scoreboard_style') || 'broadcast'); // 'modern', 'arena', 'broadcast'
   
   // Rooster Photos state
-  const [fotoAzul, setFotoAzul] = useState(null);
-  const [fotoBlanco, setFotoBlanco] = useState(null);
+  const [fotoAzul, setFotoAzul] = useState(() => localStorage.getItem('reloj_foto_azul') || null);
+  const [fotoBlanco, setFotoBlanco] = useState(() => localStorage.getItem('reloj_foto_blanco') || null);
   
   // Completed fights minimization state
   const [completedMinimized, setCompletedMinimized] = useState(() => {
@@ -648,13 +648,47 @@ export default function RelojView() {
     };
   }, [isRunning, presetDuration, message]);
 
-  // Handlers for rooster photo uploads with instant live broadcast
-  const handleFotoAzulChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
+  // Fast client-side image compressor using HTML5 canvas
+  // Ensures photos are ~15-30KB so they broadcast over Supabase Realtime WebSocket instantly without errors
+  const compressImage = (file, maxWidth = 320, maxHeight = 320, quality = 0.75) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target.result;
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handlers for rooster photo uploads with instant live broadcast
+  const handleFotoAzulChange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      try {
+        const dataUrl = await compressImage(file, 320, 320, 0.75);
         setFotoAzul(dataUrl);
         localStorage.setItem('reloj_foto_azul', dataUrl);
         if (channelRef.current) {
@@ -664,17 +698,22 @@ export default function RelojView() {
             payload: { side: 'azul', photo: dataUrl, fightNumber }
           });
         }
-      };
-      reader.readAsDataURL(file);
+        await upsertSetting('rooster_photos', JSON.stringify({
+          azul: dataUrl,
+          blanco: fotoBlanco || localStorage.getItem('reloj_foto_blanco') || null,
+          fightNumber
+        }));
+      } catch (err) {
+        console.error('Error procesando foto azul:', err);
+      }
     }
   };
 
-  const handleFotoBlancoChange = (e) => {
-    const file = e.target.files[0];
+  const handleFotoBlancoChange = async (e) => {
+    const file = e.target.files && e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const dataUrl = event.target.result;
+      try {
+        const dataUrl = await compressImage(file, 320, 320, 0.75);
         setFotoBlanco(dataUrl);
         localStorage.setItem('reloj_foto_blanco', dataUrl);
         if (channelRef.current) {
@@ -684,8 +723,14 @@ export default function RelojView() {
             payload: { side: 'blanco', photo: dataUrl, fightNumber }
           });
         }
-      };
-      reader.readAsDataURL(file);
+        await upsertSetting('rooster_photos', JSON.stringify({
+          azul: fotoAzul || localStorage.getItem('reloj_foto_azul') || null,
+          blanco: dataUrl,
+          fightNumber
+        }));
+      } catch (err) {
+        console.error('Error procesando foto blanco:', err);
+      }
     }
   };
 
@@ -902,6 +947,14 @@ export default function RelojView() {
     // Clear previous fight winner banner when starting a new fight
     setWinnerFlash(null);
     localStorage.removeItem('winner_flash');
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'winner_flash_sync',
+        payload: null
+      });
+    }
+    upsertSetting('winner_flash_state', JSON.stringify(null)).catch(() => {});
 
     // Stop betting phase completely when fight starts
     setBettingPhase(false);
@@ -983,11 +1036,28 @@ export default function RelojView() {
     localStorage.removeItem('reloj_peso_blanco');
     localStorage.removeItem('reloj_color_blanco');
     localStorage.removeItem('reloj_marca_blanco');
+    localStorage.removeItem('reloj_foto_azul');
+    localStorage.removeItem('reloj_foto_blanco');
     localStorage.removeItem('winner_flash');
     localStorage.removeItem('fight_active');
     localStorage.setItem('clock_running', 'false');
     localStorage.setItem('betting_active', 'false');
     localStorage.setItem('sub_running', 'false');
+
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'winner_flash_sync',
+        payload: null
+      });
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'rooster_photo_sync',
+        payload: { side: 'all', photo: null }
+      });
+    }
+    upsertSetting('winner_flash_state', JSON.stringify(null)).catch(() => {});
+    upsertSetting('rooster_photos', JSON.stringify({ azul: null, blanco: null })).catch(() => {});
 
     // Transmitir reloj en 0 sin apuestas
     broadcastClockState(false, 0, presetDuration, null);
@@ -1089,6 +1159,19 @@ export default function RelojView() {
     setWinnerFlash(flashData);
     localStorage.setItem('winner_flash', JSON.stringify(flashData));
 
+    // Broadcast winner celebration to all live spectators immediately
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'winner_flash_sync',
+        payload: flashData
+      });
+    }
+    await upsertSetting('winner_flash_state', JSON.stringify({
+      ...flashData,
+      timestamp: Date.now()
+    }));
+
     // Sync result to Supabase events table
     const winnerSideMap = { 'Azul': 'A', 'Blanco': 'B', 'Tablas': 'D' };
     const winSide = winnerSideMap[resultType] || 'D';
@@ -1135,9 +1218,27 @@ export default function RelojView() {
     setColorBlanco(fight.color_b || '');
     setMarcaBlanco(fight.marca_b || '');
     
-    // Reset winner flash when loading a new fight
+    // Reset winner flash and photos when loading a new fight
     setWinnerFlash(null);
     localStorage.removeItem('winner_flash');
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'winner_flash_sync',
+        payload: null
+      });
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'rooster_photo_sync',
+        payload: { side: 'all', photo: null }
+      });
+    }
+    upsertSetting('winner_flash_state', JSON.stringify(null)).catch(() => {});
+    upsertSetting('rooster_photos', JSON.stringify({ azul: null, blanco: null, fightNumber: fight.numero_pelea })).catch(() => {});
+    setFotoAzul(null);
+    setFotoBlanco(null);
+    localStorage.removeItem('reloj_foto_azul');
+    localStorage.removeItem('reloj_foto_blanco');
     
     handleReset();
     

@@ -341,7 +341,16 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const [clockSubTimeLeft, setClockSubTimeLeft] = useState(null);
   const [scoreboardStyle, setScoreboardStyle] = useState(() => localStorage.getItem('scoreboard_style') || 'broadcast');
   const [bettingCountdown, setBettingCountdown] = useState(120);
-  const [winnerFlash, setWinnerFlash] = useState(null);
+  const [winnerFlash, setWinnerFlash] = useState(() => {
+    try {
+      const saved = localStorage.getItem('winner_flash');
+      return saved ? JSON.parse(saved) : null;
+    } catch (_) {
+      return null;
+    }
+  });
+  const [fotoAzul, setFotoAzul] = useState(() => localStorage.getItem('reloj_foto_azul') || null);
+  const [fotoBlanco, setFotoBlanco] = useState(() => localStorage.getItem('reloj_foto_blanco') || null);
 
   // Auto-dismiss winner flash banner after 90 seconds so it never gets stuck
   useEffect(() => {
@@ -634,6 +643,26 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               setScoreboardStyle(styleSetting.value);
               localStorage.setItem('scoreboard_style', styleSetting.value);
             }
+            const photosSetting = settings.find(s => s.id === 'rooster_photos');
+            if (photosSetting && photosSetting.value) {
+              try {
+                const p = typeof photosSetting.value === 'string' ? JSON.parse(photosSetting.value) : photosSetting.value;
+                if (p) {
+                  if (p.azul) { setFotoAzul(p.azul); localStorage.setItem('reloj_foto_azul', p.azul); }
+                  if (p.blanco) { setFotoBlanco(p.blanco); localStorage.setItem('reloj_foto_blanco', p.blanco); }
+                }
+              } catch(e){}
+            }
+            const wfSetting = settings.find(s => s.id === 'winner_flash_state');
+            if (wfSetting && wfSetting.value) {
+              try {
+                const wf = typeof wfSetting.value === 'string' ? JSON.parse(wfSetting.value) : wfSetting.value;
+                if (wf && wf.timestamp && Date.now() - wf.timestamp < 180000) {
+                  setWinnerFlash(wf);
+                  localStorage.setItem('winner_flash', JSON.stringify(wf));
+                }
+              } catch(e){}
+            }
             if (activeDetailsSetting && activeDetailsSetting.value) {
               try {
                 const d = typeof activeDetailsSetting.value === 'string' ? JSON.parse(activeDetailsSetting.value) : activeDetailsSetting.value;
@@ -798,8 +827,59 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               }));
           }
       })
+      .on('broadcast', { event: 'rooster_photo_sync' }, ({ payload }) => {
+          if (payload) {
+              if (payload.side === 'azul' || payload.side === 'A') {
+                  setFotoAzul(payload.photo || null);
+                  if (payload.photo) localStorage.setItem('reloj_foto_azul', payload.photo);
+                  else localStorage.removeItem('reloj_foto_azul');
+              } else if (payload.side === 'blanco' || payload.side === 'B') {
+                  setFotoBlanco(payload.photo || null);
+                  if (payload.photo) localStorage.setItem('reloj_foto_blanco', payload.photo);
+                  else localStorage.removeItem('reloj_foto_blanco');
+              } else if (payload.side === 'all') {
+                  setFotoAzul(null);
+                  setFotoBlanco(null);
+                  localStorage.removeItem('reloj_foto_azul');
+                  localStorage.removeItem('reloj_foto_blanco');
+              }
+          }
+      })
+      .on('broadcast', { event: 'winner_flash_sync' }, ({ payload }) => {
+          if (payload) {
+              setWinnerFlash(payload);
+              localStorage.setItem('winner_flash', JSON.stringify(payload));
+              playArenaBell();
+          } else {
+              setWinnerFlash(null);
+              localStorage.removeItem('winner_flash');
+          }
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
           if (payload.new) {
+              if (payload.new.id === 'rooster_photos') {
+                  try {
+                      const p = typeof payload.new.value === 'string' ? JSON.parse(payload.new.value) : payload.new.value;
+                      if (p) {
+                          setFotoAzul(p.azul || null);
+                          setFotoBlanco(p.blanco || null);
+                          if (p.azul) localStorage.setItem('reloj_foto_azul', p.azul); else localStorage.removeItem('reloj_foto_azul');
+                          if (p.blanco) localStorage.setItem('reloj_foto_blanco', p.blanco); else localStorage.removeItem('reloj_foto_blanco');
+                      }
+                  } catch(e) {}
+              }
+              if (payload.new.id === 'winner_flash_state') {
+                  try {
+                      const wf = typeof payload.new.value === 'string' ? JSON.parse(payload.new.value) : payload.new.value;
+                      if (wf && wf.timestamp && Date.now() - wf.timestamp < 180000) {
+                          setWinnerFlash(wf);
+                          localStorage.setItem('winner_flash', JSON.stringify(wf));
+                      } else {
+                          setWinnerFlash(null);
+                          localStorage.removeItem('winner_flash');
+                      }
+                  } catch(e) {}
+              }
               if (payload.new.id === 'scoreboard_style') {
                   setScoreboardStyle(payload.new.value);
                   localStorage.setItem('scoreboard_style', payload.new.value);
@@ -1409,10 +1489,16 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     try {
       const parsed = JSON.parse(val);
       if (parsed && typeof parsed === 'object') {
-        return parsed.weight || '-';
+        const w = parsed.weight || parsed.peso || parsed.lbs;
+        return (w && typeof w === 'string' && w.trim() !== '') ? w.trim() : '-';
       }
     } catch (e) {}
-    return val;
+    if (typeof val === 'string') {
+      const trimmed = val.trim();
+      if (trimmed.includes('{') || trimmed.includes('}')) return '-';
+      return trimmed || '-';
+    }
+    return val || '-';
   };
 
   const sortedCartelera = React.useMemo(() => {
@@ -1438,19 +1524,64 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
   const formatWeight = (val) => {
     if (!val) return '';
     if (typeof val === 'object') {
-      return val.weight || val.peso || val.lbs || '';
+      const w = val.weight || val.peso || val.lbs || '';
+      return (typeof w === 'string' && w.trim() !== '') ? w.trim() : (typeof w === 'number' ? String(w) : '');
     }
     if (typeof val === 'string') {
       const trimmed = val.trim();
-      if (trimmed.startsWith('{')) {
+      if (trimmed.startsWith('{') || trimmed.includes('"weight"')) {
         try {
           const parsed = JSON.parse(trimmed);
-          return parsed.weight || parsed.peso || parsed.lbs || trimmed;
-        } catch(_) {}
+          const w = parsed.weight || parsed.peso || parsed.lbs || '';
+          return (typeof w === 'string' && w.trim() !== '') ? w.trim() : (typeof w === 'number' ? String(w) : '');
+        } catch(_) {
+          return '';
+        }
       }
+      if (trimmed.includes('{') || trimmed.includes('}')) return '';
       return trimmed;
     }
     return String(val);
+  };
+
+  const renderLiveRoosterAvatar = (side, photo, size = 32) => {
+    const isAzul = side === 'azul' || side === 'A';
+    const borderCol = isAzul ? '#93c5fd' : '#1e40af';
+    if (photo) {
+      return (
+        <img 
+          src={photo} 
+          style={{ 
+            width: size, 
+            height: size, 
+            borderRadius: '50%', 
+            objectFit: 'cover', 
+            border: `2px solid ${borderCol}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+            flexShrink: 0
+          }} 
+          alt={`Gallo ${side}`} 
+        />
+      );
+    }
+    return (
+      <div style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: isAzul ? 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)' : 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)',
+        border: `2px solid ${borderCol}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+        fontSize: Math.round(size * 0.55),
+        flexShrink: 0,
+        color: isAzul ? '#ffffff' : '#0f172a'
+      }}>
+        🐓
+      </div>
+    );
   };
 
   const activeProgItem = hasLoadedFight
@@ -1789,19 +1920,25 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     borderLeft: '4px solid #93c5fd',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                     cursor: isBettingOpen ? 'pointer' : 'default',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                    <span style={{ fontSize: 9, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>GALLO AZUL</span>
-                    {hasLoadedFight && weightA && (
-                      <span style={{ fontSize: 10, color: '#bfdbfe', fontWeight: 900 }}>
-                        ⚖️ {weightA}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 15px)', textTransform: 'uppercase', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {hasLoadedFight ? (fightInfo.gallo_a_name || 'GALLO AZUL') : '—'}
+                  {renderLiveRoosterAvatar('azul', fotoAzul, 34)}
+                  <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                      <span style={{ fontSize: 9, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>GALLO AZUL</span>
+                      {hasLoadedFight && weightA && (
+                        <span style={{ fontSize: 10, color: '#bfdbfe', fontWeight: 900 }}>
+                          ⚖️ {weightA}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 15px)', textTransform: 'uppercase', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {hasLoadedFight ? (fightInfo.gallo_a_name || 'GALLO AZUL') : '—'}
+                    </div>
                   </div>
                 </div>
 
@@ -1816,19 +1953,25 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     borderRight: '4px solid #0f3dd1',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                     cursor: isBettingOpen ? 'pointer' : 'default',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                    <span style={{ fontSize: 9, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>GALLO BLANCO</span>
-                    {hasLoadedFight && weightB && (
-                      <span style={{ fontSize: 10, color: '#1e40af', fontWeight: 900 }}>
-                        ⚖️ {weightB}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 15px)', textTransform: 'uppercase', color: '#111111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {hasLoadedFight ? (fightInfo.gallo_b_name || 'GALLO BLANCO') : '—'}
+                  {renderLiveRoosterAvatar('blanco', fotoBlanco, 34)}
+                  <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                      <span style={{ fontSize: 9, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>GALLO BLANCO</span>
+                      {hasLoadedFight && weightB && (
+                        <span style={{ fontSize: 10, color: '#1e40af', fontWeight: 900 }}>
+                          ⚖️ {weightB}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 15px)', textTransform: 'uppercase', color: '#111111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {hasLoadedFight ? (fightInfo.gallo_b_name || 'GALLO BLANCO') : '—'}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1852,8 +1995,11 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                 {/* Left Azul */}
                 <div 
                   onClick={() => isBettingOpen && openBetModal('A')}
-                  style={{ background: '#1d4ed8', color: '#ffffff', borderRadius: 8, padding: 12, textAlign: 'center', cursor: isBettingOpen ? 'pointer' : 'default' }}
+                  style={{ background: '#1d4ed8', color: '#ffffff', borderRadius: 8, padding: 12, textAlign: 'center', cursor: isBettingOpen ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
                 >
+                  <div style={{ marginBottom: 4 }}>
+                    {renderLiveRoosterAvatar('azul', fotoAzul, 44)}
+                  </div>
                   <div style={{ fontSize: 10, color: '#93c5fd', fontWeight: 900 }}>GALLO AZUL</div>
                   <div style={{ fontWeight: 900, fontSize: 18, textTransform: 'uppercase', margin: '4px 0' }}>
                     {hasLoadedFight ? (fightInfo.gallo_a_name || 'GALLO AZUL') : '—'}
@@ -1881,8 +2027,11 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                 {/* Right Blanco */}
                 <div 
                   onClick={() => isBettingOpen && openBetModal('B')}
-                  style={{ background: '#ffffff', color: '#111111', borderRadius: 8, padding: 12, textAlign: 'center', cursor: isBettingOpen ? 'pointer' : 'default' }}
+                  style={{ background: '#ffffff', color: '#111111', borderRadius: 8, padding: 12, textAlign: 'center', cursor: isBettingOpen ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
                 >
+                  <div style={{ marginBottom: 4 }}>
+                    {renderLiveRoosterAvatar('blanco', fotoBlanco, 44)}
+                  </div>
                   <div style={{ fontSize: 10, color: '#0f3dd1', fontWeight: 900 }}>GALLO BLANCO</div>
                   <div style={{ fontWeight: 900, fontSize: 18, textTransform: 'uppercase', margin: '4px 0' }}>
                     {hasLoadedFight ? (fightInfo.gallo_b_name || 'GALLO BLANCO') : '—'}
@@ -1968,8 +2117,9 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                       background: '#1d4ed8', color: '#ffffff', padding: '8px 14px', fontWeight: 900, fontSize: 'clamp(12px, 3vw, 15px)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isBettingOpen ? 'pointer' : 'default', borderBottom: '1px solid rgba(255,255,255,0.2)'
                     }}
                   >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {hasLoadedFight ? (fightInfo.gallo_a_name || 'GALLO AZUL') : 'GALLO AZUL'}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {renderLiveRoosterAvatar('azul', fotoAzul, 28)}
+                      <span>{hasLoadedFight ? (fightInfo.gallo_a_name || 'GALLO AZUL') : 'GALLO AZUL'}</span>
                       {hasLoadedFight && weightA && <span style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 800 }}>⚖️ {weightA}</span>}
                     </span>
                     {hasLoadedFight && <span style={{ color: '#93c5fd', fontSize: 13, fontWeight: 900 }}>x{fightInfo.gallo_a_odds?.toFixed(2) || '1.90'}</span>}
@@ -1982,8 +2132,9 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                       background: '#ffffff', color: '#111111', padding: '8px 14px', fontWeight: 900, fontSize: 'clamp(12px, 3vw, 15px)', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: isBettingOpen ? 'pointer' : 'default'
                     }}
                   >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {hasLoadedFight ? (fightInfo.gallo_b_name || 'GALLO BLANCO') : 'GALLO BLANCO'}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {renderLiveRoosterAvatar('blanco', fotoBlanco, 28)}
+                      <span>{hasLoadedFight ? (fightInfo.gallo_b_name || 'GALLO BLANCO') : 'GALLO BLANCO'}</span>
                       {hasLoadedFight && weightB && <span style={{ fontSize: 11, color: '#4b5563', fontWeight: 800 }}>⚖️ {weightB}</span>}
                     </span>
                     {hasLoadedFight && <span style={{ color: '#1d4ed8', fontSize: 13, fontWeight: 900 }}>x{fightInfo.gallo_b_odds?.toFixed(2) || '1.90'}</span>}
@@ -2443,6 +2594,26 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                 .premium-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; }
                 .premium-btn:hover { transform: translateY(-3px); filter: brightness(1.1); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
                 .premium-btn:active { transform: translateY(-1px); }
+                @keyframes winnerModalFadeIn {
+                    0% { opacity: 0; transform: scale(0.92); }
+                    100% { opacity: 1; transform: scale(1); }
+                }
+                @keyframes winnerFlashIn {
+                    0% { opacity: 0; transform: scale(0.95); }
+                    100% { opacity: 1; transform: scale(1); }
+                }
+                @keyframes ringBell {
+                    0% { transform: rotate(0); }
+                    20% { transform: rotate(15deg); }
+                    40% { transform: rotate(-15deg); }
+                    60% { transform: rotate(10deg); }
+                    80% { transform: rotate(-10deg); }
+                    100% { transform: rotate(0); }
+                }
+                .bell-ringing {
+                    display: inline-block;
+                    animation: ringBell 1s infinite ease-in-out;
+                }
             `}</style>
         </div>
       )}
@@ -2638,19 +2809,25 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     borderLeft: '4px solid #93c5fd',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                     cursor: isBettingOpen ? 'pointer' : 'default',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                    <span style={{ fontSize: 8, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>GALLO AZUL</span>
-                    {hasLoadedFight && weightA && (
-                      <span style={{ fontSize: 9, color: '#bfdbfe', fontWeight: 900 }}>
-                        ⚖️ {weightA}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 14px)', textTransform: 'uppercase', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {hasLoadedFight ? (fightInfo.gallo_a_name || 'GALLO AZUL') : '—'}
+                  {renderLiveRoosterAvatar('azul', fotoAzul, 28)}
+                  <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                      <span style={{ fontSize: 8, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>GALLO AZUL</span>
+                      {hasLoadedFight && weightA && (
+                        <span style={{ fontSize: 9, color: '#bfdbfe', fontWeight: 900 }}>
+                          ⚖️ {weightA}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 14px)', textTransform: 'uppercase', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {hasLoadedFight ? (fightInfo.gallo_a_name || 'GALLO AZUL') : '—'}
+                    </div>
                   </div>
                 </div>
 
@@ -2665,19 +2842,25 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     borderRight: '4px solid #0f3dd1',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                     cursor: isBettingOpen ? 'pointer' : 'default',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-                    <span style={{ fontSize: 8, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>GALLO BLANCO</span>
-                    {hasLoadedFight && weightB && (
-                      <span style={{ fontSize: 9, color: '#1e40af', fontWeight: 900 }}>
-                        ⚖️ {weightB}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 14px)', textTransform: 'uppercase', color: '#111111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {hasLoadedFight ? (fightInfo.gallo_b_name || 'GALLO BLANCO') : '—'}
+                  {renderLiveRoosterAvatar('blanco', fotoBlanco, 28)}
+                  <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                      <span style={{ fontSize: 8, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>GALLO BLANCO</span>
+                      {hasLoadedFight && weightB && (
+                        <span style={{ fontSize: 9, color: '#1e40af', fontWeight: 900 }}>
+                          ⚖️ {weightB}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontWeight: 900, fontSize: 'clamp(11px, 2.8vw, 14px)', textTransform: 'uppercase', color: '#111111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {hasLoadedFight ? (fightInfo.gallo_b_name || 'GALLO BLANCO') : '—'}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2957,10 +3140,8 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                 </div>
               ) : (
                 sortedCartelera.map((event) => {
-                  let aData = { weight: event.gallo_a_weight || '0-0.0' };
-                  let bData = { weight: event.gallo_b_weight || '0-0.0' };
-                  try { const pA = JSON.parse(event.gallo_a_weight); if (pA && typeof pA === 'object') aData = pA; } catch(e){}
-                  try { const pB = JSON.parse(event.gallo_b_weight); if (pB && typeof pB === 'object') bData = pB; } catch(e){}
+                  const wA = formatWeight(event.gallo_a_weight);
+                  const wB = formatWeight(event.gallo_b_weight);
 
                   const isActive = fightInfo.id && event.id === fightInfo.id;
                   const isBettingOpen = isActive && fightInfo.status === 'LIVE';
@@ -3011,9 +3192,11 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                           <span style={{ color: '#60a5fa', fontSize: 12, fontWeight: 800 }}>
                             {event.gallo_a_name || 'Gallo Azul'}
                           </span>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>
-                            Peso: {aData.weight || event.gallo_a_weight}
-                          </span>
+                          {wA && (
+                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>
+                              Peso: {wA}
+                            </span>
+                          )}
                         </div>
 
                         <span style={{ color: '#f59e0b', fontWeight: 900, fontSize: 11 }}>VS</span>
@@ -3023,9 +3206,11 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                           <span style={{ color: '#ffffff', fontSize: 12, fontWeight: 800 }}>
                             {event.gallo_b_name || 'Gallo Blanco'}
                           </span>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>
-                            Peso: {bData.weight || event.gallo_b_weight}
-                          </span>
+                          {wB && (
+                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>
+                              Peso: {wB}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -3051,6 +3236,193 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* BIG CELEBRATORY WINNER OVERLAY (FOR CELL / FULLSCREEN & SPECTATORS) */}
+      {/* ======================================================== */}
+      {winnerFlash && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000005,
+            background: 'rgba(5, 8, 16, 0.94)',
+            backdropFilter: 'blur(24px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            animation: 'winnerModalFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+          onClick={() => {
+            setWinnerFlash(null);
+            localStorage.removeItem('winner_flash');
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 460,
+              borderRadius: 22,
+              padding: '30px 22px 24px',
+              textAlign: 'center',
+              position: 'relative',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.95), 0 0 50px ' + (
+                winnerFlash.side === 'Azul' || winnerFlash.side === 'A' 
+                  ? 'rgba(37,99,235,0.45)' 
+                  : (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B' ? 'rgba(255,255,255,0.35)' : 'rgba(245,158,11,0.45)')
+              ),
+              border: '3px solid ' + (
+                winnerFlash.side === 'Azul' || winnerFlash.side === 'A' 
+                  ? '#3b82f6' 
+                  : (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B' ? '#ffffff' : '#f59e0b')
+              ),
+              background: winnerFlash.side === 'Azul' || winnerFlash.side === 'A'
+                ? 'linear-gradient(180deg, #1e3a8a 0%, #0b1329 100%)'
+                : (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B'
+                  ? 'linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%)'
+                  : 'linear-gradient(180deg, #92400e 0%, #1e1b18 100%)'
+                ),
+              color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff'
+            }}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setWinnerFlash(null);
+                localStorage.removeItem('winner_flash');
+              }}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                background: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.15)',
+                border: 'none',
+                color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff',
+                borderRadius: '50%',
+                width: 34,
+                height: 34,
+                fontSize: 16,
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+              }}
+              title="Cerrar"
+            >
+              ✕
+            </button>
+
+            {/* Header with ringing bells */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              fontSize: 'clamp(12px, 3.5vw, 16px)',
+              fontWeight: 900,
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              marginBottom: 16,
+              color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#475569' : '#93c5fd'
+            }}>
+              <span className="bell-ringing" style={{ fontSize: '1.4em' }}>🔔</span>
+              <span>PELEA #{winnerFlash.fightNum || fightInfo.post_number} · {
+                (winnerFlash.side === 'Azul' || winnerFlash.side === 'A') 
+                  ? 'GALLO AZUL' 
+                  : ((winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? 'GALLO BLANCO' : 'TABLAS')
+              }</span>
+              <span className="bell-ringing" style={{ fontSize: '1.4em' }}>🔔</span>
+            </div>
+
+            {/* Winner Rooster Photo / Avatar if available */}
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+              {(winnerFlash.side === 'Azul' || winnerFlash.side === 'A') && (
+                renderLiveRoosterAvatar('azul', fotoAzul, 96)
+              )}
+              {(winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') && (
+                renderLiveRoosterAvatar('blanco', fotoBlanco, 96)
+              )}
+              {winnerFlash.side !== 'Azul' && winnerFlash.side !== 'A' && winnerFlash.side !== 'Blanco' && winnerFlash.side !== 'B' && (
+                <div style={{ fontSize: 52 }}>🤝</div>
+              )}
+            </div>
+
+            {/* Winner Tagline */}
+            <div style={{
+              fontSize: 'clamp(11px, 3vw, 14px)',
+              fontWeight: 900,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+              marginBottom: 6,
+              color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#1e40af' : '#fbbf24'
+            }}>
+              {winnerFlash.side === 'Tablas' ? '¡COMBATE DECLARADO EN TABLAS!' : '¡CAMPEÓN DE LA PELEA!'}
+            </div>
+
+            {/* Giant Winner Name */}
+            <div style={{
+              fontSize: 'clamp(26px, 8vw, 44px)',
+              fontWeight: 900,
+              lineHeight: 1.1,
+              textTransform: 'uppercase',
+              marginBottom: 14,
+              letterSpacing: '0.5px',
+              textShadow: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? 'none' : '0 2px 14px rgba(0,0,0,0.7)'
+            }}>
+              {winnerFlash.side === 'Tablas' ? 'PELEA EN TABLAS' : (winnerFlash.name || 'GALLO GANADOR')}
+            </div>
+
+            {/* Official Weight Badge */}
+            {winnerFlash.weight && (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : 'rgba(255,255,255,0.15)',
+                color: '#ffffff',
+                borderRadius: 20,
+                padding: '6px 18px',
+                fontSize: 'clamp(12px, 3.2vw, 15px)',
+                fontWeight: 900,
+                border: '1px solid rgba(255,255,255,0.25)',
+                marginBottom: 18
+              }}>
+                <span>⚖️ PESO OFICIAL:</span>
+                <span style={{ color: '#fbbf24' }}>{winnerFlash.weight}</span>
+              </div>
+            )}
+
+            {/* Dismiss button */}
+            <div style={{ marginTop: 6 }}>
+              <button
+                onClick={() => {
+                  setWinnerFlash(null);
+                  localStorage.removeItem('winner_flash');
+                }}
+                style={{
+                  background: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#0f172a' : '#ffffff',
+                  color: (winnerFlash.side === 'Blanco' || winnerFlash.side === 'B') ? '#ffffff' : '#0f172a',
+                  border: 'none',
+                  borderRadius: 12,
+                  padding: '12px 28px',
+                  fontSize: 14,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Cerrar Notificación
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
