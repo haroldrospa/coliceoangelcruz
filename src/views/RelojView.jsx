@@ -202,8 +202,23 @@ export default function RelojView() {
   const persistRoosterDetailsToSupabase = async (details) => {
     try {
       const { num, nameA, nameB, pAzul, mAzul, cAzul, pBlanco, mBlanco, cBlanco } = details;
-      const weightObjA = JSON.stringify({ weight: pAzul || '', marca: mAzul || '', color: cAzul || '' });
-      const weightObjB = JSON.stringify({ weight: pBlanco || '', marca: mBlanco || '', color: cBlanco || '' });
+      const fight = carteleraFights.find(f => f.numero_pelea === parseInt(num));
+      const defWeightA = fight ? `${fight.peso_libras_a}-${fight.peso_onzas_a}.${fight.peso_puntos_a}` : '';
+      const defWeightB = fight ? `${fight.peso_libras_b}-${fight.peso_onzas_b}.${fight.peso_puntos_b}` : '';
+      const weightObjA = JSON.stringify({
+        weight: (pAzul && pAzul.trim()) ? pAzul.trim() : defWeightA,
+        marca: mAzul || fight?.marca_a || '',
+        color: cAzul || fight?.color_a || '',
+        turno: fight?.turno_a || '',
+        clase: fight?.clase_a || ''
+      });
+      const weightObjB = JSON.stringify({
+        weight: (pBlanco && pBlanco.trim()) ? pBlanco.trim() : defWeightB,
+        marca: mBlanco || fight?.marca_b || '',
+        color: cBlanco || fight?.color_b || '',
+        turno: fight?.turno_b || '',
+        clase: fight?.clase_b || ''
+      });
 
       // 1. Update matching event in events table
       const existingEvents = await rawFetch(`events?select=*&post_number=eq.${num}`);

@@ -577,13 +577,43 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
         if (cartelera) {
           const merged = cartelera.map(f => {
             const ev = events ? events.find(e => parseInt(e.post_number) === f.numero_pelea) : null;
+            const defWeightA = `${f.peso_libras_a}-${f.peso_onzas_a}.${f.peso_puntos_a}`;
+            const defWeightB = `${f.peso_libras_b}-${f.peso_onzas_b}.${f.peso_puntos_b}`;
+
+            let aWeightObj = { weight: defWeightA, color: f.color_a || '', marca: f.marca_a || '', clase: f.clase_a || '', turno: f.turno_a || '' };
+            let bWeightObj = { weight: defWeightB, color: f.color_b || '', marca: f.marca_b || '', clase: f.clase_b || '', turno: f.turno_b || '' };
+
             if (ev) {
+              if (ev.gallo_a_weight) {
+                try {
+                  const pA = JSON.parse(ev.gallo_a_weight);
+                  if (pA && typeof pA === 'object') {
+                    if (pA.weight && String(pA.weight).trim() !== '' && pA.weight !== '0-0.0') aWeightObj.weight = String(pA.weight).trim();
+                    if (pA.color && String(pA.color).trim() !== '') aWeightObj.color = String(pA.color).trim();
+                    if (pA.marca && String(pA.marca).trim() !== '') aWeightObj.marca = pA.marca;
+                    if (pA.turno && String(pA.turno).trim() !== '') aWeightObj.turno = pA.turno;
+                  }
+                } catch(e){}
+              }
+              if (ev.gallo_b_weight) {
+                try {
+                  const pB = JSON.parse(ev.gallo_b_weight);
+                  if (pB && typeof pB === 'object') {
+                    if (pB.weight && String(pB.weight).trim() !== '' && pB.weight !== '0-0.0') bWeightObj.weight = String(pB.weight).trim();
+                    if (pB.color && String(pB.color).trim() !== '') bWeightObj.color = String(pB.color).trim();
+                    if (pB.marca && String(pB.marca).trim() !== '') bWeightObj.marca = pB.marca;
+                    if (pB.turno && String(pB.turno).trim() !== '') bWeightObj.turno = pB.turno;
+                  }
+                } catch(e){}
+              }
+
               return {
                 ...ev,
                 gallo_a_name: ev.gallo_a_name || f.traba_a,
                 gallo_b_name: ev.gallo_b_name || f.traba_b,
-                gallo_a_weight: ev.gallo_a_weight || JSON.stringify({ weight: `${f.peso_libras_a}-${f.peso_onzas_a}.${f.peso_puntos_a}`, color: f.color_a, marca: f.marca_a, clase: f.clase_a, turno: f.turno_a }),
-                gallo_b_weight: ev.gallo_b_weight || JSON.stringify({ weight: `${f.peso_libras_b}-${f.peso_onzas_b}.${f.peso_puntos_b}`, color: f.color_b, marca: f.marca_b, clase: f.clase_b, turno: f.turno_b }),
+                gallo_a_weight: JSON.stringify(aWeightObj),
+                gallo_b_weight: JSON.stringify(bWeightObj),
+                cartelera_fight: f
               };
             }
             return {
@@ -591,11 +621,12 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
               post_number: f.numero_pelea.toString(),
               gallo_a_name: f.traba_a,
               gallo_b_name: f.traba_b,
-              gallo_a_weight: JSON.stringify({ weight: `${f.peso_libras_a}-${f.peso_onzas_a}.${f.peso_puntos_a}`, color: f.color_a, marca: f.marca_a, clase: f.clase_a, turno: f.turno_a }),
-              gallo_b_weight: JSON.stringify({ weight: `${f.peso_libras_b}-${f.peso_onzas_b}.${f.peso_puntos_b}`, color: f.color_b, marca: f.marca_b, clase: f.clase_b, turno: f.turno_b }),
+              gallo_a_weight: JSON.stringify(aWeightObj),
+              gallo_b_weight: JSON.stringify(bWeightObj),
               gallo_a_odds: 1.9,
               gallo_b_odds: 1.9,
-              status: 'PENDING'
+              status: 'PENDING',
+              cartelera_fight: f
             };
           });
           setTodayProgram(merged);
@@ -1525,6 +1556,53 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     return String(val);
   };
 
+  const getFighterDetails = (event, side) => {
+    const isAzul = side === 'A';
+    const raw = isAzul ? event.gallo_a_weight : event.gallo_b_weight;
+    const cf = event.cartelera_fight;
+    
+    let parsed = {};
+    if (typeof raw === 'object' && raw !== null) {
+      parsed = raw;
+    } else if (typeof raw === 'string') {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith('{')) {
+        try { parsed = JSON.parse(trimmed); } catch (_) {}
+      } else if (trimmed && !trimmed.includes('{')) {
+        parsed = { weight: trimmed };
+      }
+    }
+
+    const cfWeight = cf ? (isAzul ? `${cf.peso_libras_a}-${cf.peso_onzas_a}.${cf.peso_puntos_a}` : `${cf.peso_libras_b}-${cf.peso_onzas_b}.${cf.peso_puntos_b}`) : '';
+    const cleanWeight = (parsed.weight && typeof parsed.weight === 'string' && parsed.weight.trim() !== '' && parsed.weight !== '0-0.0')
+      ? parsed.weight.trim()
+      : (cfWeight && !cfWeight.includes('undefined') ? cfWeight : '');
+    
+    const color = (parsed.color && String(parsed.color).trim() !== '')
+      ? String(parsed.color).trim()
+      : (cf ? (isAzul ? cf.color_a : cf.color_b) : '');
+      
+    const marca = (parsed.marca && String(parsed.marca).trim() !== '')
+      ? String(parsed.marca).trim()
+      : (cf ? (isAzul ? cf.marca_a : cf.marca_b) : '');
+
+    const turno = (parsed.turno && String(parsed.turno).trim() !== '')
+      ? String(parsed.turno).trim()
+      : (cf ? (isAzul ? cf.turno_a : cf.turno_b) : '');
+
+    const clase = (parsed.clase && String(parsed.clase).trim() !== '')
+      ? String(parsed.clase).trim()
+      : (cf ? (isAzul ? cf.clase_a : cf.clase_b) : '');
+
+    return {
+      weight: cleanWeight,
+      color: color || '',
+      marca: marca || '',
+      turno: turno || '',
+      clase: clase || ''
+    };
+  };
+
   const renderLiveRoosterAvatar = (side, photo, size = 32) => {
     const isAzul = side === 'azul' || side === 'A';
     const borderCol = isAzul ? '#93c5fd' : '#1e40af';
@@ -2169,31 +2247,23 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                   </div>
                 ) : (
                   sortedCartelera.map((event) => {
-                    let aData = { weight: event.gallo_a_weight || '0-0.0' };
-                    let bData = { weight: event.gallo_b_weight || '0-0.0' };
-                    try { 
-                      const pA = JSON.parse(event.gallo_a_weight); 
-                      if (pA && typeof pA === 'object') aData = pA;
-                    } catch(e){}
-                    try { 
-                      const pB = JSON.parse(event.gallo_b_weight); 
-                      if (pB && typeof pB === 'object') bData = pB;
-                    } catch(e){}
+                    const aData = getFighterDetails(event, 'A');
+                    const bData = getFighterDetails(event, 'B');
 
                     const isActive = fightInfo.id && event.id === fightInfo.id;
                     const activeStatus = isActive ? fightInfo.status : null;
                     const isBettingOpen = isActive && activeStatus === 'LIVE';
 
                     let tagColor = 'default';
-                    let tagLabel = '⏳ PROGRAMADA';
+                    let tagLabel = 'PROGRAMADA';
                     if (event.status === 'FINISHED') {
                       tagColor = 'gold'; 
-                      tagLabel = '🏁 FINALIZADA';
+                      tagLabel = 'FINALIZADA';
                     } else if (isActive && activeStatus === 'CLOSED') {
                       tagLabel = null; // User requested to remove "EN COMBATE" tag from the top right
                     } else if (isActive && activeStatus === 'LIVE') {
                       tagColor = 'green'; 
-                      tagLabel = '🟢 APUESTAS ABIERTAS';
+                      tagLabel = 'APUESTAS ABIERTAS';
                     }
 
                     return (
@@ -2239,12 +2309,13 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                           <div className="cart-fighter-column left">
                             <div className="fighter-title-row">
                               {aData.clase === 'P' && <span className="fighter-badge-p">P</span>}
-                              <span className="fighter-name fighter-name-azul">{event.gallo_a_name}</span>
+                              <span className="fighter-name fighter-name-azul">{event.gallo_a_name || 'Gallo Azul'}</span>
                             </div>
                             <div className="fighter-meta-row">
-                              {aData.turno && <span className="meta-tag">T: {aData.turno}</span>}
-                              {aData.marca && <span className="meta-tag">M: {aData.marca}</span>}
-                              <span className="weight-tag">{aData.weight}</span>
+                              {aData.weight && <span className="meta-pill-weight">{aData.weight}</span>}
+                              {aData.color && <span className="meta-item-clean">{aData.color}</span>}
+                              {aData.marca && <span className="meta-item-clean">M: {aData.marca}</span>}
+                              {aData.turno && <span className="meta-item-clean">T: {aData.turno}</span>}
                             </div>
                           </div>
 
@@ -2256,14 +2327,14 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                           {/* Right Fighter (B - Blanco) */}
                           <div className="cart-fighter-column right">
                             <div className="fighter-title-row">
-                              <span className="fighter-name fighter-name-blanco">{event.gallo_b_name}</span>
+                              <span className="fighter-name fighter-name-blanco">{event.gallo_b_name || 'Gallo Blanco'}</span>
                               {bData.clase === 'P' && <span className="fighter-badge-p">P</span>}
                             </div>
                             <div className="fighter-meta-row">
-                              <span className="weight-tag">{bData.weight}</span>
-                              {bData.color && <span className="meta-tag color-badge">{bData.color}</span>}
-                              {bData.marca && <span className="meta-tag">M: {bData.marca}</span>}
-                              {bData.turno && <span className="meta-tag">T: {bData.turno}</span>}
+                              {bData.weight && <span className="meta-pill-weight">{bData.weight}</span>}
+                              {bData.color && <span className="meta-item-clean">{bData.color}</span>}
+                              {bData.marca && <span className="meta-item-clean">M: {bData.marca}</span>}
+                              {bData.turno && <span className="meta-item-clean">T: {bData.turno}</span>}
                             </div>
                           </div>
                         </div>
@@ -3139,37 +3210,37 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                 </div>
               ) : (
                 sortedCartelera.map((event) => {
-                  const wA = formatWeight(event.gallo_a_weight);
-                  const wB = formatWeight(event.gallo_b_weight);
+                  const aData = getFighterDetails(event, 'A');
+                  const bData = getFighterDetails(event, 'B');
 
                   const isActive = fightInfo.id && event.id === fightInfo.id;
                   const isBettingOpen = isActive && fightInfo.status === 'LIVE';
 
-                  let statusColor = 'rgba(255,255,255,0.08)';
+                  let statusColor = 'rgba(255,255,255,0.06)';
                   let statusTextColor = 'rgba(255,255,255,0.5)';
-                  let statusLabel = '⏳ PROGRAMADA';
+                  let statusLabel = 'PROGRAMADA';
 
                   if (event.status === 'FINISHED') {
-                    statusColor = 'rgba(245, 158, 11, 0.15)';
-                    statusTextColor = '#f59e0b';
-                    statusLabel = `🏁 GANÓ ${event.winner || 'FINALIZADA'}`;
+                    statusColor = 'rgba(245, 158, 11, 0.12)';
+                    statusTextColor = '#fbbf24';
+                    statusLabel = `GANÓ ${event.winner || 'FINALIZADA'}`;
                   } else if (isActive && fightInfo.status === 'CLOSED') {
-                    statusColor = 'rgba(239, 68, 68, 0.15)';
+                    statusColor = 'rgba(239, 68, 68, 0.12)';
                     statusTextColor = '#ef4444';
-                    statusLabel = '⚔️ EN COMBATE';
+                    statusLabel = 'EN COMBATE';
                   } else if (isActive && fightInfo.status === 'LIVE') {
-                    statusColor = 'rgba(16, 185, 129, 0.15)';
+                    statusColor = 'rgba(16, 185, 129, 0.12)';
                     statusTextColor = '#10b981';
-                    statusLabel = '🟢 APUESTAS ABIERTAS';
+                    statusLabel = 'APUESTAS ABIERTAS';
                   }
 
                   return (
                     <div 
                       key={event.id}
                       style={{
-                        background: isActive ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(10, 14, 23, 0.95) 100%)' : 'rgba(255, 255, 255, 0.03)',
-                        border: isActive ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.07)',
-                        borderRadius: 12,
+                        background: isActive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255, 255, 255, 0.025)',
+                        border: isActive ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.06)',
+                        borderRadius: 10,
                         padding: '10px 12px',
                         display: 'flex',
                         flexDirection: 'column',
@@ -3180,36 +3251,36 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                         <span style={{ color: '#fff', fontSize: 12, fontWeight: 900 }}>
                           PELEA #{event.post_number}
                         </span>
-                        <span style={{ background: statusColor, color: statusTextColor, fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6, border: `1px solid ${statusTextColor}40` }}>
+                        <span style={{ background: statusColor, color: statusTextColor, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 12, border: `1px solid ${statusTextColor}30` }}>
                           {statusLabel}
                         </span>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.3)', padding: '8px 10px', borderRadius: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.25)', padding: '8px 10px', borderRadius: 8 }}>
                         {/* Azul */}
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                           <span style={{ color: '#60a5fa', fontSize: 12, fontWeight: 800 }}>
                             {event.gallo_a_name || 'Gallo Azul'}
                           </span>
-                          {wA && (
-                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>
-                              Peso: {wA}
-                            </span>
-                          )}
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
+                            {aData.weight && <span style={{ color: '#38bdf8', fontWeight: 800 }}>{aData.weight}</span>}
+                            {aData.color && <span>{aData.color}</span>}
+                            {aData.marca && <span>M: {aData.marca}</span>}
+                          </span>
                         </div>
 
-                        <span style={{ color: '#f59e0b', fontWeight: 900, fontSize: 11 }}>VS</span>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800, fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,0.05)', borderRadius: 4 }}>VS</span>
 
                         {/* Blanco */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                           <span style={{ color: '#ffffff', fontSize: 12, fontWeight: 800 }}>
                             {event.gallo_b_name || 'Gallo Blanco'}
                           </span>
-                          {wB && (
-                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>
-                              Peso: {wB}
-                            </span>
-                          )}
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
+                            {bData.weight && <span style={{ color: '#38bdf8', fontWeight: 800 }}>{bData.weight}</span>}
+                            {bData.color && <span>{bData.color}</span>}
+                            {bData.marca && <span>M: {bData.marca}</span>}
+                          </span>
                         </div>
                       </div>
 
