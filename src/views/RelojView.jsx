@@ -181,7 +181,77 @@ export default function RelojView() {
   const [colorBlanco, setColorBlanco] = useState(() => localStorage.getItem('reloj_color_blanco') || '');
   const [marcaBlanco, setMarcaBlanco] = useState(() => localStorage.getItem('reloj_marca_blanco') || '');
 
-  // Keep local storage in sync with current fight details so tab navigation never resets active fight
+  const syncRoosterTimeoutRef = useRef(null);
+
+  // Broadcast rooster modifications live to all spectator screens & tabs
+  const broadcastRoosterDetails = (details) => {
+    try {
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'rooster_details_sync',
+          payload: details
+        });
+      }
+    } catch (err) {
+      console.error('Error broadcasting rooster details:', err);
+    }
+  };
+
+  // Persist modifications to Supabase events & settings
+  const persistRoosterDetailsToSupabase = async (details) => {
+    try {
+      const { num, nameA, nameB, pAzul, mAzul, cAzul, pBlanco, mBlanco, cBlanco } = details;
+      const weightObjA = JSON.stringify({ weight: pAzul || '', marca: mAzul || '', color: cAzul || '' });
+      const weightObjB = JSON.stringify({ weight: pBlanco || '', marca: mBlanco || '', color: cBlanco || '' });
+
+      // 1. Update matching event in events table
+      const existingEvents = await rawFetch(`events?select=*&post_number=eq.${num}`);
+      if (existingEvents && existingEvents[0]) {
+        await rawFetch('events', {
+          method: 'PATCH',
+          query: `id=eq.${existingEvents[0].id}`,
+          body: {
+            gallo_a_name: nameA || 'GALLO AZUL',
+            gallo_b_name: nameB || 'GALLO BLANCO',
+            gallo_a_weight: weightObjA,
+            gallo_b_weight: weightObjB,
+            updated_at: new Date().toISOString()
+          }
+        });
+      }
+
+      // 2. Update cartelera_fights table if loaded from cartelera
+      await rawFetch('cartelera_fights', {
+        method: 'PATCH',
+        query: `numero_pelea=eq.${num}`,
+        body: {
+          traba_a: nameA,
+          traba_b: nameB,
+          marca_a: mAzul,
+          marca_b: mBlanco
+        }
+      }).catch(() => {});
+
+      // 3. Save to settings for global sync across newly loaded devices
+      await upsertSetting('active_fight_details', JSON.stringify({
+        fightNumber: num,
+        gallinoName: nameA,
+        blancoName: nameB,
+        pesoAzul: pAzul,
+        marcaAzul: mAzul,
+        colorAzul: cAzul,
+        pesoBlanco: pBlanco,
+        marcaBlanco: mBlanco,
+        colorBlanco: cBlanco,
+        updated_at: Date.now()
+      })).catch(() => {});
+    } catch (e) {
+      console.error('Error persisting rooster details:', e);
+    }
+  };
+
+  // Keep local storage in sync and broadcast changes in real time to all pages
   useEffect(() => {
     if (fightNumber) localStorage.setItem('reloj_fight_number', fightNumber.toString());
     localStorage.setItem('reloj_gallino_name', gallinoName || '');
@@ -192,6 +262,49 @@ export default function RelojView() {
     localStorage.setItem('reloj_peso_blanco', pesoBlanco || '');
     localStorage.setItem('reloj_color_blanco', colorBlanco || '');
     localStorage.setItem('reloj_marca_blanco', marcaBlanco || '');
+
+    if (gallinoName || blancoName || pesoAzul || pesoBlanco) {
+      const details = {
+        num: fightNumber,
+        fightNumber,
+        nameA: gallinoName,
+        nameB: blancoName,
+        gallinoName,
+        blancoName,
+        pesoAzul,
+        marcaAzul,
+        colorAzul,
+        pesoBlanco,
+        marcaBlanco,
+        colorBlanco
+      };
+
+      // Realtime Broadcast immediately
+      broadcastRoosterDetails(details);
+
+      // Debounce Supabase write
+      if (syncRoosterTimeoutRef.current) clearTimeout(syncRoosterTimeoutRef.current);
+      syncRoosterTimeoutRef.current = setTimeout(() => {
+        persistRoosterDetailsToSupabase(details);
+        // Also update carteleraFights in local state
+        setCarteleraFights(prev => prev.map(f => {
+          if (f.numero_pelea === fightNumber) {
+            return {
+              ...f,
+              traba_a: gallinoName || f.traba_a,
+              traba_b: blancoName || f.traba_b,
+              marca_a: marcaAzul || f.marca_a,
+              marca_b: marcaBlanco || f.marca_b
+            };
+          }
+          return f;
+        }));
+      }, 400);
+    }
+
+    return () => {
+      if (syncRoosterTimeoutRef.current) clearTimeout(syncRoosterTimeoutRef.current);
+    };
   }, [fightNumber, gallinoName, blancoName, pesoAzul, colorAzul, marcaAzul, pesoBlanco, colorBlanco, marcaBlanco]);
 
   // Cartelera & Local Results state
@@ -535,12 +648,23 @@ export default function RelojView() {
     };
   }, [isRunning, presetDuration, message]);
 
-  // Handlers for rooster photo uploads
+  // Handlers for rooster photo uploads with instant live broadcast
   const handleFotoAzulChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => setFotoAzul(event.target.result);
+      reader.onload = (event) => {
+        const dataUrl = event.target.result;
+        setFotoAzul(dataUrl);
+        localStorage.setItem('reloj_foto_azul', dataUrl);
+        if (channelRef.current) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'rooster_photo_sync',
+            payload: { side: 'azul', photo: dataUrl, fightNumber }
+          });
+        }
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -549,7 +673,18 @@ export default function RelojView() {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (event) => setFotoBlanco(event.target.result);
+      reader.onload = (event) => {
+        const dataUrl = event.target.result;
+        setFotoBlanco(dataUrl);
+        localStorage.setItem('reloj_foto_blanco', dataUrl);
+        if (channelRef.current) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'rooster_photo_sync',
+            payload: { side: 'blanco', photo: dataUrl, fightNumber }
+          });
+        }
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -633,10 +768,14 @@ export default function RelojView() {
   const upsertEvent = async (fightNum, status, winnerSide = null, winnerNameForBroadcast = null, winnerWeightForBroadcast = null) => {
     try {
       const fight = carteleraFights.find(f => f.numero_pelea === fightNum);
-      const nameA = fight ? fight.traba_a : (fightNum === fightNumber ? gallinoName : 'Gallo Azul');
-      const nameB = fight ? fight.traba_b : (fightNum === fightNumber ? blancoName : 'Gallo Blanco');
-      const weightA = fight ? JSON.stringify({ weight: `${fight.peso_libras_a}-${fight.peso_onzas_a}.${fight.peso_puntos_a}`, color: fight.color_a, marca: fight.marca_a, clase: fight.clase_a, turno: fight.turno_a }) : '';
-      const weightB = fight ? JSON.stringify({ weight: `${fight.peso_libras_b}-${fight.peso_onzas_b}.${fight.peso_puntos_b}`, color: fight.color_b, marca: fight.marca_b, clase: fight.clase_b, turno: fight.turno_b }) : '';
+      const nameA = (fightNum === fightNumber && gallinoName) ? gallinoName : (fight ? fight.traba_a : 'Gallo Azul');
+      const nameB = (fightNum === fightNumber && blancoName) ? blancoName : (fight ? fight.traba_b : 'Gallo Blanco');
+      const weightA = (fightNum === fightNumber && (pesoAzul || marcaAzul || colorAzul))
+        ? JSON.stringify({ weight: pesoAzul || '', color: colorAzul || '', marca: marcaAzul || '', clase: fight?.clase_a || '', turno: fight?.turno_a || '' })
+        : (fight ? JSON.stringify({ weight: `${fight.peso_libras_a}-${fight.peso_onzas_a}.${fight.peso_puntos_a}`, color: fight.color_a, marca: fight.marca_a, clase: fight.clase_a, turno: fight.turno_a }) : '');
+      const weightB = (fightNum === fightNumber && (pesoBlanco || marcaBlanco || colorBlanco))
+        ? JSON.stringify({ weight: pesoBlanco || '', color: colorBlanco || '', marca: marcaBlanco || '', clase: fight?.clase_b || '', turno: fight?.turno_b || '' })
+        : (fight ? JSON.stringify({ weight: `${fight.peso_libras_b}-${fight.peso_onzas_b}.${fight.peso_puntos_b}`, color: fight.color_b, marca: fight.marca_b, clase: fight.clase_b, turno: fight.turno_b }) : '');
 
       const nowIso = new Date().toISOString();
       const existing = await rawFetch(`events?select=*&post_number=eq.${fightNum}`);

@@ -626,12 +626,28 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
             const mode = settings.find(s => s.id === 'stream_logic_mode');
             const styleSetting = settings.find(s => s.id === 'scoreboard_style');
             const clockSetting = settings.find(s => s.id === 'clock_state');
+            const activeDetailsSetting = settings.find(s => s.id === 'active_fight_details');
             if (stream) setGlobalStream(stream.value);
             if (cartelera) setShowCartelera(cartelera.value === 'true');
             if (mode) setStreamMode(mode.value);
             if (styleSetting && styleSetting.value) {
               setScoreboardStyle(styleSetting.value);
               localStorage.setItem('scoreboard_style', styleSetting.value);
+            }
+            if (activeDetailsSetting && activeDetailsSetting.value) {
+              try {
+                const d = typeof activeDetailsSetting.value === 'string' ? JSON.parse(activeDetailsSetting.value) : activeDetailsSetting.value;
+                if (d && (!activeEvents || !activeEvents[0] || activeEvents[0].status !== 'FINISHED')) {
+                  setFightInfo(prev => ({
+                    ...prev,
+                    post_number: d.fightNumber ? d.fightNumber.toString() : prev.post_number,
+                    gallo_a_name: d.gallinoName || prev.gallo_a_name,
+                    gallo_b_name: d.blancoName || prev.gallo_b_name,
+                    gallo_a_weight: JSON.stringify({ weight: d.pesoAzul || '', marca: d.marcaAzul || '', color: d.colorAzul || '' }),
+                    gallo_b_weight: JSON.stringify({ weight: d.pesoBlanco || '', marca: d.marcaBlanco || '', color: d.colorBlanco || '' })
+                  }));
+                }
+              } catch(e){}
             }
             if (clockSetting && clockSetting.value) {
               try {
@@ -737,11 +753,71 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
             }
           }
       })
+      .on('broadcast', { event: 'rooster_details_sync' }, ({ payload }) => {
+          if (payload) {
+              const targetPostNum = (payload.fightNumber || payload.num || '').toString();
+              setFightInfo(prev => ({
+                  ...prev,
+                  post_number: targetPostNum || prev.post_number,
+                  gallo_a_name: payload.gallinoName !== undefined ? payload.gallinoName : (payload.nameA !== undefined ? payload.nameA : prev.gallo_a_name),
+                  gallo_b_name: payload.blancoName !== undefined ? payload.blancoName : (payload.nameB !== undefined ? payload.nameB : prev.gallo_b_name),
+                  gallo_a_weight: JSON.stringify({
+                      weight: payload.pesoAzul !== undefined ? payload.pesoAzul : (payload.pAzul || ''),
+                      marca: payload.marcaAzul !== undefined ? payload.marcaAzul : (payload.mAzul || ''),
+                      color: payload.colorAzul !== undefined ? payload.colorAzul : (payload.cAzul || '')
+                  }),
+                  gallo_b_weight: JSON.stringify({
+                      weight: payload.pesoBlanco !== undefined ? payload.pesoBlanco : (payload.pBlanco || ''),
+                      marca: payload.marcaBlanco !== undefined ? payload.marcaBlanco : (payload.mBlanco || ''),
+                      color: payload.colorBlanco !== undefined ? payload.colorBlanco : (payload.cBlanco || '')
+                  })
+              }));
+
+              // Also update todayProgram so the Cartelera drawer also reflects the edit
+              setTodayProgram(prev => prev.map(item => {
+                  const itemNum = parseInt(item.post_number || item.numero_pelea || '0');
+                  const targetNum = parseInt(targetPostNum || '0');
+                  if (itemNum === targetNum && targetNum > 0) {
+                      return {
+                          ...item,
+                          gallo_a_name: payload.gallinoName || payload.nameA || item.gallo_a_name,
+                          gallo_b_name: payload.blancoName || payload.nameB || item.gallo_b_name,
+                          gallo_a_weight: JSON.stringify({
+                              weight: payload.pesoAzul !== undefined ? payload.pesoAzul : (payload.pAzul || ''),
+                              marca: payload.marcaAzul !== undefined ? payload.marcaAzul : (payload.mAzul || ''),
+                              color: payload.colorAzul !== undefined ? payload.colorAzul : (payload.cAzul || '')
+                          }),
+                          gallo_b_weight: JSON.stringify({
+                              weight: payload.pesoBlanco !== undefined ? payload.pesoBlanco : (payload.pBlanco || ''),
+                              marca: payload.marcaBlanco !== undefined ? payload.marcaBlanco : (payload.mBlanco || ''),
+                              color: payload.colorBlanco !== undefined ? payload.colorBlanco : (payload.cBlanco || '')
+                          })
+                      };
+                  }
+                  return item;
+              }));
+          }
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
           if (payload.new) {
               if (payload.new.id === 'scoreboard_style') {
                   setScoreboardStyle(payload.new.value);
                   localStorage.setItem('scoreboard_style', payload.new.value);
+              }
+              if (payload.new.id === 'active_fight_details') {
+                  try {
+                      const d = typeof payload.new.value === 'string' ? JSON.parse(payload.new.value) : payload.new.value;
+                      if (d) {
+                          setFightInfo(prev => ({
+                              ...prev,
+                              post_number: d.fightNumber ? d.fightNumber.toString() : prev.post_number,
+                              gallo_a_name: d.gallinoName || prev.gallo_a_name,
+                              gallo_b_name: d.blancoName || prev.gallo_b_name,
+                              gallo_a_weight: JSON.stringify({ weight: d.pesoAzul || '', marca: d.marcaAzul || '', color: d.colorAzul || '' }),
+                              gallo_b_weight: JSON.stringify({ weight: d.pesoBlanco || '', marca: d.marcaBlanco || '', color: d.colorBlanco || '' })
+                          }));
+                      }
+                  } catch(e){}
               }
               if (payload.new.id === 'clock_state') {
                   try {
