@@ -1403,12 +1403,13 @@ export default function RelojView() {
     }));
 
   const pendingColumns = [
-    { title: '# Pelea', dataIndex: 'numero_pelea', key: 'numero_pelea', width: 90, align: 'center', render: (num) => <Text style={{ fontWeight: 800 }}>#{num}</Text> },
+    { title: '# Pelea', dataIndex: 'numero_pelea', key: 'numero_pelea', width: 75, align: 'center', fixed: 'left', render: (num) => <Text style={{ fontWeight: 800 }}>#{num}</Text> },
     { 
       title: 'Gallo Azul (Izquierdo)', 
       key: 'gallo_azul', 
+      minWidth: 160,
       render: (_, r) => (
-        <div>
+        <div style={{ whiteSpace: 'nowrap' }}>
           <Text style={{ fontWeight: 700, color: '#60a5fa', display: 'block' }}>{r.traba_a}</Text>
           <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
             Peso: {r.peso_libras_a}-{r.peso_onzas_a}.{r.peso_puntos_a} | Color: {r.color_a} | Marca: {r.marca_a || '-'}
@@ -1419,8 +1420,9 @@ export default function RelojView() {
     { 
       title: 'Gallo Blanco (Derecho)', 
       key: 'gallo_blanco', 
+      minWidth: 160,
       render: (_, r) => (
-        <div>
+        <div style={{ whiteSpace: 'nowrap' }}>
           <Text style={{ fontWeight: 700, color: '#fff', display: 'block' }}>{r.traba_b}</Text>
           <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
             Peso: {r.peso_libras_b}-{r.peso_onzas_b}.{r.peso_puntos_b} | Color: {r.color_b} | Marca: {r.marca_b || '-'}
@@ -1431,8 +1433,9 @@ export default function RelojView() {
     { 
       title: 'Acciones', 
       key: 'actions', 
-      width: 100,
+      width: 90,
       align: 'center',
+      fixed: 'right',
       render: (_, record) => (
         <Button 
           size="small" 
@@ -1468,12 +1471,13 @@ export default function RelojView() {
     });
 
   const completedColumns = [
-    { title: '# Pelea', dataIndex: 'numero_pelea', key: 'numero_pelea', width: 80, align: 'center', render: (num) => <Text style={{ fontWeight: 800 }}>#{num}</Text> },
+    { title: '# Pelea', dataIndex: 'numero_pelea', key: 'numero_pelea', width: 75, align: 'center', fixed: 'left', render: (num) => <Text style={{ fontWeight: 800 }}>#{num}</Text> },
     { 
       title: 'Detalle de Combate', 
       key: 'fight_detail', 
+      minWidth: 160,
       render: (_, r) => (
-        <div>
+        <div style={{ whiteSpace: 'nowrap' }}>
           <Text style={{ fontWeight: 700, fontSize: 12 }}>
             <span style={{ color: '#60a5fa' }}>{r.traba_a}</span> 
             <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px' }}>vs</span> 
@@ -1482,12 +1486,12 @@ export default function RelojView() {
         </div>
       ) 
     },
-    { title: 'Duración', dataIndex: 'duration', key: 'duration', width: 95, align: 'center' },
+    { title: 'Duración', dataIndex: 'duration', key: 'duration', width: 90, align: 'center' },
     { 
       title: 'Resultado', 
       dataIndex: 'result', 
       key: 'result', 
-      width: 110,
+      width: 100,
       align: 'center',
       render: (val) => {
         let color = 'gray';
@@ -2864,22 +2868,25 @@ export default function RelojView() {
               }}
               styles={{ body: { padding: 0 } }}
             >
-              <Table 
-                dataSource={pendingTableData} 
-                columns={pendingColumns} 
-                loading={loadingCartelera}
-                onRow={(record) => ({
-                  onDoubleClick: () => {
-                    handleLoadFight(record);
-                  },
-                  style: { cursor: 'pointer' },
-                  title: `Doble clic para cargar la Pelea #${record.numero_pelea}`
-                })}
-                pagination={{ pageSize: 8 }}
-                locale={{ emptyText: <Text style={{ color: 'rgba(255,255,255,0.35)' }}>No hay peleas programadas pendientes</Text> }}
-                className="custom-table"
-                style={{ background: 'transparent' }}
-              />
+              <div className="responsive-table-container" style={{ margin: 0 }}>
+                <Table 
+                  dataSource={pendingTableData} 
+                  columns={pendingColumns} 
+                  loading={loadingCartelera}
+                  scroll={{ x: 600 }}
+                  onRow={(record) => ({
+                    onDoubleClick: () => {
+                      handleLoadFight(record);
+                    },
+                    style: { cursor: 'pointer' },
+                    title: `Doble clic para cargar la Pelea #${record.numero_pelea}`
+                  })}
+                  pagination={{ pageSize: 8 }}
+                  locale={{ emptyText: <Text style={{ color: 'rgba(255,255,255,0.35)' }}>No hay peleas programadas pendientes</Text> }}
+                  className="custom-table"
+                  style={{ background: 'transparent' }}
+                />
+              </div>
             </Card>
 
             {/* Table: Completed Fights (Minimized / Collapsible) */}
@@ -2927,15 +2934,18 @@ export default function RelojView() {
               styles={{ body: { padding: 0 } }}
             >
               {!completedMinimized && (
-                <Table 
-                  dataSource={completedTableData} 
-                  columns={completedColumns} 
-                  loading={loadingCartelera}
-                  pagination={{ pageSize: 8 }}
-                  locale={{ emptyText: <Text style={{ color: 'rgba(255,255,255,0.35)' }}>No hay peleas realizadas todavía</Text> }}
-                  className="custom-table"
-                  style={{ background: 'transparent' }}
-                />
+                <div className="responsive-table-container" style={{ margin: 0 }}>
+                  <Table 
+                    dataSource={completedTableData} 
+                    columns={completedColumns} 
+                    loading={loadingCartelera}
+                    scroll={{ x: 600 }}
+                    pagination={{ pageSize: 8 }}
+                    locale={{ emptyText: <Text style={{ color: 'rgba(255,255,255,0.35)' }}>No hay peleas realizadas todavía</Text> }}
+                    className="custom-table"
+                    style={{ background: 'transparent' }}
+                  />
+                </div>
               )}
             </Card>
           </div>

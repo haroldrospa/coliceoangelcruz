@@ -713,46 +713,56 @@ const AdminCarteleraView = () => {
   };
 
   const columns = [
-    { title: '#', dataIndex: 'numero_pelea', key: 'num', width: 40, align: 'center' },
+    { 
+      title: '#', 
+      dataIndex: 'numero_pelea', 
+      key: 'num', 
+      width: 48, 
+      align: 'center',
+      fixed: 'left',
+      render: n => <strong style={{ color: '#10b981', fontSize: 12 }}>#{n}</strong> 
+    },
     { 
       title: 'GALLO AZUL (IZQUIERDO)', 
       className: 'column-group-border',
       children: [
-        { title: 'T', dataIndex: 'turno_a', width: 40, align: 'center', render: t => <Text type="secondary">{t || '-'}</Text> },
-        { title: 'P', dataIndex: 'clase_a', width: 40, align: 'center', render: c => c ? <Tag color="gold" style={{ margin: 0 }}>{c}</Tag> : '-' },
-        { title: 'Traba', dataIndex: 'traba_a' },
-        { title: 'Marca', dataIndex: 'marca_a', align: 'center', render: m => m || '-' },
-        { title: 'Peso', render: (_, r) => <Text style={{ color: '#10b981', fontWeight: 600 }}>{r.peso_libras_a}-{r.peso_onzas_a}.{r.peso_puntos_a}</Text> },
-        { title: 'Color', dataIndex: 'color_a' },
+        { title: 'T', dataIndex: 'turno_a', width: 44, align: 'center', render: t => <Text type="secondary" style={{ whiteSpace: 'nowrap' }}>{t || '-'}</Text> },
+        { title: 'P', dataIndex: 'clase_a', width: 44, align: 'center', render: c => c ? <Tag color="gold" style={{ margin: 0, padding: '0 4px', fontSize: 10 }}>{c}</Tag> : '-' },
+        { title: 'Traba', dataIndex: 'traba_a', width: 130, render: t => <Text style={{ color: '#93c5fd', fontWeight: 700, whiteSpace: 'nowrap' }}>{t || '-'}</Text> },
+        { title: 'Marca', dataIndex: 'marca_a', width: 75, align: 'center', render: m => <span style={{ whiteSpace: 'nowrap' }}>{m || '-'}</span> },
+        { title: 'Peso', width: 85, align: 'center', render: (_, r) => <Text style={{ color: '#10b981', fontWeight: 700, whiteSpace: 'nowrap' }}>{r.peso_libras_a}-{r.peso_onzas_a}.{r.peso_puntos_a}</Text> },
+        { title: 'Color', dataIndex: 'color_a', width: 75, align: 'center', render: c => <span style={{ whiteSpace: 'nowrap' }}>{c || '-'}</span> },
       ]
     },
     { 
       title: 'VS', 
       align: 'center',
-      width: 50,
-      render: () => <ThunderboltFilled style={{ color: '#10b981', fontSize: 18 }} />
+      width: 46,
+      render: () => <ThunderboltFilled style={{ color: '#10b981', fontSize: 16 }} />
     },
     { 
       title: 'GALLO BLANCO (DERECHO)', 
       className: 'column-group-border',
       children: [
-        { title: 'T', dataIndex: 'turno_b', width: 40, align: 'center', render: t => <Text type="secondary">{t || '-'}</Text> },
-        { title: 'P', dataIndex: 'clase_b', width: 40, align: 'center', render: c => c ? <Tag color="gold" style={{ margin: 0 }}>{c}</Tag> : '-' },
-        { title: 'Traba', dataIndex: 'traba_b' },
-        { title: 'Marca', dataIndex: 'marca_b', align: 'center', render: m => m || '-' },
-        { title: 'Peso', render: (_, r) => <Text style={{ color: '#10b981', fontWeight: 600 }}>{r.peso_libras_b}-{r.peso_onzas_b}.{r.peso_puntos_b}</Text> },
-        { title: 'Color', dataIndex: 'color_b' },
+        { title: 'T', dataIndex: 'turno_b', width: 44, align: 'center', render: t => <Text type="secondary" style={{ whiteSpace: 'nowrap' }}>{t || '-'}</Text> },
+        { title: 'P', dataIndex: 'clase_b', width: 44, align: 'center', render: c => c ? <Tag color="gold" style={{ margin: 0, padding: '0 4px', fontSize: 10 }}>{c}</Tag> : '-' },
+        { title: 'Traba', dataIndex: 'traba_b', width: 130, render: t => <Text style={{ color: '#f3f4f6', fontWeight: 700, whiteSpace: 'nowrap' }}>{t || '-'}</Text> },
+        { title: 'Marca', dataIndex: 'marca_b', width: 75, align: 'center', render: m => <span style={{ whiteSpace: 'nowrap' }}>{m || '-'}</span> },
+        { title: 'Peso', width: 85, align: 'center', render: (_, r) => <Text style={{ color: '#10b981', fontWeight: 700, whiteSpace: 'nowrap' }}>{r.peso_libras_b}-{r.peso_onzas_b}.{r.peso_puntos_b}</Text> },
+        { title: 'Color', dataIndex: 'color_b', width: 75, align: 'center', render: c => <span style={{ whiteSpace: 'nowrap' }}>{c || '-'}</span> },
       ]
     },
     {
       title: 'Acción',
-      width: 100,
+      width: 85,
       align: 'center',
+      fixed: 'right',
       render: (_, r) => (
         <Space size="small">
           <Button 
             type="text" 
-            icon={<EditOutlined style={{ color: '#10b981', fontSize: 16 }} />} 
+            size="small"
+            icon={<EditOutlined style={{ color: '#10b981', fontSize: 15 }} />} 
             onClick={() => handleOpenEditFight(r)}
             disabled={isLocked}
             title={isLocked ? "La cartelera está cerrada para edición" : "Editar Pelea"}
@@ -767,8 +777,9 @@ const AdminCarteleraView = () => {
           >
             <Button 
               danger 
+              size="small"
               type="text" 
-              icon={<DeleteOutlined style={{ fontSize: 16 }} />} 
+              icon={<DeleteOutlined style={{ fontSize: 15 }} />} 
               title="Eliminar Pelea"
             />
           </Popconfirm>
@@ -778,26 +789,30 @@ const AdminCarteleraView = () => {
   ];
 
   return (
-    <div style={{ padding: 24, maxWidth: 1400, margin: '0 auto' }}>
-      <div className="desktop-only" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+    <div style={{ padding: 'clamp(10px, 2.5vw, 24px)', maxWidth: 1400, margin: '0 auto' }}>
+      {/* Header and Actions Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ 
-              width: 60, height: 60, 
+              width: 48, height: 48, 
               borderRadius: '50%', 
               background: 'rgba(16,185,129,0.1)', 
               border: '2px solid rgba(16,185,129,0.3)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden',
-              boxShadow: '0 0 15px rgba(16,185,129,0.2)'
+              boxShadow: '0 0 15px rgba(16,185,129,0.2)',
+              flexShrink: 0
           }}>
              <img src="/logo_coliseo.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div>
-            <Title level={2} style={{ color: '#fff', margin: 0, letterSpacing: '1px' }}>COLISEO ANGEL CRUZ</Title>
-            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>CARRERA DE PALMAS, LA VEGA • CONTROL DE PESAJE</Text>
+            <Title level={3} style={{ color: '#fff', margin: 0, letterSpacing: '1px', fontSize: 'clamp(15px, 2.8vw, 20px)' }}>COLISEO ANGEL CRUZ</Title>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, display: 'block' }}>CARRERA DE PALMAS, LA VEGA • CONTROL DE PESAJE</Text>
           </div>
         </div>
-        <Space>
+
+        {/* Action Buttons Toolbar - Fully Responsive */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {/* BOTÓN CARGAR DESDE ARCHIVO TXT */}
           <input 
             type="file" 
@@ -810,38 +825,40 @@ const AdminCarteleraView = () => {
             type="primary"
             icon={<UploadOutlined />} 
             onClick={() => document.getElementById('cartelera-file-upload')?.click()}
-            style={{ background: '#10b981', fontWeight: 700 }}
+            style={{ background: '#10b981', fontWeight: 700, borderRadius: 8, height: 36, fontSize: 12 }}
             disabled={isLocked}
           >
-            Cargar Cartelera (.TXT)
+            Cargar TXT
           </Button>
 
           <Button 
             icon={<PlusOutlined />} 
             onClick={handleOpenNewFight}
             disabled={isLocked}
+            style={{ borderRadius: 8, height: 36, fontSize: 12 }}
           >
-            Nueva Pelea Manual
+            Nueva Pelea
           </Button>
 
           <Button 
             icon={isLocked ? <UnlockOutlined /> : <LockOutlined />} 
             danger={!isLocked}
             onClick={toggleLock}
+            style={{ borderRadius: 8, height: 36, fontSize: 12 }}
           >
-            {isLocked ? 'Abrir Edición' : 'Cerrar Cartelera'}
+            {isLocked ? 'Abrir' : 'Cerrar'}
           </Button>
-          <Button icon={<FilePdfOutlined />} onClick={exportPDF}>Exportar PDF</Button>
+          <Button icon={<FilePdfOutlined />} onClick={exportPDF} style={{ borderRadius: 8, height: 36, fontSize: 12 }}>PDF</Button>
           <Button 
             danger 
             icon={<DeleteOutlined />} 
             onClick={() => setIsClearModalOpen(true)}
             disabled={fights.length === 0}
-            style={{ fontWeight: 600 }}
+            style={{ fontWeight: 600, borderRadius: 8, height: 36, fontSize: 12 }}
           >
-            Eliminar Cartelera
+            Limpiar
           </Button>
-        </Space>
+        </div>
       </div>
 
       <Tabs 
@@ -854,14 +871,25 @@ const AdminCarteleraView = () => {
             label: <span><FilePdfOutlined /> CARTELERA ACTUAL</span>,
             children: (
               <Card className="glass-panel" styles={{ body: { padding: 0 } }}>
-                <Table 
-                  columns={columns} 
-                  dataSource={fights} 
-                  loading={loading}
-                  rowKey="id"
-                  pagination={false}
-                  size="small"
-                />
+                <div style={{ padding: '8px 14px', background: 'rgba(16,185,129,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                  <Text style={{ color: '#10b981', fontSize: 11, fontWeight: 700 }}>
+                    ⚡ {fights.length} Combates Programados
+                  </Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>
+                    👉 Desliza horizontalmente para ver todos los datos
+                  </Text>
+                </div>
+                <div className="responsive-table-container" style={{ margin: 0 }}>
+                  <Table 
+                    columns={columns} 
+                    dataSource={fights} 
+                    loading={loading}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                    scroll={{ x: 960 }}
+                  />
+                </div>
               </Card>
             )
           },
@@ -869,22 +897,22 @@ const AdminCarteleraView = () => {
             key: 'pool',
             label: <span><ThunderboltFilled /> DEPÓSITO DE GALLOS ({roosters.length})</span>,
             children: (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                 {/* Formulario arriba horizontal */}
                 <Card 
                   title={<Title level={5} style={{ color: '#fff', margin: 0, fontSize: 13, letterSpacing: '1px' }}>REGISTRO DE NUEVO GALLO</Title>}
                   className="glass-panel"
                   style={{ border: '1px solid rgba(16,185,129,0.1)' }}
-                  styles={{ body: { padding: '24px 32px' } }}
+                  styles={{ body: { padding: 'clamp(14px, 2.5vw, 24px)' } }}
                 >
                   <Form form={roosterForm} layout="vertical" onFinish={addRoosterToPool}>
-                    <Row gutter={24}>
-                      <Col span={4}>
+                    <Row gutter={[12, 12]}>
+                      <Col xs={12} sm={8} md={4}>
                         <Form.Item name="turno" label="TURNO" initialValue={nextTurn}>
                           <InputNumber min={1} className="premium-input-xl" style={{ width: '100%' }} disabled />
                         </Form.Item>
                       </Col>
-                      <Col span={4}>
+                      <Col xs={12} sm={8} md={4}>
                         <Form.Item name="clase" label="P (PELEADO)" initialValue="">
                           <Select className="premium-select-xl">
                             <Option value="">-</Option>
@@ -892,17 +920,17 @@ const AdminCarteleraView = () => {
                           </Select>
                         </Form.Item>
                       </Col>
-                      <Col span={8}>
+                      <Col xs={24} sm={16} md={8}>
                         <Form.Item name="traba" label="TRABA / DUEÑO" rules={[{ required: true }]}>
                           <Input placeholder="Ej. El Mayoral" className="premium-input-xl" />
                         </Form.Item>
                       </Col>
-                      <Col span={4}>
+                      <Col xs={12} sm={8} md={4}>
                         <Form.Item name="marca" label="MARCA">
                           <InputNumber style={{ width: '100%' }} className="premium-input-xl" placeholder="000" />
                         </Form.Item>
                       </Col>
-                      <Col span={4}>
+                      <Col xs={12} sm={8} md={4}>
                         <Form.Item name="color" label="COLOR">
                           <Select className="premium-select-xl" placeholder="Indio...">
                             {colors.map(c => <Option key={c} value={c}>{c}</Option>)}
@@ -911,10 +939,10 @@ const AdminCarteleraView = () => {
                       </Col>
                     </Row>
                     
-                    <Row gutter={24} align="bottom">
-                      <Col span={8}>
-                         <div style={{ background: 'rgba(5,5,5,0.4)', padding: '12px 24px', borderRadius: 12, border: '1px solid rgba(16,185,129,0.3)' }}>
-                           <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, display: 'block', marginBottom: 8, fontWeight: 700 }}>PESAJE (LBS,OZ.PTS)</Text>
+                    <Row gutter={[12, 12]} align="bottom">
+                      <Col xs={24} sm={12} md={10}>
+                         <div style={{ background: 'rgba(5,5,5,0.4)', padding: '10px 16px', borderRadius: 12, border: '1px solid rgba(16,185,129,0.3)' }}>
+                           <Text style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, display: 'block', marginBottom: 6, fontWeight: 700 }}>PESAJE (LBS,OZ.PTS)</Text>
                            <Form.Item 
                              name="peso_input" 
                              style={{ marginBottom: 0 }}
@@ -926,27 +954,27 @@ const AdminCarteleraView = () => {
                                }
                              ]}
                            >
-                              <Input placeholder="3,10.3" className="premium-input-xl" style={{ fontSize: 24, fontWeight: 900, color: '#10b981' }} />
+                              <Input placeholder="3,10.3" className="premium-input-xl" style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }} />
                            </Form.Item>
                          </div>
                       </Col>
-                      <Col span={16}>
-                          <Space style={{ width: '100%' }}>
+                      <Col xs={24} sm={12} md={14}>
+                          <Space style={{ width: '100%', display: 'flex', flexWrap: 'wrap' }}>
                             <Button 
                               type="primary" 
                               icon={editingRoosterId ? <SaveOutlined /> : <PlusOutlined />} 
                               htmlType="submit" 
                               loading={loading} 
-                              style={{ height: 75, width: editingRoosterId ? 'auto' : '100%', fontSize: 16, fontWeight: 900, letterSpacing: '2px', background: editingRoosterId ? '#faad14' : '#10b981' }}
+                              style={{ height: 56, minWidth: 180, flex: 1, fontSize: 13, fontWeight: 900, letterSpacing: '1px', background: editingRoosterId ? '#faad14' : '#10b981', borderRadius: 10 }}
                             >
-                              {editingRoosterId ? 'GUARDAR GALLO' : 'REGISTRAR GALLO EN DEPÓSITO'}
+                              {editingRoosterId ? 'GUARDAR GALLO' : 'REGISTRAR GALLO'}
                             </Button>
                             {editingRoosterId && (
                               <Button 
                                 type="default" 
                                 icon={<CloseOutlined />} 
                                 onClick={cancelEdit}
-                                style={{ height: 75, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)' }}
+                                style={{ height: 56, background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.6)', borderRadius: 10 }}
                               >
                                 CANCELAR
                               </Button>
@@ -958,8 +986,8 @@ const AdminCarteleraView = () => {
                 </Card>
 
                 {/* Tabla abajo */}
-                <div style={{ background: 'rgba(5,5,5,0.2)', padding: 24, borderRadius: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div style={{ background: 'rgba(5,5,5,0.2)', padding: 'clamp(12px, 2vw, 20px)', borderRadius: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
                     <div>
                       <Title level={5} style={{ color: '#fff', margin: 0 }}>Gallos en Espera ({roosters.length})</Title>
                       <Text style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>EL SISTEMA BUSCARÁ PAREJAS CON HASTA 3 OZ DE DIFERENCIA</Text>
@@ -967,7 +995,7 @@ const AdminCarteleraView = () => {
                     <Button 
                       type="primary" 
                       icon={<ThunderboltFilled />} 
-                      style={{ background: '#10b981', height: 48, padding: '0 32px', fontWeight: 900, letterSpacing: '2px', border: 'none', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}
+                      style={{ background: '#10b981', height: 40, padding: '0 20px', fontWeight: 900, letterSpacing: '1px', border: 'none', boxShadow: '0 4px 15px rgba(16,185,129,0.3)', borderRadius: 8, fontSize: 12 }}
                       onClick={autoMatch}
                       loading={loading}
                     >
@@ -975,11 +1003,13 @@ const AdminCarteleraView = () => {
                     </Button>
                   </div>
                   
-                  <Table 
-                    size="middle"
-                    dataSource={roosters}
-                    pagination={false}
-                    className="premium-table-pool"
+                  <div className="responsive-table-container">
+                    <Table 
+                      size="middle"
+                      dataSource={roosters}
+                      pagination={false}
+                      className="premium-table-pool"
+                      scroll={{ x: 700 }}
                     columns={[
                       { title: 'Turno', dataIndex: 'turno', width: 80, align: 'center' },
                       { title: 'Traba / Socio', dataIndex: 'traba', className: 'column-traba' },
@@ -1012,7 +1042,8 @@ const AdminCarteleraView = () => {
                   />
                 </div>
               </div>
-            )
+            </div>
+          )
           }
         ]}
       />
@@ -1410,12 +1441,13 @@ const AdminCarteleraView = () => {
           />
         </div>
 
-        <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+        <div style={{ maxHeight: '55vh', overflowY: 'auto' }} className="responsive-table-container">
           <Table
             size="small"
             dataSource={parsedImportFights}
             rowKey="numero_pelea"
             pagination={false}
+            scroll={{ x: 600 }}
             columns={[
               { title: '#', dataIndex: 'numero_pelea', width: 50, align: 'center', render: n => <strong style={{ color: '#10b981' }}>#{n}</strong> },
               {
@@ -1474,9 +1506,16 @@ const AdminCarteleraView = () => {
         .premium-table-pool .ant-table-thead > tr > th { background: rgba(16,185,129,0.03) !important; padding: 16px !important; }
         .premium-table-pool .column-traba { color: #fff !important; font-weight: 700; }
         
-        .ant-tabs-tab { color: rgba(255,255,255,0.4) !important; padding: 12px 24px !important; }
+        .ant-tabs-tab { color: rgba(255,255,255,0.4) !important; padding: 10px 18px !important; }
         .ant-tabs-tab-active .ant-tabs-tab-btn { color: #10b981 !important; font-weight: 800 !important; }
         .ant-tabs-ink-bar { background: #10b981 !important; }
+        
+        @media (max-width: 768px) {
+          .ant-tabs-tab { padding: 8px 12px !important; font-size: 11px !important; margin: 0 2px !important; }
+          .ant-tabs-nav-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+          .ant-tabs-nav-list { flex-wrap: nowrap !important; }
+          .premium-table-pool .ant-table-thead > tr > th { padding: 10px 8px !important; font-size: 10px !important; }
+        }
       `}</style>
     </div>
   );

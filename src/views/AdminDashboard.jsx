@@ -444,31 +444,31 @@ const AdminDashboard = () => {
   };
 
   const eventColumns = [
-    { title: 'PELEA #', dataIndex: 'post_number', key: 'post', render: (t) => <Text style={{ color: 'var(--champagne)', fontWeight: 900 }}>{t}</Text> },
-    { title: 'GALLOS', key: 'ga', render: (_, r) => <div style={{ color: '#fff' }}>{r.gallo_a_name.replace('[ARCHIVED] ', '')} vs {r.gallo_b_name}</div> },
-    { title: 'GANADOR', key: 'winner', render: (_, r) => {
+    { title: 'PELEA #', dataIndex: 'post_number', key: 'post', width: 72, fixed: 'left', render: (t) => <Text style={{ color: 'var(--champagne)', fontWeight: 900, whiteSpace: 'nowrap' }}>#{t}</Text> },
+    { title: 'GALLOS', key: 'ga', minWidth: 170, render: (_, r) => <div style={{ color: '#fff', whiteSpace: 'nowrap' }}>{r.gallo_a_name.replace('[ARCHIVED] ', '')} <span style={{ color: '#ef4444', fontWeight: 800 }}>vs</span> {r.gallo_b_name}</div> },
+    { title: 'GANADOR', key: 'winner', width: 95, align: 'center', render: (_, r) => {
         if (r.status !== 'FINISHED' && r.status !== 'CLOSED') return <Text style={{ color: 'rgba(255,255,255,0.1)' }}>-</Text>;
         if (r.winner_side === 'D') return <Tag color="orange" style={{ fontWeight: 800 }}>TABLAS</Tag>;
         return <Tag color={r.winner_side === 'A' ? 'blue' : 'default'} style={{ fontWeight: 800 }}>{r.winner_side === 'A' ? 'AZUL' : 'BLANCO'}</Tag>;
     }},
-    { title: 'ESTADO', dataIndex: 'status', key: 'status', render: (s, r) => {
-      if (s === 'LIVE') return <Tag color="green">VIVO</Tag>;
+    { title: 'ESTADO', dataIndex: 'status', key: 'status', width: 110, align: 'center', render: (s, r) => {
+      if (s === 'LIVE') return <Tag color="green" style={{ fontWeight: 800 }}>VIVO</Tag>;
       if (s === 'FINISHED') {
          const hasReplay = r.stream_url && (r.stream_url.includes('/storage/') || r.stream_url.match(/\.(mp4|webm|mov|ogg)$/i));
          return (
-           <Space>
+           <Space size={4}>
              <Tag color="cyan">TERMINADA</Tag>
-             {!hasReplay && <Badge count="SIN VIDEO" style={{ backgroundColor: '#ff4d4f', fontSize: 9, fontWeight: 900, borderRadius: 4, height: 16, lineHeight: '16px', boxShadow: '0 0 8px rgba(255,77,79,0.5)' }} className="pulse-warning" />}
+             {!hasReplay && <Badge count="SIN VIDEO" style={{ backgroundColor: '#ff4d4f', fontSize: 9, fontWeight: 900, borderRadius: 4, height: 16, lineHeight: '16px' }} />}
            </Space>
          );
       }
       return <Tag>{s}</Tag>;
     }},
-    { title: 'ACCIONES', key: 'actions', render: (_, r) => (
-      <Space>
+    { title: 'ACCIONES', key: 'actions', width: 230, render: (_, r) => (
+      <Space size={6} wrap>
         {r.status === 'LIVE' && <Button size="small" onClick={() => updateStatus(r.id, 'CLOSED')}>CERRAR</Button>}
         {r.status === 'CLOSED' && (
-          <Space>
+          <Space size={4} wrap>
             <Button size="small" type="primary" style={{ background: '#10b981' }} onClick={() => setWinnerAndPayout(r, 'A')}>PAGAR AZUL</Button>
             <Button size="small" type="primary" style={{ background: '#d4af37' }} onClick={() => setWinnerAndPayout(r, 'B')}>PAGAR BLANCO</Button>
             <Button size="small" type="default" onClick={() => setWinnerAndPayout(r, 'D')}>TABLAS</Button>
@@ -503,42 +503,121 @@ const AdminDashboard = () => {
   ];
 
   const depositColumns = [
-      { title: 'USUARIO', dataIndex: ['users', 'email'], key: 'email' },
-      { title: 'MONTO', dataIndex: 'amount', key: 'amount', render: (a) => <Text style={{ color: '#22c55e' }}>${a}</Text> },
-      { title: 'RECIBO', dataIndex: 'proof_url', key: 'proof', render: (url) => url && <Image src={url} width={30} /> },
-      { title: 'GESTIÓN', key: 'ops', render: (_, r) => r.status === 'PENDING' && (
+      { title: 'USUARIO', dataIndex: ['users', 'email'], key: 'email', minWidth: 150 },
+      { title: 'MONTO', dataIndex: 'amount', key: 'amount', width: 90, align: 'center', render: (a) => <Text style={{ color: '#22c55e', fontWeight: 800 }}>${a}</Text> },
+      { title: 'RECIBO', dataIndex: 'proof_url', key: 'proof', width: 70, align: 'center', render: (url) => url && <Image src={url} width={30} /> },
+      { title: 'GESTIÓN', key: 'ops', width: 90, align: 'center', render: (_, r) => r.status === 'PENDING' && (
           <Button type="primary" size="small" onClick={() => handleApproveDeposit(r)}>APROBAR</Button>
       )}
   ];
 
   const tabItems = [
     { key: '1', label: <span>PELEAS</span>, children: (
-        <div className="responsive-table-container">
-            <Table 
-                columns={eventColumns} 
-                dataSource={events} 
-                pagination={false} 
-                rowKey="id" 
-                scroll={{ x: 800 }}
-                onRow={(record) => ({
-                    onClick: () => {
-                        if (record.status === 'FINISHED') openReplayEditor(record);
-                    }
-                })}
-                rowClassName={(record) => record.status === 'FINISHED' ? 'clickable-row' : ''}
-            />
+        <div>
+          {/* Responsive Action Toolbar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexWrap: 'wrap',
+            marginBottom: 16
+          }}>
+            <Button 
+              onClick={() => setIsModalOpen(true)} 
+              icon={<PlusOutlined />}
+              style={{ 
+                  height: 38, 
+                  borderRadius: 10, 
+                  fontWeight: 700, 
+                  background: '#10b981', 
+                  color: '#fff', 
+                  border: 'none',
+                  boxShadow: '0 4px 12px rgba(16,185,129,0.2)',
+                  fontSize: 12,
+                  flex: '1 1 auto',
+                  minWidth: 120
+              }}
+            >
+              NUEVA PELEA
+            </Button>
+
+            <Button 
+              onClick={() => setIsBulkModalOpen(true)} 
+              icon={<TrophyOutlined />}
+              style={{ 
+                  height: 38, 
+                  borderRadius: 10, 
+                  fontWeight: 700, 
+                  background: 'rgba(16,185,129,0.1)', 
+                  color: '#10b981', 
+                  border: '1px solid rgba(16,185,129,0.2)',
+                  fontSize: 12,
+                  flex: '1 1 auto',
+                  minWidth: 120
+              }}
+            >
+              CARGA MASIVA
+            </Button>
+
+            <Button 
+              onClick={() => {
+                  setEditingEvent(null);
+                  setIsReplayModalOpen(true);
+                  form.resetFields();
+              }} 
+              icon={<VideoCameraOutlined />} 
+              style={{ 
+                  height: 38, 
+                  borderRadius: 10, 
+                  fontWeight: 700, 
+                  background: 'rgba(212,175,55,0.1)', 
+                  color: '#d4af37', 
+                  border: '1px solid rgba(212,175,55,0.2)',
+                  fontSize: 12,
+                  flex: '1 1 auto',
+                  minWidth: 140
+              }}
+            >
+              REPETICIÓN
+            </Button>
+          </div>
+
+          <div style={{ padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 6, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>
+              👉 Desliza horizontalmente la tabla para ver cuotas y acciones
+            </Text>
+            <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 700 }}>
+              {events.length} Peleas
+            </Text>
+          </div>
+
+          <div className="responsive-table-container">
+              <Table 
+                  columns={eventColumns} 
+                  dataSource={events} 
+                  pagination={false} 
+                  rowKey="id" 
+                  scroll={{ x: 750 }}
+                  onRow={(record) => ({
+                      onClick: () => {
+                          if (record.status === 'FINISHED') openReplayEditor(record);
+                      }
+                  })}
+                  rowClassName={(record) => record.status === 'FINISHED' ? 'clickable-row' : ''}
+              />
+          </div>
         </div>
     )},
     { key: '2', label: <span>TESORERÍA</span>, children: (
         <div className="responsive-table-container">
-            <Table columns={depositColumns} dataSource={deposits} pagination={false} rowKey="id" scroll={{ x: 600 }} />
+            <Table columns={depositColumns} dataSource={deposits} pagination={false} rowKey="id" scroll={{ x: 550 }} />
         </div>
     )}
   ];
 
   return (
     <>
-    <div style={{ padding: '40px 24px', maxWidth: 1100, margin: '0 auto', background: 'var(--obsidian)', minHeight: '100vh' }}>
+    <div style={{ padding: 'clamp(16px, 3vw, 40px) clamp(12px, 2.5vw, 24px)', maxWidth: 1100, margin: '0 auto', background: 'var(--obsidian)', minHeight: '100vh' }}>
       
       {/* 🚀 ADMIN CONTROL PANEL */}
       <div style={{ 
@@ -690,60 +769,8 @@ const AdminDashboard = () => {
         activeKey={activeTab} 
         onChange={setActiveTab} 
         items={tabItems} 
-        tabBarStyle={{ borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: 24 }}
-        tabBarExtraContent={activeTab === '1' && (
-        <Space size={12}>
-          <Button 
-            onClick={() => setIsModalOpen(true)} 
-            icon={<PlusOutlined />}
-            style={{ 
-                height: 40, 
-                borderRadius: 10, 
-                fontWeight: 700, 
-                background: '#10b981', 
-                color: '#fff', 
-                border: 'none',
-                boxShadow: '0 4px 12px rgba(16,185,129,0.2)'
-            }}
-          >
-            NUEVA PELEA
-          </Button>
-
-          <Button 
-            onClick={() => setIsBulkModalOpen(true)} 
-            icon={<TrophyOutlined />}
-            style={{ 
-                height: 40, 
-                borderRadius: 10, 
-                fontWeight: 700, 
-                background: 'rgba(16,185,129,0.1)', 
-                color: '#10b981', 
-                border: '1px solid rgba(16,185,129,0.2)'
-            }}
-          >
-            CARGA MASIVA
-          </Button>
-
-          <Button 
-            onClick={() => {
-                setEditingEvent(null);
-                setIsReplayModalOpen(true);
-                form.resetFields();
-            }} 
-            icon={<VideoCameraOutlined />} 
-            style={{ 
-                height: 40, 
-                borderRadius: 10, 
-                fontWeight: 700, 
-                background: 'rgba(212,175,55,0.1)', 
-                color: '#d4af37', 
-                border: '1px solid rgba(212,175,55,0.2)'
-            }}
-          >
-            CARGAR REPETICIÓN
-          </Button>
-        </Space>
-      )} />
+        tabBarStyle={{ borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: 20 }}
+      />
 
       <Modal open={isModalOpen} onCancel={() => setIsModalOpen(false)} footer={null} centered width={600}>
         <div style={{ background: 'var(--charcoal)', padding: 30, borderRadius: 12 }}>
