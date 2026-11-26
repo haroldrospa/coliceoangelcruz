@@ -1603,46 +1603,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
     };
   };
 
-  const renderLiveRoosterAvatar = (side, photo, size = 32) => {
-    const isAzul = side === 'azul' || side === 'A';
-    const borderCol = isAzul ? '#93c5fd' : '#1e40af';
-    if (photo) {
-      return (
-        <img 
-          src={photo} 
-          style={{ 
-            width: size, 
-            height: size, 
-            borderRadius: '50%', 
-            objectFit: 'cover', 
-            border: `2px solid ${borderCol}`,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-            flexShrink: 0
-          }} 
-          alt={`Gallo ${side}`} 
-        />
-      );
-    }
-    return (
-      <div style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: isAzul ? 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)' : 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)',
-        border: `2px solid ${borderCol}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-        fontSize: Math.round(size * 0.55),
-        flexShrink: 0,
-        color: isAzul ? '#ffffff' : '#0f172a'
-      }}>
-        🐓
-      </div>
-    );
-  };
-
   const activeProgItem = hasLoadedFight
     ? todayProgram.find(p => (fightInfo.id && p.id === fightInfo.id) || (p.post_number && parseInt(p.post_number) === parseInt(fightInfo.post_number)))
     : null;
@@ -1697,17 +1657,7 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
           width: '100%', 
           padding: '0 10px' 
         }}>
-          {isAzul && fotoAzul && (
-            <div style={{ flexShrink: 0 }}>
-              {renderLiveRoosterAvatar('azul', fotoAzul, compact ? 42 : 56)}
-            </div>
-          )}
-          {isBlanco && fotoBlanco && (
-            <div style={{ flexShrink: 0 }}>
-              {renderLiveRoosterAvatar('blanco', fotoBlanco, compact ? 42 : 56)}
-            </div>
-          )}
-          <div style={{ textAlign: hasPhoto ? 'left' : 'center', minWidth: 0 }}>
+          <div style={{ textAlign: 'center', minWidth: 0 }}>
             <div style={{
               fontSize: 'clamp(9px, 1.8vw, 12px)',
               fontWeight: 800,
@@ -2003,7 +1953,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     gap: 8
                   }}
                 >
-                  {renderLiveRoosterAvatar('azul', fotoAzul, 34)}
                   <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                       <span style={{ fontSize: 9, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>GALLO AZUL</span>
@@ -2036,7 +1985,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     gap: 8
                   }}
                 >
-                  {renderLiveRoosterAvatar('blanco', fotoBlanco, 34)}
                   <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                       <span style={{ fontSize: 9, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>GALLO BLANCO</span>
@@ -2074,9 +2022,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                   onClick={() => isBettingOpen && openBetModal('A')}
                   style={{ background: '#1d4ed8', color: '#ffffff', borderRadius: 8, padding: 12, textAlign: 'center', cursor: isBettingOpen ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
                 >
-                  <div style={{ marginBottom: 4 }}>
-                    {renderLiveRoosterAvatar('azul', fotoAzul, 44)}
-                  </div>
                   <div style={{ fontSize: 10, color: '#93c5fd', fontWeight: 900 }}>GALLO AZUL</div>
                   <div style={{ fontWeight: 900, fontSize: 18, textTransform: 'uppercase', margin: '4px 0' }}>
                     {hasLoadedFight ? (fightInfo.gallo_a_name || 'GALLO AZUL') : '—'}
@@ -2106,9 +2051,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                   onClick={() => isBettingOpen && openBetModal('B')}
                   style={{ background: '#ffffff', color: '#111111', borderRadius: 8, padding: 12, textAlign: 'center', cursor: isBettingOpen ? 'pointer' : 'default', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
                 >
-                  <div style={{ marginBottom: 4 }}>
-                    {renderLiveRoosterAvatar('blanco', fotoBlanco, 44)}
-                  </div>
                   <div style={{ fontSize: 10, color: '#0f3dd1', fontWeight: 900 }}>GALLO BLANCO</div>
                   <div style={{ fontWeight: 900, fontSize: 18, textTransform: 'uppercase', margin: '4px 0' }}>
                     {hasLoadedFight ? (fightInfo.gallo_b_name || 'GALLO BLANCO') : '—'}
@@ -2195,7 +2137,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {renderLiveRoosterAvatar('azul', fotoAzul, 28)}
                       <span>{hasLoadedFight ? (fightInfo.gallo_a_name || 'GALLO AZUL') : 'GALLO AZUL'}</span>
                       {hasLoadedFight && weightA && <span style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 800 }}>⚖️ {weightA}</span>}
                     </span>
@@ -2210,7 +2151,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {renderLiveRoosterAvatar('blanco', fotoBlanco, 28)}
                       <span>{hasLoadedFight ? (fightInfo.gallo_b_name || 'GALLO BLANCO') : 'GALLO BLANCO'}</span>
                       {hasLoadedFight && weightB && <span style={{ fontSize: 11, color: '#4b5563', fontWeight: 800 }}>⚖️ {weightB}</span>}
                     </span>
@@ -2885,7 +2825,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     gap: 6
                   }}
                 >
-                  {renderLiveRoosterAvatar('azul', fotoAzul, 28)}
                   <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                       <span style={{ fontSize: 8, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>GALLO AZUL</span>
@@ -2918,7 +2857,6 @@ const UserLiveView = ({ userBalance, setUserBalance, currentUser, setCurrentView
                     gap: 6
                   }}
                 >
-                  {renderLiveRoosterAvatar('blanco', fotoBlanco, 28)}
                   <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                       <span style={{ fontSize: 8, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>GALLO BLANCO</span>

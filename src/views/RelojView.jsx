@@ -760,47 +760,6 @@ export default function RelojView() {
     }
   };
 
-  // Avatar rendering helper
-  const renderRoosterAvatar = (side, photo) => {
-    const isAzul = side === 'azul';
-    const borderCol = isAzul ? '#93c5fd' : '#0f3dd1';
-    const avatarDim = isFullscreen ? 130 : 54;
-    if (photo) {
-      return (
-        <img 
-          src={photo} 
-          style={{ 
-            width: avatarDim, 
-            height: avatarDim, 
-            borderRadius: '50%', 
-            objectFit: 'cover', 
-            border: `2.5px solid ${borderCol}`,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
-            flexShrink: 0
-          }} 
-          alt={`Gallo ${side}`} 
-        />
-      );
-    }
-    return (
-      <div style={{
-        width: avatarDim,
-        height: avatarDim,
-        borderRadius: '50%',
-        background: isAzul ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)' : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-        border: `2.5px solid ${borderCol}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-        fontSize: isFullscreen ? 60 : 28,
-        flexShrink: 0
-      }}>
-        🐓
-      </div>
-    );
-  };
-
   // Secondary sub-timer handler (Careo/Tierra countdown in the middle red clock)
   useEffect(() => {
     if (subTimeLeft !== null && subTimeLeft > 0) {
@@ -1601,17 +1560,7 @@ export default function RelojView() {
           width: '100%', 
           padding: '0 16px' 
         }}>
-          {isAzul && fotoAzul && (
-            <div style={{ flexShrink: 0 }}>
-              {renderRoosterAvatar('azul', fotoAzul)}
-            </div>
-          )}
-          {isBlanco && fotoBlanco && (
-            <div style={{ flexShrink: 0 }}>
-              {renderRoosterAvatar('blanco', fotoBlanco)}
-            </div>
-          )}
-          <div style={{ textAlign: hasPhoto ? 'left' : 'center', minWidth: 0 }}>
+          <div style={{ textAlign: 'center', minWidth: 0 }}>
             <div style={{
               fontSize: 'clamp(10px, 1.8vw, 12px)',
               fontWeight: 800,
@@ -2025,9 +1974,6 @@ export default function RelojView() {
                   textAlign: 'center',
                   border: '1px solid #06238b'
                 }}>
-                  <div style={{ marginBottom: 10 }}>
-                    {renderRoosterAvatar('azul', fotoAzul)}
-                  </div>
                   <div style={{ color: '#93c5fd', fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>GALLO AZUL</div>
                   <div style={{ fontWeight: 900, fontSize: isFullscreen ? 28 : 18, textTransform: 'uppercase', lineHeight: 1.2, wordBreak: 'break-word', color: '#ffffff' }}>
                     {gallinoName ? gallinoName : '—'}
@@ -2111,9 +2057,6 @@ export default function RelojView() {
                   textAlign: 'center',
                   border: '1px solid #dddddd'
                 }}>
-                  <div style={{ marginBottom: 10 }}>
-                    {renderRoosterAvatar('blanco', fotoBlanco)}
-                  </div>
                   <div style={{ color: '#0f3dd1', fontWeight: 900, fontSize: isFullscreen ? 14 : 10, letterSpacing: 1, marginBottom: 4 }}>GALLO BLANCO</div>
                   <div style={{ fontWeight: 900, fontSize: isFullscreen ? 28 : 18, textTransform: 'uppercase', lineHeight: 1.2, wordBreak: 'break-word', color: '#111111' }}>
                     {blancoName ? blancoName : '—'}
@@ -2272,7 +2215,6 @@ export default function RelojView() {
                   overflow: 'hidden'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-                    {renderRoosterAvatar('azul', fotoAzul)}
                     <div style={{ overflow: 'hidden', flex: 1 }}>
                       <div style={{ fontSize: 9, color: '#93c5fd', fontWeight: 900, letterSpacing: 0.5 }}>GALLO AZUL</div>
                       <div style={{ fontWeight: 900, fontSize: 'clamp(14px, 3.5vw, 24px)', textTransform: 'uppercase', color: '#ffffff', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -2303,7 +2245,6 @@ export default function RelojView() {
                   overflow: 'hidden'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-                    {renderRoosterAvatar('blanco', fotoBlanco)}
                     <div style={{ overflow: 'hidden', flex: 1 }}>
                       <div style={{ fontSize: 9, color: '#0f3dd1', fontWeight: 900, letterSpacing: 0.5 }}>GALLO BLANCO</div>
                       <div style={{ fontWeight: 900, fontSize: 'clamp(14px, 3.5vw, 24px)', textTransform: 'uppercase', color: '#111111', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -2675,51 +2616,6 @@ export default function RelojView() {
                         onChange={(e) => setMarcaBlanco(e.target.value)} 
                         style={{ background: 'rgba(0,0,0,0.25)', color: '#fff', borderColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 6, fontSize: 11 }} 
                       />
-                    </Col>
-                  </Row>
-                </div>
-
-                {/* CUSTOM PHOTO UPLOAD BUTTONS */}
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10 }}>
-                  <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, display: 'block', marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    FOTOS EN VIVO (TRANSMISIÓN)
-                  </Text>
-                  <Row gutter={8}>
-                    <Col span={12}>
-                      <label style={{ cursor: 'pointer', display: 'block' }}>
-                        <input type="file" accept="image/*" onChange={handleFotoAzulChange} style={{ display: 'none' }} />
-                        <div style={{ 
-                          background: fotoAzul ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.03)', 
-                          border: fotoAzul ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.08)', 
-                          borderRadius: 6, 
-                          padding: '6px 8px', 
-                          textAlign: 'center',
-                          transition: 'all 0.15s'
-                        }}>
-                          <div style={{ fontSize: 10, color: '#93c5fd', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                            {fotoAzul ? <CheckOutlined style={{ color: '#10b981' }} /> : <PictureOutlined />}
-                            <span>{fotoAzul ? 'Azul Subida' : 'Foto Gallo Azul'}</span>
-                          </div>
-                        </div>
-                      </label>
-                    </Col>
-                    <Col span={12}>
-                      <label style={{ cursor: 'pointer', display: 'block' }}>
-                        <input type="file" accept="image/*" onChange={handleFotoBlancoChange} style={{ display: 'none' }} />
-                        <div style={{ 
-                          background: fotoBlanco ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.03)', 
-                          border: fotoBlanco ? '1px solid #ffffff' : '1px solid rgba(255,255,255,0.08)', 
-                          borderRadius: 6, 
-                          padding: '6px 8px', 
-                          textAlign: 'center',
-                          transition: 'all 0.15s'
-                        }}>
-                          <div style={{ fontSize: 10, color: '#ffffff', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                            {fotoBlanco ? <CheckOutlined style={{ color: '#10b981' }} /> : <PictureOutlined />}
-                            <span>{fotoBlanco ? 'Blanca Subida' : 'Foto Gallo Blanco'}</span>
-                          </div>
-                        </div>
-                      </label>
                     </Col>
                   </Row>
                 </div>
@@ -3107,7 +3003,7 @@ export default function RelojView() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
               <div style={{ background: 'rgba(255,255,255,0.2)', width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-                🐓
+                🔵
               </div>
               <div>
                 <div style={{ color: '#93c5fd', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -3143,7 +3039,7 @@ export default function RelojView() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}>
               <div style={{ background: 'rgba(15, 23, 42, 0.1)', width: 34, height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-                🐓
+                ⚪
               </div>
               <div>
                 <div style={{ color: '#475569', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
